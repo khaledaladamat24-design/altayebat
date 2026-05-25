@@ -6,7 +6,7 @@ export default function Splash() {
 
   const handleContinue = () => {
     localStorage.setItem("al_tayebat_onboarded", "1");
-    setLocation("/");
+    setLocation("/auth");
   };
 
   return (
@@ -26,8 +26,8 @@ export default function Splash() {
       <div className="relative z-10 flex flex-col min-h-screen px-6 pt-safe">
         {/* Logo */}
         <div className="flex justify-center pt-16 pb-4">
-          <div className="bg-primary rounded-2xl w-20 h-20 flex items-center justify-center shadow-lg">
-            <span className="text-primary-foreground text-4xl font-black">ط</span>
+          <div className="bg-white/15 backdrop-blur-sm border border-white/30 rounded-3xl px-6 py-2 shadow-lg">
+            <span className="text-white text-2xl font-black tracking-wide drop-shadow">الطيبات</span>
           </div>
         </div>
 

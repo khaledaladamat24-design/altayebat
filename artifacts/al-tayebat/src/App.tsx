@@ -20,6 +20,7 @@ import Login from "@/pages/login";
 import Admin from "@/pages/admin";
 import Splash from "@/pages/splash";
 import Settings from "@/pages/settings";
+import Auth from "@/pages/auth";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +44,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/splash" component={Splash} />
+      <Route path="/auth" component={Auth} />
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
       <Route path="/settings" component={Settings} />
