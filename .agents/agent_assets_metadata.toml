@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "58kDO-dPtdkRg82rlASwH"
+uri = "file://artifacts/al-tayebat/public/images/banner.png"
+type = "image"
+title = "healthy food promo banner"
+
+[[generated]]
+id = "33jhx9IuHi_MkQrrWQZ9i"
+uri = "file://artifacts/al-tayebat/public/images/keto-snacks.png"
+type = "image"
+title = "keto snacks category"
+
+[[generated]]
+id = "wu51aMgv-pDWMpzlAbH1D"
+uri = "file://artifacts/al-tayebat/public/images/organic-veg.png"
+type = "image"
+title = "organic vegetables category"
+
+[[generated]]
+id = "PujsewmF4UnqZK6HjlAye"
+uri = "file://artifacts/al-tayebat/public/images/pantry.png"
+type = "image"
+title = "pantry staples category"
+
+[[generated]]
+id = "vzHKT8bLM7QGoD9rLzwKQ"
+uri = "file://artifacts/al-tayebat/public/images/drinks.png"
+type = "image"
+title = "healthy drinks category"

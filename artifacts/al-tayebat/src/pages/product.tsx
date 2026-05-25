@@ -1,0 +1,176 @@
+import { useGetProduct, useAddToCart, getGetCartQueryKey, useListProducts } from "@workspace/api-client-react";
+import { Link, useParams } from "wouter";
+import { ChevronRight, Plus, Minus, ShoppingBag } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useSession } from "@/hooks/use-session";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ProductCard } from "@/components/product-card";
+
+export default function Product() {
+  const params = useParams();
+  const productId = params.id ? parseInt(params.id, 10) : undefined;
+  
+  const { data: product, isLoading } = useGetProduct(productId!, {
+    query: { enabled: !!productId }
+  });
+
+  const { data: relatedProducts } = useListProducts(
+    { categoryId: product?.categoryId },
+    { query: { enabled: !!product?.categoryId } }
+  );
+
+  const sessionId = useSession();
+  const queryClient = useQueryClient();
+  const addToCart = useAddToCart();
+  const [quantity, setQuantity] = useState(1);
+
+  const handleAddToCart = () => {
+    if (!sessionId || !product) return;
+    
+    addToCart.mutate(
+      { data: { productId: product.id, quantity, sessionId } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          toast.success(`تمت إضافة ${product.nameAr} إلى السلة`);
+        },
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="pb-24">
+        <Skeleton className="w-full aspect-square" />
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-6 w-1/3" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+        <h2 className="text-xl font-bold mb-2">المنتج غير موجود</h2>
+        <Link href="/"><Button>العودة للرئيسية</Button></Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-24">
+      <div className="relative">
+        <Link href="~" onClick={(e) => { e.preventDefault(); window.history.back(); }}>
+          <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur p-2 rounded-full cursor-pointer shadow-sm">
+            <ChevronRight className="w-6 h-6" />
+          </div>
+        </Link>
+        
+        <div className="aspect-square bg-white relative">
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt={product.nameAr} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">
+              صورة المنتج
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 bg-background rounded-t-3xl -mt-6 relative z-10">
+        <div className="flex gap-2 mb-3">
+          {product.isKeto && (
+            <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md">كيتو 🥑</span>
+          )}
+          {product.isOrganic && (
+            <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-1 rounded-md">عضوي 🌿</span>
+          )}
+          {product.isBestseller && (
+            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-md">الأكثر مبيعاً</span>
+          )}
+        </div>
+
+        <h1 className="text-2xl font-bold mb-1">{product.nameAr}</h1>
+        {product.weightOrVolume && (
+          <p className="text-sm text-muted-foreground mb-4">{product.weightOrVolume}</p>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold text-primary">{formatPrice(product.price)}</span>
+            {product.originalPrice && (
+              <span className="text-sm text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+            )}
+          </div>
+          
+          <div className="flex items-center bg-muted rounded-full p-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full" 
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="w-8 text-center font-bold">{quantity}</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full" 
+              onClick={() => setQuantity(quantity + 1)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="font-bold text-lg mb-2">الوصف</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {product.descriptionAr || 'لا يوجد وصف متاح لهذا المنتج.'}
+          </p>
+        </div>
+
+        {relatedProducts && relatedProducts.length > 1 && (
+          <div className="mb-8">
+            <h3 className="font-bold text-lg mb-4">منتجات مشابهة</h3>
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-4 px-4">
+              {relatedProducts
+                .filter(p => p.id !== product.id)
+                .slice(0, 5)
+                .map((relatedProd) => (
+                  <div key={relatedProd.id} className="min-w-[160px] snap-start">
+                    <ProductCard product={relatedProd} />
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-50 max-w-md mx-auto">
+        <Button 
+          className="w-full h-14 rounded-full text-lg shadow-lg flex items-center justify-center gap-2" 
+          onClick={handleAddToCart}
+          disabled={!product.inStock || addToCart.isPending}
+        >
+          <ShoppingBag className="w-5 h-5" />
+          {product.inStock ? 'أضف للسلة' : 'غير متوفر'}
+          {product.inStock && (
+            <span className="bg-primary-foreground/20 px-2 py-0.5 rounded text-sm mr-2">
+              {formatPrice(product.price * quantity)}
+            </span>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}

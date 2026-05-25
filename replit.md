@@ -1,10 +1,11 @@
-# [Project name]
+# الطيبات — Al-Tayebat
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+تطبيق ويب لطلب الأكل الصحي والكيتو والمؤونة البلدية في الأردن — مستوحى من هيكل تطبيق كيتا.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/al-tayebat run dev` — run the frontend (port assigned by workflow)
+- `pnpm --filter @workspace/api-server run dev` — run the API server
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -14,6 +15,7 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React + Vite + Tailwind CSS (Arabic RTL, Cairo/Tajawal font)
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,23 +24,40 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — API contract source of truth
+- `lib/db/src/schema/` — DB schema (categories, products, carts, orders, banners)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/al-tayebat/src/` — React frontend (Arabic RTL)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Session-based guest cart/orders using `localStorage` sessionId — no auth required
+- RTL-first layout with Arabic as the primary language
+- Free delivery above 20 JD, 1.5 JD fixed fee below
+- COD only (الدفع عند الاستلام) — payment to be added later
+- OpenAPI-first contract with Orval codegen for type-safe hooks
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- الصفحة الرئيسية: بانرات ترويجية، أقسام، منتجات مميزة، الأكثر مبيعاً
+- أقسام المنتجات: الكيتو، الخضروات العضوية، المؤونة الصحية، المشروبات، الألبان، المكسرات، الحلويات الطبيعية، اللحوم
+- السلة والدفع: إتمام الطلب بالاسم والهاتف والعنوان، الدفع عند الاستلام
+- طلباتي: تتبع الطلبات حتى لغير المسجلين عبر sessionId
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Primary colors: Deep green + rose/pink accent
+- Full Arabic RTL layout
+- No ads inside the app
+- No auth required — app works fully as guest
+- Jordan market focus (JD currency, د.أ)
+- Payment integration to be added later
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`
+- Products route must declare `/featured` and `/bestsellers` BEFORE `/:id` to avoid routing conflicts
+- Cart uses sessionId from localStorage key `al_tayebat_session`
 
 ## Pointers
 
