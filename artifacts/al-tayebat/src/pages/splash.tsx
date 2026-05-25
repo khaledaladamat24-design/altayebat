@@ -1,0 +1,68 @@
+import { useLocation } from "wouter";
+import { ChevronLeft } from "lucide-react";
+
+export default function Splash() {
+  const [, setLocation] = useLocation();
+
+  const handleContinue = () => {
+    localStorage.setItem("al_tayebat_onboarded", "1");
+    setLocation("/");
+  };
+
+  return (
+    <div className="relative min-h-screen w-full max-w-md mx-auto overflow-hidden" dir="rtl">
+      {/* Background food image */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=85"
+          alt="طعام صحي"
+          className="w-full h-full object-cover"
+        />
+        {/* Dark gradient overlay - stronger at bottom */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/85" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col min-h-screen px-6 pt-safe">
+        {/* Logo */}
+        <div className="flex justify-center pt-16 pb-4">
+          <div className="bg-primary rounded-2xl w-20 h-20 flex items-center justify-center shadow-lg">
+            <span className="text-primary-foreground text-4xl font-black">ط</span>
+          </div>
+        </div>
+
+        {/* Spacer push content to bottom */}
+        <div className="flex-1" />
+
+        {/* Bottom content */}
+        <div className="pb-10 space-y-5">
+          {/* Welcome text */}
+          <div className="text-center">
+            <h1 className="text-white text-3xl font-black mb-2 drop-shadow-lg">
+              أهلاً بك في الطيبات
+            </h1>
+            <p className="text-white/85 text-base font-medium drop-shadow">
+              تناول طعاماً أفضل وعيش حياةً أفضل
+            </p>
+          </div>
+
+          {/* CTA Button */}
+          <button
+            onClick={handleContinue}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] text-primary-foreground text-xl font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2"
+          >
+            متابعة
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          {/* Privacy */}
+          <p className="text-center text-white/65 text-xs leading-relaxed px-2">
+            بالمتابعة، فإنك توافق على{" "}
+            <span className="underline text-white/85 cursor-pointer">سياسة الخصوصية</span>{" "}
+            الخاصة بنا. تحتاج الطيبات إلى الوصول لموقعك لتسهيل توصيل الطلبات وتقديم توصيات مخصصة لك.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

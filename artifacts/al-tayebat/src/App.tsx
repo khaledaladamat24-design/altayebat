@@ -1,8 +1,9 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider } from "@clerk/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import Home from "@/pages/home";
@@ -17,6 +18,8 @@ import OrderDetail from "@/pages/order-detail";
 import Account from "@/pages/account";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
+import Splash from "@/pages/splash";
+import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,27 +29,41 @@ const queryClient = new QueryClient({
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
+function SplashGate({ children }: { children: React.ReactNode }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    if (!localStorage.getItem("al_tayebat_onboarded")) {
+      setLocation("/splash");
+    }
+  }, [setLocation]);
+  return <>{children}</>;
+}
+
 function Router() {
   return (
     <Switch>
+      <Route path="/splash" component={Splash} />
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
+      <Route path="/settings" component={Settings} />
       <Route>
-        <AppLayout>
-          <Switch>
-            <Route path="/" component={Home} />
-            <Route path="/categories" component={Categories} />
-            <Route path="/category/:id" component={Category} />
-            <Route path="/product/:id" component={Product} />
-            <Route path="/search" component={Search} />
-            <Route path="/cart" component={Cart} />
-            <Route path="/checkout" component={Checkout} />
-            <Route path="/orders" component={Orders} />
-            <Route path="/orders/:id" component={OrderDetail} />
-            <Route path="/account" component={Account} />
-            <Route component={NotFound} />
-          </Switch>
-        </AppLayout>
+        <SplashGate>
+          <AppLayout>
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/categories" component={Categories} />
+              <Route path="/category/:id" component={Category} />
+              <Route path="/product/:id" component={Product} />
+              <Route path="/search" component={Search} />
+              <Route path="/cart" component={Cart} />
+              <Route path="/checkout" component={Checkout} />
+              <Route path="/orders" component={Orders} />
+              <Route path="/orders/:id" component={OrderDetail} />
+              <Route path="/account" component={Account} />
+              <Route component={NotFound} />
+            </Switch>
+          </AppLayout>
+        </SplashGate>
       </Route>
     </Switch>
   );
