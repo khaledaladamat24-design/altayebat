@@ -33,13 +33,22 @@ const queryClient = new QueryClient({
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 const SPLASH_EXCLUDED = ["/splash", "/auth", "/login", "/admin", "/settings", "/register", "/privacy-policy"];
+const ONBOARD_KEY = "al_tayebat_onboarded_v2";
+const AUTH_SKIPPED_KEY = "al_tayebat_auth_skipped_v2";
 
 function SplashGate({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   useEffect(() => {
     const excluded = SPLASH_EXCLUDED.some(p => location.startsWith(p));
-    if (!excluded && !localStorage.getItem("al_tayebat_onboarded")) {
+    if (excluded) return;
+
+    if (!localStorage.getItem(ONBOARD_KEY)) {
       setLocation("/splash");
+      return;
+    }
+    const signedIn = !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("__clerk_db_jwt");
+    if (!signedIn && !localStorage.getItem(AUTH_SKIPPED_KEY)) {
+      setLocation("/auth");
     }
   }, [location, setLocation]);
   return <>{children}</>;

@@ -5,7 +5,7 @@ export default function Splash() {
   const [, setLocation] = useLocation();
 
   const handleContinue = () => {
-    localStorage.setItem("al_tayebat_onboarded", "1");
+    localStorage.setItem("al_tayebat_onboarded_v2", "1");
     setLocation("/auth");
   };
 

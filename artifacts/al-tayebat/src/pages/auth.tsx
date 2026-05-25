@@ -43,7 +43,8 @@ export default function Auth() {
   }, []);
 
   const skipAuth = () => {
-    localStorage.setItem("al_tayebat_auth_skipped", "1");
+    localStorage.setItem("al_tayebat_auth_skipped_v2", "1");
+    localStorage.setItem("al_tayebat_onboarded_v2", "1");
     setLocation("/");
   };
 
