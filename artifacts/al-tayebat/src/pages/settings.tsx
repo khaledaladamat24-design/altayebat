@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useClerk, useAuth } from "@clerk/react";
 import {
-  ChevronRight, Bell, ShieldCheck, Wrench, Trash2, Info, LogOut, ChevronLeft,
+  ChevronRight, Bell, ShieldCheck, Wrench, Trash2, Info, LogOut, ChevronLeft, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,10 +34,17 @@ export default function Settings() {
     },
     {
       icon: ShieldCheck,
-      label: "إعدادات الخصوصية",
+      label: "سياسة الخصوصية",
       iconColor: "text-blue-500",
       iconBg: "bg-blue-50",
-      onPress: () => toast("قريباً", { description: "إعدادات الخصوصية" }),
+      onPress: () => setLocation("/privacy-policy"),
+    },
+    {
+      icon: FileText,
+      label: "إعدادات الخصوصية",
+      iconColor: "text-indigo-500",
+      iconBg: "bg-indigo-50",
+      onPress: () => toast("قريباً", { description: "إعدادات الخصوصية التفصيلية" }),
     },
     {
       icon: Wrench,

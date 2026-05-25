@@ -21,6 +21,8 @@ import Admin from "@/pages/admin";
 import Splash from "@/pages/splash";
 import Settings from "@/pages/settings";
 import Auth from "@/pages/auth";
+import Register from "@/pages/register";
+import PrivacyPolicy from "@/pages/privacy-policy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,13 +32,16 @@ const queryClient = new QueryClient({
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
+const SPLASH_EXCLUDED = ["/splash", "/auth", "/login", "/admin", "/settings", "/register", "/privacy-policy"];
+
 function SplashGate({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   useEffect(() => {
-    if (!localStorage.getItem("al_tayebat_onboarded")) {
+    const excluded = SPLASH_EXCLUDED.some(p => location.startsWith(p));
+    if (!excluded && !localStorage.getItem("al_tayebat_onboarded")) {
       setLocation("/splash");
     }
-  }, [setLocation]);
+  }, [location, setLocation]);
   return <>{children}</>;
 }
 
@@ -45,9 +50,11 @@ function Router() {
     <Switch>
       <Route path="/splash" component={Splash} />
       <Route path="/auth" component={Auth} />
+      <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
       <Route path="/settings" component={Settings} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route>
         <SplashGate>
           <AppLayout>

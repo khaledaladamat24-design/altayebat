@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { Mail, Phone, Eye, EyeOff, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { isConfigured, auth } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 
-type Mode = "landing" | "email-login" | "email-signup" | "phone" | "otp";
+type Mode = "landing" | "email-login" | "email-signup" | "phone-input" | "otp-email" | "otp-phone";
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
 
 export default function Auth() {
   const [, setLocation] = useLocation();
@@ -14,6 +23,7 @@ export default function Auth() {
 
   const [mode, setMode] = useState<Mode>("landing");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +31,16 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(true);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingVerification, setPendingVerification] = useState(false);
+  const [pendingSignUp, setPendingSignUp] = useState(false);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+
+  const firebaseEnabled = isConfigured();
+
+  useEffect(() => {
+    return () => {
+      try { window.recaptchaVerifier?.clear(); } catch {}
+    };
+  }, []);
 
   const skipAuth = () => {
     localStorage.setItem("al_tayebat_auth_skipped", "1");
@@ -35,15 +54,13 @@ export default function Auth() {
     if (!signInLoaded) return;
     setLoading(true);
     try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
+      const result = await signIn.create({ identifier: email, password });
       if (result.status === "complete") {
+        toast.success("مرحباً بك في الطيبات!");
         setLocation("/");
       } else if (result.status === "needs_first_factor") {
-        setPendingVerification(true);
-        setMode("otp");
+        setPendingSignUp(false);
+        setMode("otp-email");
         toast("تم إرسال رمز التحقق إلى بريدك");
       }
     } catch (err: unknown) {
@@ -57,19 +74,14 @@ export default function Auth() {
   const handleEmailSignup = async () => {
     if (!firstName.trim()) { toast.error("أدخل الاسم الأول"); return; }
     if (!email) { toast.error("أدخل البريد الإلكتروني"); return; }
-    if (password.length < 8) { toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return; }
+    if (password.length < 8) { toast.error("كلمة المرور 8 أحرف على الأقل"); return; }
     if (!signUpLoaded) return;
     setLoading(true);
     try {
-      await signUp.create({
-        firstName,
-        lastName,
-        emailAddress: email,
-        password,
-      });
+      await signUp.create({ firstName, lastName, emailAddress: email, password });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setPendingVerification(true);
-      setMode("otp");
+      setPendingSignUp(true);
+      setMode("otp-email");
       toast("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
     } catch (err: unknown) {
       const msg = (err as { errors?: { message: string }[] })?.errors?.[0]?.message;
@@ -78,22 +90,19 @@ export default function Auth() {
     setLoading(false);
   };
 
-  /* ── OTP Verify ── */
-  const handleOtpVerify = async () => {
+  /* ── OTP Email Verify ── */
+  const handleOtpEmailVerify = async () => {
     if (!otp || otp.length < 6) { toast.error("أدخل الرمز المكون من 6 أرقام"); return; }
     setLoading(true);
     try {
-      if (pendingVerification && signUpLoaded && signUp.status !== "complete") {
+      if (pendingSignUp && signUpLoaded) {
         const result = await signUp.attemptEmailAddressVerification({ code: otp });
         if (result.status === "complete") {
           toast.success("تم إنشاء حسابك بنجاح 🎉");
-          setLocation("/");
+          setLocation("/register");
         }
       } else if (signInLoaded) {
-        const result = await signIn.attemptFirstFactor({
-          strategy: "email_code",
-          code: otp,
-        });
+        const result = await signIn.attemptFirstFactor({ strategy: "email_code", code: otp });
         if (result.status === "complete") {
           toast.success("مرحباً بك في الطيبات!");
           setLocation("/");
@@ -106,20 +115,60 @@ export default function Auth() {
     setLoading(false);
   };
 
-  /* ── Phone (via Clerk modal) ── */
-  const handlePhone = () => {
-    openSignIn({});
+  /* ── Firebase Phone Send OTP ── */
+  const handleSendPhoneOtp = async () => {
+    if (!phone || phone.length < 9) { toast.error("أدخل رقم الهاتف بالكامل مع مفتاح الدولة"); return; }
+
+    if (!firebaseEnabled) {
+      toast.error("خدمة OTP الهاتفية غير مُفعّلة بعد. أضف مفاتيح Firebase في إعدادات المشروع.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (!window.recaptchaVerifier && recaptchaRef.current) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaRef.current, {
+          size: "invisible",
+        });
+      }
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier!);
+      window.confirmationResult = confirmation;
+      setMode("otp-phone");
+      toast("تم إرسال رمز التحقق إلى هاتفك");
+    } catch (err: unknown) {
+      const msg = (err as Error).message;
+      toast.error(msg?.includes("invalid-phone") ? "رقم الهاتف غير صحيح" : "فشل إرسال الرمز. تأكد من رقم الهاتف.");
+    }
+    setLoading(false);
   };
 
-  /* ─────────────────────────── UI ─────────────────────────── */
+  /* ── Firebase Phone Verify OTP ── */
+  const handleOtpPhoneVerify = async () => {
+    if (!otp || otp.length < 6) { toast.error("أدخل الرمز المكون من 6 أرقام"); return; }
+    if (!window.confirmationResult) { toast.error("انتهت صلاحية الجلسة. أعد المحاولة."); return; }
+    setLoading(true);
+    try {
+      const result = await window.confirmationResult.confirm(otp);
+      if (result.user) {
+        localStorage.setItem("al_tayebat_firebase_uid", result.user.uid);
+        localStorage.setItem("al_tayebat_phone", phone);
+        await fetch("/api/users/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firebaseUid: result.user.uid, phone, role: "consumer" }),
+        });
+        toast.success("تم التحقق بنجاح! 🎉");
+        setLocation("/register");
+      }
+    } catch {
+      toast.error("الرمز غير صحيح أو منتهي الصلاحية");
+    }
+    setLoading(false);
+  };
 
   const headerImg = (
     <div className="relative h-44 shrink-0 overflow-hidden rounded-b-3xl">
-      <img
-        src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=80"
-        alt="طعام صحي"
-        className="w-full h-full object-cover"
-      />
+      <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=80" alt="" className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-primary/80" />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
         <span className="text-white text-3xl font-black drop-shadow">الطيبات</span>
@@ -128,210 +177,246 @@ export default function Auth() {
     </div>
   );
 
-  /* OTP screen */
-  if (mode === "otp") {
+  const RememberMeBox = () => (
+    <label className="flex items-center gap-3 cursor-pointer select-none">
+      <div onClick={() => setRememberMe(r => !r)} className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${rememberMe ? "bg-primary border-primary" : "border-border bg-muted/30"}`}>
+        {rememberMe && <CheckCircle2 className="w-4 h-4 text-white fill-white" />}
+      </div>
+      <span className="text-sm font-medium">تذكّرني</span>
+    </label>
+  );
+
+  /* ── OTP phone screen ── */
+  if (mode === "otp-phone") {
     return (
       <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
         {headerImg}
         <div className="flex-1 px-6 py-8 space-y-6">
-          <button onClick={() => { setMode(pendingVerification ? "email-signup" : "email-login"); setPendingVerification(false); }} className="flex items-center gap-1 text-muted-foreground text-sm">
+          <button onClick={() => { setMode("phone-input"); setOtp(""); }} className="flex items-center gap-1 text-muted-foreground text-sm">
             <ArrowLeft className="w-4 h-4 rotate-180" /> رجوع
           </button>
           <div>
             <h2 className="text-2xl font-black">أدخل رمز التحقق</h2>
-            <p className="text-muted-foreground text-sm mt-1">تم إرسال رمز مكون من 6 أرقام إلى <span className="text-foreground font-bold">{email}</span></p>
+            <p className="text-muted-foreground text-sm mt-1">تم إرسال رمز 6 أرقام إلى <span className="text-foreground font-bold" dir="ltr">{phone}</span></p>
           </div>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            placeholder="_ _ _ _ _ _"
-            value={otp}
-            onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
-            className="w-full h-14 rounded-2xl border-2 border-primary/30 focus:border-primary bg-muted/30 text-center text-3xl font-black tracking-[0.5em] outline-none transition-colors"
-            dir="ltr"
-          />
-          <button
-            onClick={handleOtpVerify}
-            disabled={loading || otp.length < 6}
-            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
-          >
+          <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+            placeholder="_ _ _ _ _ _" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
+            className="w-full h-14 rounded-2xl border-2 border-primary/30 focus:border-primary bg-muted/30 text-center text-3xl font-black tracking-[0.5em] outline-none transition-colors" dir="ltr" />
+          <button onClick={handleOtpPhoneVerify} disabled={loading || otp.length < 6}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
             {loading ? "جاري التحقق..." : "تأكيد"}
           </button>
-          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground hover:text-foreground py-2">
-            تخطّى — تصفح كضيف
-          </button>
+          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-2">تخطّى — تصفح كضيف</button>
         </div>
       </div>
     );
   }
 
-  /* Email Login screen */
+  /* ── OTP email screen ── */
+  if (mode === "otp-email") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+        {headerImg}
+        <div className="flex-1 px-6 py-8 space-y-6">
+          <button onClick={() => { setMode(pendingSignUp ? "email-signup" : "email-login"); setOtp(""); }} className="flex items-center gap-1 text-muted-foreground text-sm">
+            <ArrowLeft className="w-4 h-4 rotate-180" /> رجوع
+          </button>
+          <div>
+            <h2 className="text-2xl font-black">أدخل رمز التحقق</h2>
+            <p className="text-muted-foreground text-sm mt-1">تم الإرسال إلى <span className="text-foreground font-bold">{email}</span></p>
+          </div>
+          <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+            placeholder="_ _ _ _ _ _" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
+            className="w-full h-14 rounded-2xl border-2 border-primary/30 focus:border-primary bg-muted/30 text-center text-3xl font-black tracking-[0.5em] outline-none transition-colors" dir="ltr" />
+          <button onClick={handleOtpEmailVerify} disabled={loading || otp.length < 6}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+            {loading ? "جاري التحقق..." : "تأكيد"}
+          </button>
+          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-2">تخطّى — تصفح كضيف</button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Phone input screen ── */
+  if (mode === "phone-input") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+        {headerImg}
+        <div className="flex-1 px-6 py-6 space-y-5">
+          <button onClick={() => setMode("landing")} className="flex items-center gap-1 text-muted-foreground text-sm">
+            <ArrowLeft className="w-4 h-4 rotate-180" /> رجوع
+          </button>
+          <div>
+            <h2 className="text-2xl font-black">رقم الهاتف</h2>
+            <p className="text-muted-foreground text-sm mt-1">أدخل رقمك مع مفتاح الدولة</p>
+          </div>
+          <div className="relative">
+            <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input type="tel" placeholder="+962791234567" value={phone} onChange={e => setPhone(e.target.value)}
+              className="w-full h-14 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 text-lg outline-none focus:border-primary transition-colors" dir="ltr" />
+          </div>
+
+          {!firebaseEnabled && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                ⚠️ خدمة OTP الهاتفية تحتاج مفاتيح Firebase. أضف المتغيرات في ملف <code className="font-mono bg-amber-100 dark:bg-amber-900 px-1 rounded">.env</code> من ملف <code className="font-mono">.env.example</code>
+              </p>
+            </div>
+          )}
+
+          <RememberMeBox />
+
+          <button onClick={handleSendPhoneOtp} disabled={loading}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
+            {loading ? "جاري الإرسال..." : "إرسال الرمز"}
+          </button>
+
+          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-2">تخطّى — تصفح كضيف</button>
+          <div ref={recaptchaRef} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Email Login screen ── */
   if (mode === "email-login") {
     return (
       <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
         {headerImg}
         <div className="flex-1 px-6 py-6 space-y-4">
-          <button onClick={() => setMode("landing")} className="flex items-center gap-1 text-muted-foreground text-sm mb-2">
+          <button onClick={() => setMode("landing")} className="flex items-center gap-1 text-muted-foreground text-sm">
             <ArrowLeft className="w-4 h-4 rotate-180" /> رجوع
           </button>
           <h2 className="text-2xl font-black">تسجيل الدخول</h2>
-
-          {/* Email */}
           <div className="relative">
             <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input type="email" placeholder="البريد الإلكتروني" value={email} onChange={e => setEmail(e.target.value)} className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 py-3.5 text-sm outline-none focus:border-primary transition-colors text-right" dir="ltr" />
+            <input type="email" placeholder="البريد الإلكتروني" value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 py-3.5 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
           </div>
-
-          {/* Password */}
           <div className="relative">
             <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute left-4 top-1/2 -translate-y-1/2">
               {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
             </button>
-            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleEmailLogin()} className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 py-3.5 text-sm outline-none focus:border-primary transition-colors text-right" dir="ltr" />
+            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور"
+              value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleEmailLogin()}
+              className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 py-3.5 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
           </div>
-
-          {/* Remember me */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div onClick={() => setRememberMe(r => !r)} className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${rememberMe ? "bg-primary border-primary" : "border-border bg-muted/30"}`}>
-              {rememberMe && <CheckCircle2 className="w-4 h-4 text-white fill-white" />}
-            </div>
-            <span className="text-sm font-medium text-foreground">تذكّرني</span>
-          </label>
-
-          <button onClick={handleEmailLogin} disabled={loading} className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+          <RememberMeBox />
+          <button onClick={handleEmailLogin} disabled={loading}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
             {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
           </button>
-
           <div className="flex items-center gap-3"><div className="flex-1 h-px bg-border" /><span className="text-muted-foreground text-xs">أو</span><div className="flex-1 h-px bg-border" /></div>
-
-          <button onClick={() => setMode("email-signup")} className="w-full h-12 border-2 border-primary text-primary font-black rounded-2xl hover:bg-primary/5 transition-all text-sm">
+          <button onClick={() => setMode("email-signup")}
+            className="w-full h-12 border-2 border-primary text-primary font-black rounded-2xl hover:bg-primary/5 transition-all text-sm">
             إنشاء حساب جديد
           </button>
-          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground hover:text-foreground py-1">تخطّى — تصفح كضيف</button>
+          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-1">تخطّى — تصفح كضيف</button>
         </div>
       </div>
     );
   }
 
-  /* Email Signup screen */
+  /* ── Email Signup screen ── */
   if (mode === "email-signup") {
     return (
       <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
         {headerImg}
         <div className="flex-1 px-6 py-6 space-y-4">
-          <button onClick={() => setMode("landing")} className="flex items-center gap-1 text-muted-foreground text-sm mb-2">
+          <button onClick={() => setMode("landing")} className="flex items-center gap-1 text-muted-foreground text-sm">
             <ArrowLeft className="w-4 h-4 rotate-180" /> رجوع
           </button>
           <h2 className="text-2xl font-black">إنشاء حساب جديد</h2>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-muted-foreground">الاسم الأول *</label>
-              <input type="text" placeholder="أحمد" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary transition-colors" />
+              <input type="text" placeholder="أحمد" value={firstName} onChange={e => setFirstName(e.target.value)}
+                className="w-full h-12 rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary" />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-muted-foreground">اسم العائلة</label>
-              <input type="text" placeholder="محمد" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary transition-colors" />
+              <input type="text" placeholder="محمد" value={lastName} onChange={e => setLastName(e.target.value)}
+                className="w-full h-12 rounded-xl border border-border bg-muted/30 px-3 text-sm outline-none focus:border-primary" />
             </div>
           </div>
-
           <div className="relative">
             <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input type="email" placeholder="البريد الإلكتروني" value={email} onChange={e => setEmail(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-11 pl-4 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
+            <input type="email" placeholder="البريد الإلكتروني" value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-11 pl-4 text-sm outline-none focus:border-primary" dir="ltr" />
           </div>
-
           <div className="relative">
             <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute left-4 top-1/2 -translate-y-1/2">
               {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
             </button>
-            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور (8 أحرف على الأقل)" value={password} onChange={e => setPassword(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
+            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور (8 أحرف على الأقل)"
+              value={password} onChange={e => setPassword(e.target.value)}
+              className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary" dir="ltr" />
           </div>
-
-          {/* Remember me */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div onClick={() => setRememberMe(r => !r)} className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${rememberMe ? "bg-primary border-primary" : "border-border bg-muted/30"}`}>
-              {rememberMe && <CheckCircle2 className="w-4 h-4 text-white fill-white" />}
-            </div>
-            <span className="text-sm font-medium">تذكّرني</span>
-          </label>
-
-          <button onClick={handleEmailSignup} disabled={loading} className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+          <RememberMeBox />
+          <button onClick={handleEmailSignup} disabled={loading}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
             {loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
           </button>
-
           <p className="text-center text-xs text-muted-foreground">
-            لديك حساب بالفعل؟{" "}
+            لديك حساب؟{" "}
             <button onClick={() => setMode("email-login")} className="text-primary font-bold underline">تسجيل الدخول</button>
           </p>
-          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground hover:text-foreground py-1">تخطّى — تصفح كضيف</button>
+          <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-1">تخطّى — تصفح كضيف</button>
         </div>
       </div>
     );
   }
 
-  /* Landing screen — default */
+  /* ── Landing screen ── */
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
       {headerImg}
-
       <div className="flex-1 px-6 py-8 space-y-4">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-black">مرحباً! 👋</h1>
           <p className="text-muted-foreground text-sm mt-1">سجّل دخولك أو أنشئ حساباً للمتابعة</p>
         </div>
 
-        {/* Email option */}
-        <button
-          onClick={() => setMode("email-login")}
-          className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] text-primary-foreground text-base font-black rounded-2xl shadow-md transition-all flex items-center gap-3 px-5"
-        >
+        <button onClick={() => setMode("email-login")}
+          className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] text-primary-foreground text-base font-black rounded-2xl shadow-md transition-all flex items-center gap-3 px-5">
           <Mail className="w-5 h-5 shrink-0" />
           <span className="flex-1 text-right">تسجيل الدخول بالبريد الإلكتروني</span>
         </button>
 
-        {/* Phone option */}
-        <button
-          onClick={handlePhone}
-          className="w-full h-14 border-2 border-border hover:border-primary hover:bg-primary/5 active:scale-[0.98] text-foreground text-base font-bold rounded-2xl transition-all flex items-center gap-3 px-5"
-        >
+        <button onClick={() => setMode("phone-input")}
+          className="w-full h-14 border-2 border-border hover:border-primary hover:bg-primary/5 active:scale-[0.98] text-foreground text-base font-bold rounded-2xl transition-all flex items-center gap-3 px-5">
           <Phone className="w-5 h-5 shrink-0 text-primary" />
-          <span className="flex-1 text-right">تسجيل الدخول برقم الهاتف</span>
+          <span className="flex-1 text-right">تسجيل الدخول برقم الهاتف (OTP)</span>
+          {firebaseEnabled && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full shrink-0">مُفعّل</span>}
         </button>
 
-        {/* Divider */}
         <div className="flex items-center gap-3 py-1">
           <div className="flex-1 h-px bg-border" />
           <span className="text-muted-foreground text-xs font-medium">أو</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
-        {/* Create account */}
-        <button
-          onClick={() => setMode("email-signup")}
-          className="w-full h-14 bg-rose hover:bg-rose/90 active:scale-[0.98] text-white text-base font-black rounded-2xl shadow-md transition-all flex items-center gap-3 px-5"
-        >
+        <button onClick={() => setMode("email-signup")}
+          className="w-full h-14 bg-rose hover:bg-rose/90 active:scale-[0.98] text-white text-base font-black rounded-2xl shadow-md transition-all flex items-center gap-3 px-5">
           <span className="text-xl">✨</span>
           <span className="flex-1 text-right">إنشاء حساب جديد</span>
         </button>
 
-        {/* Privacy */}
         <p className="text-center text-xs text-muted-foreground pt-1 leading-relaxed">
           بالمتابعة توافق على{" "}
-          <span className="underline cursor-pointer text-foreground font-medium">سياسة الخصوصية</span>
+          <span className="underline cursor-pointer text-foreground font-medium" onClick={() => setLocation("/privacy-policy")}>سياسة الخصوصية</span>
           {" "}و{" "}
           <span className="underline cursor-pointer text-foreground font-medium">شروط الاستخدام</span>
         </p>
 
-        {/* Skip */}
-        <button
-          onClick={skipAuth}
-          className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
-        >
+        <button onClick={skipAuth}
+          className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors py-2 font-medium">
           تخطّى — تصفح كضيف بدون تسجيل
         </button>
       </div>

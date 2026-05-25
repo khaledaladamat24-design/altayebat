@@ -83,11 +83,17 @@ router.post("/orders", async (req, res) => {
     const now = new Date();
     const estimated = new Date(now.getTime() + 45 * 60 * 1000);
 
+    const paymentMethod = req.body.paymentMethod || "cod";
+    const paymentScreenshotUrl = req.body.paymentScreenshotUrl || null;
+
     const [newOrder] = await db
       .insert(ordersTable)
       .values({
         sessionId,
         status: "pending",
+        paymentMethod,
+        paymentStatus: paymentScreenshotUrl ? "pending" : "cod",
+        paymentScreenshotUrl,
         subtotal: subtotal.toFixed(3),
         deliveryFee: deliveryFee.toFixed(3),
         total: total.toFixed(3),

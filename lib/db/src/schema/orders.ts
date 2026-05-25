@@ -5,7 +5,12 @@ import { z } from "zod/v4";
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
   sessionId: text("session_id"),
+  userId: integer("user_id"),
+  vendorId: integer("vendor_id"),
   status: text("status").notNull().default("pending"),
+  paymentMethod: text("payment_method").notNull().default("cod"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  paymentScreenshotUrl: text("payment_screenshot_url"),
   subtotal: numeric("subtotal", { precision: 10, scale: 3 }).notNull(),
   deliveryFee: numeric("delivery_fee", { precision: 10, scale: 3 }).notNull().default("1.500"),
   total: numeric("total", { precision: 10, scale: 3 }).notNull(),

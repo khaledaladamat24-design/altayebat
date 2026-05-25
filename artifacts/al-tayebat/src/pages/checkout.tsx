@@ -1,6 +1,6 @@
 import { useGetCart, useCreateOrder, getGetCartQueryKey } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
-import { ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronRight, CheckCircle2, Upload, X, Smartphone, CreditCard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,15 +11,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapPicker } from "@/components/map-picker";
 
 const formSchema = z.object({
@@ -29,13 +24,26 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
+type PaymentMethod = "cod" | "cliq" | "wallet";
+
+const DEMO_VENDOR = {
+  cliqAlias: "altayebat",
+  walletNumber: "0791234567",
+  storeName: "الطيبات",
+};
+
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const sessionId = useSession();
   const queryClient = useQueryClient();
-  
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [screenshotName, setScreenshotName] = useState("");
+
   const { data: cart, isLoading } = useGetCart(
-    { sessionId }, 
+    { sessionId },
     { query: { enabled: !!sessionId } }
   );
 
@@ -44,9 +52,9 @@ export default function Checkout() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerName: localStorage.getItem('al_tayebat_name') || "",
-      customerPhone: localStorage.getItem('al_tayebat_phone') || "",
-      deliveryAddress: localStorage.getItem('al_tayebat_address') || "",
+      customerName: localStorage.getItem("al_tayebat_name") || "",
+      customerPhone: localStorage.getItem("al_tayebat_phone") || "",
+      deliveryAddress: localStorage.getItem("al_tayebat_address") || "",
       notes: "",
     },
   });
@@ -57,20 +65,36 @@ export default function Checkout() {
     }
   }, [cart, setLocation, createOrder.isSuccess]);
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("حجم الصورة يجب أن يكون أقل من 5MB"); return; }
+    setScreenshotName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setScreenshot(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!sessionId || !cart || cart.items.length === 0) return;
 
-    // Save info for next time
-    localStorage.setItem('al_tayebat_name', values.customerName);
-    localStorage.setItem('al_tayebat_phone', values.customerPhone);
-    localStorage.setItem('al_tayebat_address', values.deliveryAddress);
+    if (paymentMethod !== "cod" && !screenshot) {
+      toast.error("يرجى رفع إيصال الدفع لإتمام الطلب");
+      return;
+    }
+
+    localStorage.setItem("al_tayebat_name", values.customerName);
+    localStorage.setItem("al_tayebat_phone", values.customerPhone);
+    localStorage.setItem("al_tayebat_address", values.deliveryAddress);
 
     createOrder.mutate(
-      { 
-        data: { 
-          ...values, 
-          sessionId 
-        } 
+      {
+        data: {
+          ...values,
+          sessionId,
+          paymentMethod,
+          paymentScreenshotUrl: screenshot || undefined,
+        } as Parameters<typeof createOrder.mutate>[0]["data"],
       },
       {
         onSuccess: (order) => {
@@ -80,7 +104,7 @@ export default function Checkout() {
         },
         onError: () => {
           toast.error("حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.");
-        }
+        },
       }
     );
   };
@@ -90,7 +114,7 @@ export default function Checkout() {
   }
 
   return (
-    <div className="pb-8 min-h-screen bg-muted/30">
+    <div className="pb-28 min-h-screen bg-muted/30">
       <div className="bg-background pt-8 pb-4 px-4 sticky top-0 z-20 border-b border-border/50 flex items-center gap-4">
         <Link href="/cart">
           <div className="p-2 -mr-2 text-foreground cursor-pointer">
@@ -100,106 +124,143 @@ export default function Checkout() {
         <h1 className="text-xl font-bold">إتمام الطلب</h1>
       </div>
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-4 py-6 space-y-5">
+        {/* Step 1 — Delivery Info */}
         <div className="bg-card p-5 rounded-2xl shadow-sm border border-border">
           <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+            <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">1</span>
             بيانات التوصيل
           </h2>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" id="checkout-form">
-              <FormField
-                control={form.control}
-                name="customerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الاسم الكامل</FormLabel>
-                    <FormControl>
-                      <Input placeholder="مثال: أحمد محمد" className="h-12 bg-muted border-none" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="customerPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>رقم الهاتف</FormLabel>
-                    <FormControl>
-                      <Input placeholder="مثال: 0791234567" dir="ltr" className="h-12 bg-muted border-none text-right" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="deliveryAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between mb-1">
-                      <FormLabel>عنوان التوصيل</FormLabel>
-                      <MapPicker
-                        onAddressSelect={(address) => {
-                          field.onChange(address);
-                          localStorage.setItem("al_tayebat_address", address);
-                        }}
-                      />
-                    </div>
-                    <FormControl>
-                      <Textarea
-                        placeholder="المدينة، المنطقة، الشارع، رقم العمارة، رقم الشقة"
-                        className="min-h-[90px] bg-muted border-none resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="customerName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>الاسم الكامل</FormLabel>
+                  <FormControl>
+                    <Input placeholder="مثال: أحمد محمد" className="h-12 bg-muted border-none" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ملاحظات إضافية (اختياري)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="مثال: يرجى الاتصال عند الوصول" className="h-12 bg-muted border-none" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="customerPhone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>رقم الهاتف</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0791234567" dir="ltr" className="h-12 bg-muted border-none text-right" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between mb-1">
+                    <FormLabel>عنوان التوصيل</FormLabel>
+                    <MapPicker onAddressSelect={(address) => {
+                      field.onChange(address);
+                      localStorage.setItem("al_tayebat_address", address);
+                    }} />
+                  </div>
+                  <FormControl>
+                    <Textarea placeholder="المدينة، المنطقة، الشارع، رقم المبنى" className="min-h-[80px] bg-muted border-none resize-none" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ملاحظات إضافية (اختياري)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="مثال: يرجى الاتصال عند الوصول" className="h-12 bg-muted border-none" {...field} />
+                  </FormControl>
+                </FormItem>
+              )} />
             </form>
           </Form>
         </div>
 
+        {/* Step 2 — Payment Method */}
         <div className="bg-card p-5 rounded-2xl shadow-sm border border-border">
           <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+            <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
             طريقة الدفع
           </h2>
-          
-          <div className="border border-primary bg-primary/5 rounded-xl p-4 flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground rounded-full p-1">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold">الدفع عند الاستلام</p>
-              <p className="text-sm text-muted-foreground">ادفع نقداً عند استلام طلبك</p>
-            </div>
+
+          <div className="space-y-3">
+            {[
+              { id: "cod" as PaymentMethod, icon: CheckCircle2, label: "الدفع عند الاستلام", sub: "ادفع نقداً عند استلام طلبك", color: "primary" },
+              { id: "cliq" as PaymentMethod, icon: Smartphone, label: "تحويل كليك CliQ", sub: `معرف كليك: ${DEMO_VENDOR.cliqAlias}@`, color: "blue" },
+              { id: "wallet" as PaymentMethod, icon: Wallet, label: "محفظة إلكترونية", sub: `رقم المحفظة: ${DEMO_VENDOR.walletNumber}`, color: "rose" },
+            ].map(opt => (
+              <button key={opt.id} type="button" onClick={() => setPaymentMethod(opt.id)}
+                className={`w-full border-2 rounded-xl p-4 flex items-center gap-3 transition-all ${paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${paymentMethod === opt.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                  <opt.icon className="w-5 h-5" />
+                </div>
+                <div className="text-right flex-1">
+                  <p className="font-bold text-sm">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">{opt.sub}</p>
+                </div>
+                {paymentMethod === opt.id && <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
+              </button>
+            ))}
           </div>
+
+          {/* Payment screenshot upload */}
+          {paymentMethod !== "cod" && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-bold">
+                {paymentMethod === "cliq"
+                  ? `حوّل المبلغ إلى كليك: ${DEMO_VENDOR.cliqAlias}@ ثم ارفع إيصال الدفع`
+                  : `حوّل المبلغ إلى المحفظة: ${DEMO_VENDOR.walletNumber} ثم ارفع إيصال الدفع`}
+              </p>
+
+              {screenshot ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={screenshot} alt="إيصال الدفع" className="w-full max-h-48 object-cover" />
+                  <button type="button" onClick={() => { setScreenshot(null); setScreenshotName(""); }}
+                    className="absolute top-2 left-2 bg-black/60 text-white rounded-full p-1">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> تم رفع الإيصال
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-primary/40 rounded-xl py-6 flex flex-col items-center gap-2 hover:bg-primary/5 transition-colors">
+                  <Upload className="w-8 h-8 text-primary/60" />
+                  <p className="text-sm font-bold text-primary">ارفع إيصال التحويل</p>
+                  <p className="text-xs text-muted-foreground">PNG، JPG — حتى 5MB</p>
+                </button>
+              )}
+
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleScreenshot} className="hidden" />
+
+              {paymentMethod === "cliq" && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-400">بيانات كليك للتحويل</p>
+                  </div>
+                  <p className="text-sm font-black text-blue-800 dark:text-blue-300 mt-1 text-center" dir="ltr">@{DEMO_VENDOR.cliqAlias}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 text-center">{DEMO_VENDOR.storeName}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
+        {/* Step 3 — Summary */}
         <div className="bg-card p-5 rounded-2xl shadow-sm border border-border">
-          <h2 className="font-bold text-lg mb-4">ملخص الطلب</h2>
-          
+          <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+            ملخص الطلب
+          </h2>
+
           <div className="space-y-3">
             {cart.items.map(item => (
               <div key={item.id} className="flex justify-between text-sm">
@@ -208,9 +269,9 @@ export default function Checkout() {
               </div>
             ))}
           </div>
-          
-          <div className="border-t border-border my-4"></div>
-          
+
+          <div className="border-t border-border my-4" />
+
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">المجموع الفرعي</span>
@@ -218,13 +279,9 @@ export default function Checkout() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">رسوم التوصيل</span>
-              <span className="font-medium">
-                {cart.deliveryFee === 0 ? 'مجاني' : formatPrice(cart.deliveryFee)}
-              </span>
+              <span className="font-medium">{cart.deliveryFee === 0 ? "مجاني 🎉" : formatPrice(cart.deliveryFee)}</span>
             </div>
-            
-            <div className="border-t border-border mt-3 pt-3"></div>
-            
+            <div className="border-t border-border mt-3 pt-3" />
             <div className="flex justify-between items-center text-lg font-bold">
               <span>الإجمالي المطلوب</span>
               <span className="text-primary">{formatPrice(cart.total)}</span>
@@ -234,13 +291,13 @@ export default function Checkout() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-50 max-w-md mx-auto">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           form="checkout-form"
-          className="w-full h-14 rounded-full text-lg shadow-lg" 
+          className="w-full h-14 rounded-full text-lg shadow-lg"
           disabled={createOrder.isPending}
         >
-          {createOrder.isPending ? 'جاري التأكيد...' : 'تأكيد الطلب'}
+          {createOrder.isPending ? "جاري التأكيد..." : "تأكيد الطلب ✓"}
         </Button>
       </div>
     </div>
