@@ -20,6 +20,11 @@ export const productsTable = pgTable("products", {
   weightOrVolume: text("weight_or_volume"),
   rating: numeric("rating", { precision: 3, scale: 2 }),
   reviewCount: integer("review_count").notNull().default(0),
+  calories: integer("calories"),
+  protein: numeric("protein", { precision: 6, scale: 2 }),
+  carbs: numeric("carbs", { precision: 6, scale: 2 }),
+  fats: numeric("fats", { precision: 6, scale: 2 }),
+  vendorId: integer("vendor_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

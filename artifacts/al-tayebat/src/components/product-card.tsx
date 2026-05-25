@@ -8,7 +8,16 @@ import { useSession } from "@/hooks/use-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export function ProductCard({ product }: { product: Product }) {
+type ProductWithMacros = Product & {
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fats?: number | null;
+};
+
+export function ProductCard({ product: rawProduct }: { product: Product }) {
+  const product = rawProduct as ProductWithMacros;
+  const hasMacros = product.calories != null || product.protein != null || product.carbs != null || product.fats != null;
   const sessionId = useSession();
   const queryClient = useQueryClient();
   const addToCart = useAddToCart();
@@ -70,6 +79,31 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="p-3 flex flex-col flex-grow">
           <h3 className="font-semibold text-sm line-clamp-2 mb-1">{product.nameAr}</h3>
+
+          {hasMacros && (
+            <div className="flex flex-wrap gap-1 mb-1.5" dir="ltr">
+              {product.calories != null && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded-md font-bold">
+                  🔥 {product.calories}
+                </span>
+              )}
+              {product.protein != null && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md font-bold">
+                  🍗 {product.protein}g
+                </span>
+              )}
+              {product.carbs != null && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
+                  🌾 {product.carbs}g
+                </span>
+              )}
+              {product.fats != null && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-md font-bold">
+                  🥑 {product.fats}g
+                </span>
+              )}
+            </div>
+          )}
 
           {product.weightOrVolume && (
             <p className="text-xs text-muted-foreground mb-2">{product.weightOrVolume}</p>

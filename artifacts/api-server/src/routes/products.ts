@@ -26,6 +26,11 @@ function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categor
     weightOrVolume: p.weightOrVolume ?? null,
     rating: p.rating ? Number(p.rating) : null,
     reviewCount: p.reviewCount,
+    calories: p.calories ?? null,
+    protein: p.protein ? Number(p.protein) : null,
+    carbs: p.carbs ? Number(p.carbs) : null,
+    fats: p.fats ? Number(p.fats) : null,
+    vendorId: p.vendorId ?? null,
   };
 }
 

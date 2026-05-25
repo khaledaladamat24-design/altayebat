@@ -61,6 +61,7 @@ export default function Admin() {
     nameAr: "", name: "", descriptionAr: "", description: "",
     price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
     isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true,
+    calories: "", protein: "", carbs: "", fats: "",
   });
 
   const adminHeaders = { "Content-Type": "application/json", "x-admin-key": ADMIN_PASSWORD };
@@ -107,12 +108,24 @@ export default function Admin() {
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: adminHeaders,
-        body: JSON.stringify({ ...form, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, categoryId: Number(form.categoryId) }),
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
+          categoryId: Number(form.categoryId),
+          calories: form.calories || null,
+          protein: form.protein || null,
+          carbs: form.carbs || null,
+          fats: form.fats || null,
+        }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `HTTP ${res.status}`);
+      }
       setSuccess(true);
       toast.success("تم إضافة المنتج بنجاح");
-      setForm({ nameAr: "", name: "", descriptionAr: "", description: "", price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "", isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true });
+      setForm({ nameAr: "", name: "", descriptionAr: "", description: "", price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "", isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true, calories: "", protein: "", carbs: "", fats: "" });
       refetch();
       setTimeout(() => setSuccess(false), 2500);
     } catch { toast.error("حدث خطأ أثناء إضافة المنتج"); }
@@ -313,6 +326,32 @@ export default function Admin() {
                 <label className="text-xs font-medium text-muted-foreground">رابط الصورة (URL)</label>
                 <Input placeholder="https://images.unsplash.com/..." value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
                 {form.imageUrl && <img src={form.imageUrl} alt="preview" className="h-20 rounded-lg object-cover" onError={e => (e.currentTarget.style.display = "none")} />}
+              </div>
+            </div>
+
+            <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-bold text-sm text-muted-foreground">القيم الغذائية (اختياري)</h2>
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Optional</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground -mt-2">اتركها فارغة لإخفائها من بطاقة المنتج</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">🔥 السعرات (kcal)</label>
+                  <Input type="number" inputMode="numeric" placeholder="مثال: 450" value={form.calories} onChange={e => setForm(f => ({ ...f, calories: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">🍗 بروتين (غ)</label>
+                  <Input type="number" step="0.1" placeholder="مثال: 35" value={form.protein} onChange={e => setForm(f => ({ ...f, protein: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">🌾 كربوهيدرات (غ)</label>
+                  <Input type="number" step="0.1" placeholder="مثال: 20" value={form.carbs} onChange={e => setForm(f => ({ ...f, carbs: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">🥑 دهون (غ)</label>
+                  <Input type="number" step="0.1" placeholder="مثال: 12" value={form.fats} onChange={e => setForm(f => ({ ...f, fats: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                </div>
               </div>
             </div>
 

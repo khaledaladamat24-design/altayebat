@@ -57,6 +57,8 @@ export default function Auth() {
     try {
       const result = await signIn.create({ identifier: email, password });
       if (result.status === "complete") {
+        localStorage.setItem("al_tayebat_email", email);
+        localStorage.setItem("al_tayebat_onboarded_v2", "1");
         toast.success("مرحباً بك في الطيبات!");
         setLocation("/");
       } else if (result.status === "needs_first_factor") {
@@ -99,12 +101,17 @@ export default function Auth() {
       if (pendingSignUp && signUpLoaded) {
         const result = await signUp.attemptEmailAddressVerification({ code: otp });
         if (result.status === "complete") {
+          localStorage.setItem("al_tayebat_email", email);
+          if (firstName || lastName) localStorage.setItem("al_tayebat_name", `${firstName} ${lastName}`.trim());
+          localStorage.setItem("al_tayebat_onboarded_v2", "1");
           toast.success("تم إنشاء حسابك بنجاح 🎉");
           setLocation("/register");
         }
       } else if (signInLoaded) {
-        const result = await signIn.attemptFirstFactor({ strategy: "email_code", code: otp });
+        const result = await (signIn as unknown as { attemptFirstFactor: (p: { strategy: string; code: string }) => Promise<{ status: string }> }).attemptFirstFactor({ strategy: "email_code", code: otp });
         if (result.status === "complete") {
+          localStorage.setItem("al_tayebat_email", email);
+          localStorage.setItem("al_tayebat_onboarded_v2", "1");
           toast.success("مرحباً بك في الطيبات!");
           setLocation("/");
         }
@@ -153,16 +160,23 @@ export default function Auth() {
       if (result.user) {
         localStorage.setItem("al_tayebat_firebase_uid", result.user.uid);
         localStorage.setItem("al_tayebat_phone", phone);
-        await fetch("/api/users/profile", {
+        localStorage.setItem("al_tayebat_onboarded_v2", "1");
+        const res = await fetch("/api/users/profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ firebaseUid: result.user.uid, phone, role: "consumer" }),
         });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "فشل حفظ الملف الشخصي");
+        }
+        const profile = await res.json();
+        localStorage.setItem("al_tayebat_user_id", String(profile.id));
         toast.success("تم التحقق بنجاح! 🎉");
         setLocation("/register");
       }
-    } catch {
-      toast.error("الرمز غير صحيح أو منتهي الصلاحية");
+    } catch (err) {
+      toast.error((err as Error).message || "الرمز غير صحيح أو منتهي الصلاحية");
     }
     setLoading(false);
   };

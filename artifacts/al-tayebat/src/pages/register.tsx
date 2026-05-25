@@ -45,33 +45,41 @@ export default function Register() {
     freeDeliveryAbove: "20.000",
   });
 
-  const saveUserProfile = async (r: "consumer" | "vendor") => {
-    const email = user?.primaryEmailAddress?.emailAddress || localStorage.getItem("al_tayebat_email") || undefined;
-    const phone = user?.primaryPhoneNumber?.phoneNumber || localStorage.getItem("al_tayebat_phone") || undefined;
-    const name = user?.fullName || localStorage.getItem("al_tayebat_name") || undefined;
+  const collectIdentity = () => {
+    const email = user?.primaryEmailAddress?.emailAddress || localStorage.getItem("al_tayebat_email") || null;
+    const phone = user?.primaryPhoneNumber?.phoneNumber || localStorage.getItem("al_tayebat_phone") || null;
+    const name = user?.fullName || localStorage.getItem("al_tayebat_name") || null;
+    const firebaseUid = localStorage.getItem("al_tayebat_firebase_uid") || null;
+    return { email, phone, name, firebaseUid, clerkId: user?.id || null };
+  };
 
-    await fetch("/api/users/profile", {
+  const saveUserProfile = async (r: "consumer" | "vendor") => {
+    const id = collectIdentity();
+    if (!id.email && !id.phone) {
+      throw new Error("لم نجد بريد إلكتروني أو رقم هاتف — يرجى تسجيل الدخول أولاً");
+    }
+    const res = await fetch("/api/users/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clerkId: user?.id || null,
-        email: email || null,
-        phone: phone || null,
-        name: name || null,
-        role: r,
-      }),
+      body: JSON.stringify({ ...id, role: r }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `فشل حفظ الملف الشخصي (HTTP ${res.status})`);
+    }
+    return res.json();
   };
 
   const handleConsumer = async () => {
     setLoading(true);
     try {
-      await saveUserProfile("consumer");
+      const profile = await saveUserProfile("consumer");
       localStorage.setItem("al_tayebat_role", "consumer");
+      localStorage.setItem("al_tayebat_user_id", String(profile.id));
       toast.success("أهلاً بك في الطيبات!");
       setLocation("/");
-    } catch {
-      toast.error("حدث خطأ، حاول مجدداً");
+    } catch (err) {
+      toast.error((err as Error).message || "حدث خطأ، حاول مجدداً");
     }
     setLoading(false);
   };
@@ -87,20 +95,10 @@ export default function Register() {
   const handleVendorSubmit = async () => {
     setLoading(true);
     try {
-      const userRes = await fetch("/api/users/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clerkId: user?.id || null,
-          email: user?.primaryEmailAddress?.emailAddress || null,
-          phone: user?.primaryPhoneNumber?.phoneNumber || null,
-          name: user?.fullName || null,
-          role: "vendor",
-        }),
-      });
-      const userProfile = await userRes.json();
+      const userProfile = await saveUserProfile("vendor");
+      if (!userProfile?.id) throw new Error("لم نتمكن من إنشاء حساب المورد");
 
-      await fetch("/api/vendors", {
+      const vRes = await fetch("/api/vendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,11 +107,18 @@ export default function Register() {
           ...payoutDetails,
         }),
       });
-
+      if (!vRes.ok) {
+        const body = await vRes.json().catch(() => ({}));
+        throw new Error(body.error || `فشل تسجيل المتجر (HTTP ${vRes.status})`);
+      }
+      const vendor = await vRes.json();
       localStorage.setItem("al_tayebat_role", "vendor");
+      localStorage.setItem("al_tayebat_user_id", String(userProfile.id));
+      localStorage.setItem("al_tayebat_vendor_id", String(vendor.id));
+      toast.success("تم تسجيل متجرك بنجاح!");
       setStep("done");
-    } catch {
-      toast.error("حدث خطأ أثناء تسجيل المتجر");
+    } catch (err) {
+      toast.error((err as Error).message || "حدث خطأ أثناء تسجيل المتجر");
     }
     setLoading(false);
   };
