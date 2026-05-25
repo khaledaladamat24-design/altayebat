@@ -31,6 +31,10 @@
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
 
+  --color-rose: hsl(var(--rose));
+  --color-rose-foreground: hsl(var(--rose-foreground));
+  --color-rose-soft: hsl(var(--rose-soft));
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
 
@@ -67,8 +71,12 @@
   --muted: 65 20% 92%;
   --muted-foreground: 65 10% 40%;
 
-  --accent: 349 68% 68%;
+  --accent: 349 68% 62%;
   --accent-foreground: 0 0% 100%;
+
+  --rose: 349 68% 62%;
+  --rose-foreground: 0 0% 100%;
+  --rose-soft: 349 60% 95%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 65 33% 98%;
