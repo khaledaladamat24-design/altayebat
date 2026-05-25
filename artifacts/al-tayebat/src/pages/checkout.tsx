@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { MapPicker } from "@/components/map-picker";
 
 const formSchema = z.object({
   customerName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل" }),
@@ -141,12 +142,20 @@ export default function Checkout() {
                 name="deliveryAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>عنوان التوصيل بالتفصيل</FormLabel>
+                    <div className="flex items-center justify-between mb-1">
+                      <FormLabel>عنوان التوصيل</FormLabel>
+                      <MapPicker
+                        onAddressSelect={(address) => {
+                          field.onChange(address);
+                          localStorage.setItem("al_tayebat_address", address);
+                        }}
+                      />
+                    </div>
                     <FormControl>
-                      <Textarea 
-                        placeholder="المدينة، المنطقة، الشارع، رقم العمارة، رقم الشقة" 
-                        className="min-h-[100px] bg-muted border-none resize-none" 
-                        {...field} 
+                      <Textarea
+                        placeholder="المدينة، المنطقة، الشارع، رقم العمارة، رقم الشقة"
+                        className="min-h-[90px] bg-muted border-none resize-none"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
