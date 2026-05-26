@@ -53,7 +53,7 @@ export default function Account() {
             <div>
               <p className="text-xs text-muted-foreground">مرحباً</p>
               <button
-                onClick={() => isSignedIn ? null : openSignIn({})}
+                onClick={() => isSignedIn ? null : setLocation("/auth")}
                 className="flex items-center gap-1 font-black text-base"
               >
                 {displayName}
@@ -72,12 +72,12 @@ export default function Account() {
         {/* Sign in banner (if guest) */}
         {!isSignedIn && (
           <button
-            onClick={() => openSignIn({})}
+            onClick={() => setLocation("/auth")}
             className="w-full bg-primary text-primary-foreground rounded-2xl p-4 flex items-center justify-between shadow-sm hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             <div className="text-right">
               <p className="font-black text-base">تسجيل الدخول / إنشاء حساب</p>
-              <p className="text-primary-foreground/70 text-xs mt-0.5">بالإيميل أو Google</p>
+              <p className="text-primary-foreground/70 text-xs mt-0.5">بالبريد الإلكتروني أو رقم الهاتف (OTP)</p>
             </div>
             <ChevronLeft className="w-5 h-5 opacity-70 shrink-0" />
           </button>
