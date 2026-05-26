@@ -23,6 +23,7 @@ import Settings from "@/pages/settings";
 import Auth from "@/pages/auth";
 import Register from "@/pages/register";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import VendorDashboard from "@/pages/vendor-dashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +33,7 @@ const queryClient = new QueryClient({
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
-const SPLASH_EXCLUDED = ["/splash", "/auth", "/login", "/admin", "/settings", "/register", "/privacy-policy"];
+const SPLASH_EXCLUDED = ["/splash", "/auth", "/login", "/admin", "/settings", "/register", "/privacy-policy", "/vendor-dashboard"];
 const ONBOARD_KEY = "al_tayebat_onboarded_v2";
 const AUTH_SKIPPED_KEY = "al_tayebat_auth_skipped_v2";
 
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
       <Route path="/settings" component={Settings} />
+      <Route path="/vendor-dashboard" component={VendorDashboard} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route>
         <SplashGate>

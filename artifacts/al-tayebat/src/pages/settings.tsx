@@ -1,63 +1,123 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { useClerk, useAuth } from "@clerk/react";
+import { useClerk, useUser } from "@clerk/react";
 import {
-  ChevronRight, Bell, ShieldCheck, Wrench, Trash2, Info, LogOut, ChevronLeft, FileText,
+  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+
+const SIGNED_IN_KEYS = [
+  "al_tayebat_firebase_uid", "al_tayebat_user_id", "al_tayebat_vendor_id",
+  "al_tayebat_email", "al_tayebat_phone", "al_tayebat_name", "al_tayebat_role",
+];
+
+function isLoggedIn() {
+  return !!localStorage.getItem("al_tayebat_firebase_uid")
+      || !!localStorage.getItem("al_tayebat_user_id")
+      || !!localStorage.getItem("__clerk_db_jwt");
+}
 
 export default function Settings() {
   const [, setLocation] = useLocation();
-  const { signOut } = useClerk();
-  const { isSignedIn } = useAuth();
+  const { signOut, openUserProfile } = useClerk();
+  const { user } = useUser();
+
+  const signedIn = isLoggedIn();
+  const hasClerkPassword = !!user;
+
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleClearCache = () => {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith("al_tayebat_"));
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("al_tayebat_") && k !== "al_tayebat_session");
     keys.forEach(k => localStorage.removeItem(k));
     toast.success("تم مسح ذاكرة التخزين المؤقتة");
   };
 
-  const handleSignOut = () => {
-    if (isSignedIn) {
-      signOut().then(() => setLocation("/"));
-    } else {
-      setLocation("/");
+  const handleSignOut = async () => {
+    SIGNED_IN_KEYS.forEach(k => localStorage.removeItem(k));
+    try { await signOut(); } catch {}
+    setLocation("/auth");
+  };
+
+  const handleChangePassword = async () => {
+    if (!user) {
+      toast.error("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني");
+      return;
+    }
+    if (!newPw || newPw.length < 8) {
+      toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return;
+    }
+    setPwSaving(true);
+    try {
+      await user.updatePassword({ newPassword: newPw, currentPassword: oldPw || undefined } as any);
+      toast.success("تم تغيير كلمة المرور");
+      setShowPwModal(false);
+      setOldPw(""); setNewPw("");
+    } catch (err: any) {
+      toast.error(err?.errors?.[0]?.longMessage || err?.message || "فشل تغيير كلمة المرور");
+    }
+    setPwSaving(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const userId = localStorage.getItem("al_tayebat_user_id");
+      const vendorId = localStorage.getItem("al_tayebat_vendor_id");
+      if (vendorId) {
+        await fetch(`/api/vendors/${vendorId}`, { method: "DELETE" }).catch(() => {});
+      }
+      if (userId) {
+        const r = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+        if (!r.ok) throw new Error("فشل حذف الحساب من الخادم");
+      }
+      if (user) {
+        try { await user.delete(); } catch {}
+      }
+      SIGNED_IN_KEYS.forEach(k => localStorage.removeItem(k));
+      try { await signOut(); } catch {}
+      toast.success("تم حذف حسابك نهائياً");
+      setLocation("/auth");
+    } catch (err: any) {
+      toast.error(err?.message || "فشل حذف الحساب");
+      setDeleting(false);
     }
   };
 
   const rows = [
-    {
-      icon: Bell,
-      label: "الإشعارات",
-      iconColor: "text-amber-500",
-      iconBg: "bg-amber-50",
-      onPress: () => toast("قريباً", { description: "إعدادات الإشعارات" }),
-    },
+    ...(signedIn ? [{
+      icon: KeyRound,
+      label: "تغيير كلمة المرور",
+      iconColor: "text-blue-500",
+      iconBg: "bg-blue-50",
+      onPress: () => hasClerkPassword ? setShowPwModal(true) : toast("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني — حسابات الهاتف تستخدم رمز OTP"),
+    }, {
+      icon: FileText,
+      label: "إعدادات حساب Clerk",
+      iconColor: "text-indigo-500",
+      iconBg: "bg-indigo-50",
+      onPress: () => hasClerkPassword ? openUserProfile() : toast("هذه الإعدادات تخص حسابات البريد الإلكتروني فقط"),
+    }] : []),
     {
       icon: ShieldCheck,
       label: "سياسة الخصوصية",
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-50",
+      iconColor: "text-emerald-500",
+      iconBg: "bg-emerald-50",
       onPress: () => setLocation("/privacy-policy"),
-    },
-    {
-      icon: FileText,
-      label: "إعدادات الخصوصية",
-      iconColor: "text-indigo-500",
-      iconBg: "bg-indigo-50",
-      onPress: () => toast("قريباً", { description: "إعدادات الخصوصية التفصيلية" }),
-    },
-    {
-      icon: Wrench,
-      label: "أداة التشخيص",
-      iconColor: "text-slate-500",
-      iconBg: "bg-slate-50",
-      onPress: () => toast("قريباً"),
     },
     {
       icon: Trash2,
       label: "مسح ذاكرة التخزين المؤقتة",
-      iconColor: "text-rose-500",
-      iconBg: "bg-rose-50",
+      iconColor: "text-amber-500",
+      iconBg: "bg-amber-50",
       suffix: "محلي",
       onPress: handleClearCache,
     },
@@ -74,7 +134,6 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-muted/30" dir="rtl">
       <div className="max-w-md mx-auto bg-background min-h-screen shadow-sm border-x border-border/50">
-      {/* Header */}
       <div className="bg-background border-b border-border sticky top-0 z-20 px-4 pt-12 pb-4 flex items-center gap-3">
         <button onClick={() => setLocation("/account")} className="p-1 -mr-1">
           <ChevronRight className="w-6 h-6 text-foreground" />
@@ -82,8 +141,7 @@ export default function Settings() {
         <h1 className="text-xl font-black flex-1 text-center pr-4">الإعدادات</h1>
       </div>
 
-      <div className="px-4 py-4 space-y-2">
-        {/* Settings rows */}
+      <div className="px-4 py-4 space-y-3">
         <div className="bg-background rounded-2xl border border-border overflow-hidden shadow-sm">
           {rows.map((row, i) => (
             <button
@@ -95,15 +153,27 @@ export default function Settings() {
                 <row.icon className={`w-5 h-5 ${row.iconColor}`} />
               </div>
               <span className="flex-1 font-bold text-sm">{row.label}</span>
-              {row.suffix && (
-                <span className="text-xs text-muted-foreground font-medium">{row.suffix}</span>
+              {(row as any).suffix && (
+                <span className="text-xs text-muted-foreground font-medium">{(row as any).suffix}</span>
               )}
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
           ))}
         </div>
 
-        {/* Sign out */}
+        {signedIn && (
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full bg-background border border-destructive/30 rounded-2xl px-4 py-4 flex items-center gap-3 hover:bg-destructive/5 transition-colors shadow-sm"
+          >
+            <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+              <Trash2 className="w-5 h-5 text-destructive" />
+            </div>
+            <span className="font-bold text-destructive text-sm flex-1 text-right">حذف الحساب نهائياً</span>
+            <ChevronLeft className="w-4 h-4 text-destructive/60" />
+          </button>
+        )}
+
         <button
           onClick={handleSignOut}
           className="w-full bg-background border border-border rounded-2xl px-4 py-4 flex items-center gap-3 hover:bg-destructive/5 transition-colors shadow-sm"
@@ -112,7 +182,7 @@ export default function Settings() {
             <LogOut className="w-5 h-5 text-destructive" />
           </div>
           <span className="font-bold text-destructive text-sm flex-1 text-right">
-            {isSignedIn ? "تسجيل الخروج" : "العودة للرئيسية"}
+            {signedIn ? "تسجيل الخروج" : "العودة لتسجيل الدخول"}
           </span>
         </button>
 
@@ -121,6 +191,52 @@ export default function Settings() {
         </p>
       </div>
       </div>
+
+      {/* Change password modal */}
+      {showPwModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowPwModal(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-black text-lg">تغيير كلمة المرور</h2>
+              <button onClick={() => setShowPwModal(false)} className="p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">كلمة المرور الحالية</label>
+                <Input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)} className="h-11 bg-muted border-none" dir="ltr" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">كلمة المرور الجديدة (8+ أحرف)</label>
+                <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className="h-11 bg-muted border-none" dir="ltr" />
+              </div>
+              <Button onClick={handleChangePassword} disabled={pwSaving} className="w-full h-12 rounded-xl mt-2">
+                {pwSaving ? "جاري الحفظ..." : "حفظ كلمة المرور الجديدة"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete account modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-6 h-6 text-destructive" />
+            </div>
+            <h2 className="font-black text-lg text-center mb-2">حذف الحساب نهائياً</h2>
+            <p className="text-sm text-muted-foreground text-center mb-5">
+              سيتم حذف جميع بياناتك (الملف الشخصي والمتجر إن وجد) ولا يمكن استرجاعها.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting} className="flex-1 h-12 rounded-xl">إلغاء</Button>
+              <Button onClick={handleDeleteAccount} disabled={deleting} className="flex-1 h-12 rounded-xl bg-destructive hover:bg-destructive/90">
+                {deleting ? "جاري الحذف..." : "تأكيد الحذف"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

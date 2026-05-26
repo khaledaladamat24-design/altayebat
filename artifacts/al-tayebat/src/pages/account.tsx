@@ -3,8 +3,8 @@ import {
   ChevronLeft, MapPin, Heart, Package, Globe, Settings,
   CreditCard, Zap, Gift, UserCircle,
 } from "lucide-react";
-import { useUser, useAuth } from "@clerk/react";
-import { LogOut } from "lucide-react";
+import { useUser, useAuth, useClerk } from "@clerk/react";
+import { LogOut, Store } from "lucide-react";
 import { useListOrders } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
@@ -12,16 +12,19 @@ import { useEffect, useState } from "react";
 export default function Account() {
   const [, setLocation] = useLocation();
   const { isSignedIn: clerkSignedIn } = useAuth();
+  const { signOut } = useClerk();
   const { user } = useUser();
   const sessionId = useSession();
+  const [vendorId, setVendorId] = useState<string | null>(() => localStorage.getItem("al_tayebat_vendor_id"));
 
   const [firebaseSignedIn, setFirebaseSignedIn] = useState(
     () => !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
   );
   useEffect(() => {
-    const check = () => setFirebaseSignedIn(
-      !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
-    );
+    const check = () => {
+      setFirebaseSignedIn(!!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id"));
+      setVendorId(localStorage.getItem("al_tayebat_vendor_id"));
+    };
     window.addEventListener("storage", check);
     window.addEventListener("focus", check);
     return () => {
@@ -31,14 +34,26 @@ export default function Account() {
   }, []);
   const isSignedIn = clerkSignedIn || firebaseSignedIn;
 
-  const handleSignOut = () => {
-    ["al_tayebat_firebase_uid","al_tayebat_user_id","al_tayebat_vendor_id","al_tayebat_email","al_tayebat_phone","al_tayebat_name","al_tayebat_role","al_tayebat_onboarded_v2"].forEach(k => localStorage.removeItem(k));
+  // Auto-detect vendor profile for signed-in users (and cache vendorId)
+  useEffect(() => {
+    if (!isSignedIn || vendorId) return;
+    const userId = localStorage.getItem("al_tayebat_user_id");
+    if (!userId) return;
+    fetch(`/api/vendors/by-user/${userId}`).then(async r => {
+      if (r.ok) {
+        const v = await r.json();
+        localStorage.setItem("al_tayebat_vendor_id", String(v.id));
+        setVendorId(String(v.id));
+      }
+    }).catch(() => {});
+  }, [isSignedIn, vendorId]);
+
+  const handleSignOut = async () => {
+    ["al_tayebat_firebase_uid","al_tayebat_user_id","al_tayebat_vendor_id","al_tayebat_email","al_tayebat_phone","al_tayebat_name","al_tayebat_role"].forEach(k => localStorage.removeItem(k));
     setFirebaseSignedIn(false);
-    if (clerkSignedIn) {
-      window.location.href = "/";
-    } else {
-      window.location.reload();
-    }
+    setVendorId(null);
+    try { await signOut(); } catch {}
+    setLocation("/auth");
   };
 
   const { data: orders } = useListOrders(
@@ -190,6 +205,22 @@ export default function Account() {
             );
           })}
         </div>
+
+        {/* Vendor dashboard link (only for signed-in users with a vendor profile) */}
+        {isSignedIn && vendorId && (
+          <Link href="/vendor-dashboard">
+            <div className="bg-background rounded-2xl border border-primary/30 overflow-hidden shadow-sm px-4 py-4 flex items-center gap-3 hover:bg-primary/5 transition-colors cursor-pointer">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Store className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <span className="font-bold text-sm block">إدارة متجري</span>
+                <span className="text-[11px] text-muted-foreground">أضف وعدّل واحذف منتجاتك</span>
+              </div>
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </Link>
+        )}
 
         {/* Admin link */}
         <Link href="/admin">

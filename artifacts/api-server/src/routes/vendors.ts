@@ -1,9 +1,140 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { vendorProfilesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { vendorProfilesTable, productsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router = Router();
+
+router.get("/vendors/by-user/:userId", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid userId" });
+    const [vendor] = await db.select().from(vendorProfilesTable)
+      .where(eq(vendorProfilesTable.userId, userId)).limit(1);
+    if (!vendor) return res.status(404).json({ error: "No vendor profile" });
+    res.json(vendor);
+  } catch (err) {
+    req.log.error({ err }, "Failed to get vendor by user");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/vendors/:id/products", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const rows = await db.select().from(productsTable)
+      .where(eq(productsTable.vendorId, id))
+      .orderBy(desc(productsTable.createdAt));
+    res.json(rows.map(p => ({
+      ...p,
+      price: Number(p.price),
+      originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
+      protein: p.protein ? Number(p.protein) : null,
+      carbs: p.carbs ? Number(p.carbs) : null,
+      fats: p.fats ? Number(p.fats) : null,
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list vendor products");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+async function ensureVendorApproved(vendorId: number) {
+  const [v] = await db.select().from(vendorProfilesTable)
+    .where(eq(vendorProfilesTable.id, vendorId)).limit(1);
+  return v && v.status === "approved" ? v : null;
+}
+
+router.post("/vendors/:id/products", async (req, res) => {
+  try {
+    const vendorId = parseInt(req.params.id);
+    const vendor = await ensureVendorApproved(vendorId);
+    if (!vendor) return res.status(403).json({ error: "متجرك بانتظار موافقة الإدارة" });
+    const { nameAr, name, descriptionAr, description, price, originalPrice,
+      categoryId, imageUrl, isKeto, isOrganic, weightOrVolume, inStock,
+      calories, protein, carbs, fats } = req.body;
+    if (!nameAr || !name || !price || !categoryId) {
+      return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
+    }
+    const [product] = await db.insert(productsTable).values({
+      vendorId, nameAr, name,
+      descriptionAr: descriptionAr || null, description: description || null,
+      price: String(price),
+      originalPrice: originalPrice ? String(originalPrice) : null,
+      categoryId: Number(categoryId),
+      imageUrl: imageUrl || null,
+      isKeto: Boolean(isKeto), isOrganic: Boolean(isOrganic),
+      isFeatured: false, isBestseller: false,
+      weightOrVolume: weightOrVolume || null,
+      inStock: inStock !== false,
+      calories: calories ? Number(calories) : null,
+      protein: protein ? String(protein) : null,
+      carbs: carbs ? String(carbs) : null,
+      fats: fats ? String(fats) : null,
+    }).returning();
+    res.status(201).json({ ...product, price: Number(product.price) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to create vendor product");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
+  try {
+    const vendorId = parseInt(req.params.vendorId);
+    const productId = parseInt(req.params.productId);
+    const vendor = await ensureVendorApproved(vendorId);
+    if (!vendor) return res.status(403).json({ error: "غير مصرّح" });
+    const [existing] = await db.select().from(productsTable)
+      .where(eq(productsTable.id, productId)).limit(1);
+    if (!existing || existing.vendorId !== vendorId) {
+      return res.status(404).json({ error: "المنتج غير موجود" });
+    }
+    const { nameAr, name, descriptionAr, description, price, originalPrice,
+      categoryId, imageUrl, isKeto, isOrganic, weightOrVolume, inStock,
+      calories, protein, carbs, fats } = req.body;
+    const [updated] = await db.update(productsTable).set({
+      ...(nameAr && { nameAr }),
+      ...(name && { name }),
+      ...(descriptionAr !== undefined && { descriptionAr }),
+      ...(description !== undefined && { description }),
+      ...(price !== undefined && { price: String(price) }),
+      ...(originalPrice !== undefined && { originalPrice: originalPrice ? String(originalPrice) : null }),
+      ...(categoryId !== undefined && { categoryId: Number(categoryId) }),
+      ...(imageUrl !== undefined && { imageUrl }),
+      ...(isKeto !== undefined && { isKeto: Boolean(isKeto) }),
+      ...(isOrganic !== undefined && { isOrganic: Boolean(isOrganic) }),
+      ...(weightOrVolume !== undefined && { weightOrVolume }),
+      ...(inStock !== undefined && { inStock: Boolean(inStock) }),
+      ...(calories !== undefined && { calories: calories === "" || calories === null ? null : Number(calories) }),
+      ...(protein !== undefined && { protein: protein === "" || protein === null ? null : String(protein) }),
+      ...(carbs !== undefined && { carbs: carbs === "" || carbs === null ? null : String(carbs) }),
+      ...(fats !== undefined && { fats: fats === "" || fats === null ? null : String(fats) }),
+    }).where(eq(productsTable.id, productId)).returning();
+    res.json({ ...updated, price: Number(updated.price) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update vendor product");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/vendors/:vendorId/products/:productId", async (req, res) => {
+  try {
+    const vendorId = parseInt(req.params.vendorId);
+    const productId = parseInt(req.params.productId);
+    const [existing] = await db.select().from(productsTable)
+      .where(eq(productsTable.id, productId)).limit(1);
+    if (!existing || existing.vendorId !== vendorId) {
+      return res.status(404).json({ error: "المنتج غير موجود" });
+    }
+    await db.delete(productsTable).where(eq(productsTable.id, productId));
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete vendor product");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/vendors", async (req, res) => {
   try {
