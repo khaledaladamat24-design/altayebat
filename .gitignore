@@ -71,3 +71,4 @@ key.properties
 .firebase/
 firebase-debug.log
 firestore-debug.log
+.local/keystore/

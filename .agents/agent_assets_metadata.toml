@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "58kDO-dPtdkRg82rlASwH"
@@ -30,3 +29,15 @@ id = "vzHKT8bLM7QGoD9rLzwKQ"
 uri = "file://artifacts/al-tayebat/public/images/drinks.png"
 type = "image"
 title = "healthy drinks category"
+
+[[outputs]]
+id = "a03_K246Ovs9zmF0ZBe4X"
+uri = "file://.local/keystore/al-tayebat-keystore-bundle.tar.gz"
+type = "unspecified"
+title = "🔑 al-tayebat-keystore-bundle.tar.gz (keystore + base64 + password)"
+
+[[outputs]]
+id = "1AbKlgIuF5NZirrs1jW78"
+uri = "file://.local/keystore/credentials.txt"
+type = "text"
+title = "🔐 credentials.txt (كلمة السر)"
