@@ -11,6 +11,12 @@ import { setBaseUrl } from "@workspace/api-client-react";
 // Set VITE_API_BASE_URL (e.g. https://your-app.replit.app/api) for native builds.
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
 if (apiBaseUrl) setBaseUrl(apiBaseUrl);
+
+// Detect Capacitor native shell — affects router base and Clerk proxy config.
+const isNative =
+  typeof window !== "undefined" &&
+  !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+    .Capacitor?.isNativePlatform?.();
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import Home from "@/pages/home";
@@ -100,7 +106,7 @@ function App() {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
-      {...(import.meta.env.PROD ? { proxyUrl: "/api/__clerk" } : {})}
+      {...(import.meta.env.PROD && !isNative ? { proxyUrl: "/api/__clerk" } : {})}
       appearance={{
         variables: {
           colorPrimary: "hsl(152 41% 30%)",
@@ -112,7 +118,7 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <WouterRouter base={isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
           </WouterRouter>
           <Toaster position="top-center" rtl={true} />
