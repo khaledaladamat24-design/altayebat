@@ -3,16 +3,43 @@ import {
   ChevronLeft, MapPin, Heart, Package, Globe, Settings,
   CreditCard, Zap, Gift, UserCircle,
 } from "lucide-react";
-import { useUser, useClerk, useAuth } from "@clerk/react";
+import { useUser, useAuth } from "@clerk/react";
+import { LogOut } from "lucide-react";
 import { useListOrders } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
+import { useEffect, useState } from "react";
 
 export default function Account() {
   const [, setLocation] = useLocation();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn: clerkSignedIn } = useAuth();
   const { user } = useUser();
-  const { openSignIn } = useClerk();
   const sessionId = useSession();
+
+  const [firebaseSignedIn, setFirebaseSignedIn] = useState(
+    () => !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
+  );
+  useEffect(() => {
+    const check = () => setFirebaseSignedIn(
+      !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
+    );
+    window.addEventListener("storage", check);
+    window.addEventListener("focus", check);
+    return () => {
+      window.removeEventListener("storage", check);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
+  const isSignedIn = clerkSignedIn || firebaseSignedIn;
+
+  const handleSignOut = () => {
+    ["al_tayebat_firebase_uid","al_tayebat_user_id","al_tayebat_vendor_id","al_tayebat_email","al_tayebat_phone","al_tayebat_name","al_tayebat_role","al_tayebat_onboarded_v2"].forEach(k => localStorage.removeItem(k));
+    setFirebaseSignedIn(false);
+    if (clerkSignedIn) {
+      window.location.href = "/";
+    } else {
+      window.location.reload();
+    }
+  };
 
   const { data: orders } = useListOrders(
     { sessionId },
@@ -61,10 +88,20 @@ export default function Account() {
               </button>
             </div>
           </div>
-          {/* Support icon */}
-          <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
-            <span className="text-lg">🎧</span>
-          </div>
+          {/* Sign out / Support */}
+          {isSignedIn ? (
+            <button
+              onClick={handleSignOut}
+              title="تسجيل الخروج"
+              className="w-10 h-10 rounded-full border border-destructive/30 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
+              <span className="text-lg">🎧</span>
+            </div>
+          )}
         </div>
       </div>
 
