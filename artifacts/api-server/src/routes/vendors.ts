@@ -195,7 +195,7 @@ router.post("/vendors", async (req, res) => {
       deliveryFeeFixed: deliveryFeeFixed || "1.500",
       deliveryZones: deliveryZones ? JSON.stringify(deliveryZones) : null,
       freeDeliveryAbove: freeDeliveryAbove || "20.000",
-      status: "pending",
+      status: "approved",
     }).returning();
 
     res.status(201).json(vendor);
