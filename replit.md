@@ -59,6 +59,15 @@
 - Products route must declare `/featured` and `/bestsellers` BEFORE `/:id` to avoid routing conflicts
 - Cart uses sessionId from localStorage key `al_tayebat_session`
 
+## Android (Capacitor)
+
+- Native shell config: `artifacts/al-tayebat/capacitor.config.ts` (appId `com.altayebat.app`, name "الطيبات")
+- CI: `.github/workflows/android-build.yml` builds a debug APK on every push to `main` and is downloadable from the workflow run's Artifacts panel
+- For native builds, `VITE_API_BASE_URL` must point to the deployed Replit API (e.g. `https://<your-app>.replit.app/api`) — relative `/api` URLs won't reach the backend from the device filesystem
+- Required GitHub repo secrets: `VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_FIREBASE_*` (6 values)
+- Local Android build (needs Android Studio + JDK 21): `pnpm --filter @workspace/al-tayebat cap:add:android` once, then `pnpm --filter @workspace/al-tayebat cap:sync` before each rebuild
+- For Play Store release: generate a keystore, add 4 keystore secrets to the repo, then uncomment the "signed release build" block in the workflow
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

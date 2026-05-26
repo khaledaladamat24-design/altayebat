@@ -3,7 +3,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.altayebat.app",
   appName: "الطيبات",
-  webDir: "dist",
+  webDir: "dist/public",
   android: {
     allowMixedContent: false,
   },
