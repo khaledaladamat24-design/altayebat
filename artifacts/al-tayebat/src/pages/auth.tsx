@@ -266,11 +266,18 @@ export default function Auth() {
           </button>
           <div>
             <h2 className="text-2xl font-black">رقم الهاتف</h2>
-            <p className="text-muted-foreground text-sm mt-1">أدخل رقمك مع مفتاح الدولة</p>
+            <p className="text-muted-foreground text-sm mt-1">أدخل رقمك الأردني (يبدأ بـ 07) — سيُضاف +962 تلقائياً</p>
           </div>
           <div className="relative">
             <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input type="tel" placeholder="+962791234567" value={phone} onChange={e => setPhone(e.target.value)}
+            <input type="tel" placeholder="07XXXXXXXX" value={phone} onChange={e => {
+              let v = e.target.value.replace(/[^\d+]/g, "");
+              if (v.startsWith("00962")) v = "+" + v.slice(2);
+              else if (v.startsWith("962") && !v.startsWith("+962")) v = "+" + v;
+              else if (v.startsWith("0")) v = "+962" + v.slice(1);
+              else if (/^7\d/.test(v)) v = "+962" + v;
+              setPhone(v);
+            }}
               className="w-full h-14 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 text-lg outline-none focus:border-primary transition-colors" dir="ltr" />
           </div>
 

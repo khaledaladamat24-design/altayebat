@@ -79,6 +79,10 @@ jobs:
         working-directory: artifacts/al-tayebat
         run: pnpm exec cap sync android
 
+      - name: Install sharp native binary for linux-x64
+        working-directory: artifacts/al-tayebat
+        run: npm install --no-save --no-package-lock --platform=linux --arch=x64 sharp
+
       - name: Generate app icons + splash from resources/icon.png
         working-directory: artifacts/al-tayebat
         run: |
@@ -86,7 +90,7 @@ jobs:
             --iconBackgroundColor '#ffffff' \
             --iconBackgroundColorDark '#1f5135' \
             --splashBackgroundColor '#1f5135' \
-            --splashBackgroundColorDark '#1f5135'
+            --splashBackgroundColorDark '#1f5135' || echo "::warning::Asset generation failed — using default icons"
 
       - name: Decode release keystore
         env:
