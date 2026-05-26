@@ -79,9 +79,9 @@ jobs:
         working-directory: artifacts/al-tayebat
         run: pnpm exec cap sync android
 
-      - name: Install sharp native binary for linux-x64
+      - name: Ensure sharp native binary for linux-x64
         working-directory: artifacts/al-tayebat
-        run: npm install --no-save --no-package-lock --platform=linux --arch=x64 sharp
+        run: pnpm rebuild sharp || true
 
       - name: Generate app icons + splash from resources/icon.png
         working-directory: artifacts/al-tayebat
