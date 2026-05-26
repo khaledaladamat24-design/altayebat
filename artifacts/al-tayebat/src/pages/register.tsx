@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth, useUser } from "@clerk/react";
 import { Store, ShoppingBag, ChevronLeft, Loader2, CheckCircle2, Building2, Phone, MapPin, CreditCard, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { apiUrl } from "@/lib/api-url";
 
 type Step = "role" | "vendor-details" | "vendor-payout" | "done";
 
@@ -58,7 +59,7 @@ export default function Register() {
     if (!id.email && !id.phone) {
       throw new Error("لم نجد بريد إلكتروني أو رقم هاتف — يرجى تسجيل الدخول أولاً");
     }
-    const res = await fetch("/api/users/profile", {
+    const res = await fetch(apiUrl("/api/users/profile"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...id, role: r }),
@@ -98,7 +99,7 @@ export default function Register() {
       const userProfile = await saveUserProfile("vendor");
       if (!userProfile?.id) throw new Error("لم نتمكن من إنشاء حساب المورد");
 
-      const vRes = await fetch("/api/vendors", {
+      const vRes = await fetch(apiUrl("/api/vendors"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

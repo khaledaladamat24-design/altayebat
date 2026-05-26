@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useListCategories, useListProducts } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { useAuth, useUser } from "@clerk/react";
+import { apiUrl } from "@/lib/api-url";
 
 const ADMIN_PASSWORD = "tayebat2024";
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
@@ -76,13 +77,13 @@ export default function Admin() {
     setLoadingData(true);
     try {
       if (tab === "orders") {
-        const res = await fetch("/api/admin/orders", { headers: adminHeaders });
+        const res = await fetch(apiUrl("/api/admin/orders"), { headers: adminHeaders });
         setOrders(await res.json());
       } else if (tab === "users") {
-        const res = await fetch("/api/admin/users", { headers: adminHeaders });
+        const res = await fetch(apiUrl("/api/admin/users"), { headers: adminHeaders });
         setUsers(await res.json());
       } else if (tab === "vendors") {
-        const res = await fetch("/api/admin/vendors", { headers: adminHeaders });
+        const res = await fetch(apiUrl("/api/admin/vendors"), { headers: adminHeaders });
         setVendors(await res.json());
       }
     } catch { toast.error("فشل تحميل البيانات"); }
@@ -105,7 +106,7 @@ export default function Admin() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/products", {
+      const res = await fetch(apiUrl("/api/admin/products"), {
         method: "POST",
         headers: adminHeaders,
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import { useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { Mail, Phone, Eye, EyeOff, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { isConfigured, auth } from "@/lib/firebase";
+import { apiUrl } from "@/lib/api-url";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 
 type Mode = "landing" | "email-login" | "email-signup" | "phone-input" | "otp-email" | "otp-phone";
@@ -161,7 +162,7 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_firebase_uid", result.user.uid);
         localStorage.setItem("al_tayebat_phone", phone);
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
-        const res = await fetch("/api/users/profile", {
+        const res = await fetch(apiUrl("/api/users/profile"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ firebaseUid: result.user.uid, phone, role: "consumer" }),
