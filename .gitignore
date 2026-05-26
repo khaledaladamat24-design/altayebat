@@ -72,3 +72,6 @@ key.properties
 firebase-debug.log
 firestore-debug.log
 .local/keystore/
+
+# GitHub Actions workflows — managed manually on GitHub (Replit OAuth lacks workflow scope)
+.github/workflows/
