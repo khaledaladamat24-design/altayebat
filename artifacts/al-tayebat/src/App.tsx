@@ -4,6 +4,13 @@ import { ClerkProvider } from "@clerk/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
+import { setBaseUrl } from "@workspace/api-client-react";
+
+// In Capacitor/Android builds, the web bundle is served from the local
+// filesystem so relative `/api` URLs do not reach the Replit backend.
+// Set VITE_API_BASE_URL (e.g. https://your-app.replit.app/api) for native builds.
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+if (apiBaseUrl) setBaseUrl(apiBaseUrl);
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import Home from "@/pages/home";

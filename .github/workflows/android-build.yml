@@ -1,0 +1,105 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/al-tayebat/**"
+      - "lib/**"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/android-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web bundle
+        working-directory: artifacts/al-tayebat
+        env:
+          PORT: "5173"
+          BASE_PATH: "./"
+          NODE_ENV: "production"
+        run: pnpm run build
+
+      - name: Add Android platform (if missing)
+        working-directory: artifacts/al-tayebat
+        run: |
+          if [ ! -d "android" ]; then
+            pnpm exec cap add android
+          fi
+
+      - name: Sync Capacitor
+        working-directory: artifacts/al-tayebat
+        run: pnpm exec cap sync android
+
+      - name: Build debug APK
+        working-directory: artifacts/al-tayebat/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: al-tayebat-debug-apk
+          path: artifacts/al-tayebat/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # ─── Optional: signed release build ───────────────────────────
+      # Uncomment after you generate a keystore and upload these secrets:
+      #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+      #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+      #
+      # - name: Decode keystore
+      #   run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > artifacts/al-tayebat/android/app/release.keystore
+      #
+      # - name: Build release AAB
+      #   working-directory: artifacts/al-tayebat/android
+      #   env:
+      #     KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      #     KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      #     KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      #   run: ./gradlew bundleRelease
+      #
+      # - name: Upload AAB
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: al-tayebat-release-aab
+      #     path: artifacts/al-tayebat/android/app/build/outputs/bundle/release/*.aab
