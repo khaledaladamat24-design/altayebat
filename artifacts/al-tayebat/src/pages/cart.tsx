@@ -20,14 +20,13 @@ export default function Cart() {
   const updateCartItem = useUpdateCartItem();
   const removeFromCart = useRemoveFromCart();
 
-  const handleUpdateQuantity = (productId: number, quantity: number) => {
+  const handleUpdateQuantity = (itemId: number, quantity: number) => {
     if (quantity < 1) {
-      handleRemove(productId);
+      handleRemove(itemId);
       return;
     }
-    
     updateCartItem.mutate(
-      { productId, data: { quantity }, params: { sessionId } },
+      { itemId, data: { quantity } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
@@ -36,9 +35,9 @@ export default function Cart() {
     );
   };
 
-  const handleRemove = (productId: number) => {
+  const handleRemove = (itemId: number) => {
     removeFromCart.mutate(
-      { productId, params: { sessionId } },
+      { itemId },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
@@ -99,7 +98,7 @@ export default function Cart() {
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-bold text-sm line-clamp-2">{item.productNameAr}</h3>
                     <button 
-                      onClick={() => handleRemove(item.productId)}
+                      onClick={() => handleRemove(item.id)}
                       className="text-muted-foreground hover:text-destructive p-1"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -116,7 +115,7 @@ export default function Cart() {
                         variant="ghost" 
                         size="icon" 
                         className="h-7 w-7 rounded-md" 
-                        onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                         disabled={updateCartItem.isPending}
                       >
                         <Minus className="h-3 w-3" />
@@ -126,7 +125,7 @@ export default function Cart() {
                         variant="ghost" 
                         size="icon" 
                         className="h-7 w-7 rounded-md" 
-                        onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                         disabled={updateCartItem.isPending}
                       >
                         <Plus className="h-3 w-3" />

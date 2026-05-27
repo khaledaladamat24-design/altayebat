@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
-  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X,
+  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,19 @@ export default function Settings() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [showAddrModal, setShowAddrModal] = useState(false);
+  const [city, setCity] = useState(() => localStorage.getItem("al_tayebat_city") || "");
+  const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("al_tayebat_address") || "");
+  const savedAddrLabel = [city, neighborhood].filter(Boolean).join("، ") || "لم يُحدَّد";
+
+  const handleSaveAddress = () => {
+    if (!city.trim()) { toast.error("اختر المدينة"); return; }
+    localStorage.setItem("al_tayebat_city", city.trim());
+    localStorage.setItem("al_tayebat_address", neighborhood.trim());
+    toast.success("تم حفظ العنوان");
+    setShowAddrModal(false);
+  };
 
   const handleClearCache = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("al_tayebat_") && k !== "al_tayebat_session");
@@ -93,6 +106,14 @@ export default function Settings() {
   };
 
   const rows = [
+    {
+      icon: MapPin,
+      label: "عنوان التوصيل",
+      iconColor: "text-rose-500",
+      iconBg: "bg-rose-50",
+      suffix: savedAddrLabel,
+      onPress: () => setShowAddrModal(true),
+    },
     ...(signedIn ? [{
       icon: KeyRound,
       label: "تغيير كلمة المرور",
@@ -212,6 +233,34 @@ export default function Settings() {
               <Button onClick={handleChangePassword} disabled={pwSaving} className="w-full h-12 rounded-xl mt-2">
                 {pwSaving ? "جاري الحفظ..." : "حفظ كلمة المرور الجديدة"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Address modal */}
+      {showAddrModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowAddrModal(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-black text-lg">عنوان التوصيل</h2>
+              <button onClick={() => setShowAddrModal(false)} className="p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">المدينة</label>
+                <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-11 rounded-md bg-muted px-3 text-sm" dir="rtl">
+                  <option value="">— اختر المدينة —</option>
+                  {["عمان","الزرقاء","إربد","العقبة","المفرق","الكرك","مادبا","السلط","جرش","عجلون","الطفيلة","معان"].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">الحي / المنطقة (اختياري)</label>
+                <Input value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="مثال: دابوق، الشميساني..." className="h-11 bg-muted border-none" dir="rtl" />
+              </div>
+              <Button onClick={handleSaveAddress} className="w-full h-12 rounded-xl mt-2">حفظ العنوان</Button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useListBanners, useListCategories, useListFeaturedProducts, useListBestsellers } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Search, MapPin, ChevronLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,13 @@ export default function Home() {
   const { data: featuredProducts, isLoading: loadingFeatured } = useListFeaturedProducts();
   const { data: bestsellers, isLoading: loadingBestsellers } = useListBestsellers();
 
+  const [address, setAddress] = useState<string>("");
+  useEffect(() => {
+    const a = localStorage.getItem("al_tayebat_address") || "";
+    const city = localStorage.getItem("al_tayebat_city") || "";
+    setAddress([city, a].filter(Boolean).join("، ") || "");
+  }, []);
+
   return (
     <div className="pb-8">
       {/* Header */}
@@ -19,10 +27,14 @@ export default function Home() {
           <div className="bg-rose/20 rounded-full p-1">
             <MapPin className="w-4 h-4 text-rose-soft" />
           </div>
-          <div>
-            <p className="text-xs text-primary-foreground/70">التوصيل إلى</p>
-            <p className="font-bold text-sm">عمان، دابوق</p>
-          </div>
+          <Link href="/settings">
+            <div className="cursor-pointer">
+              <p className="text-xs text-primary-foreground/70">التوصيل إلى</p>
+              <p className="font-bold text-sm">
+                {address || "أضف عنوانك ←"}
+              </p>
+            </div>
+          </Link>
         </div>
 
         <Link href="/search">
