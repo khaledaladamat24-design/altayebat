@@ -29,6 +29,7 @@ export default function Auth() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [otp, setOtp] = useState("");
@@ -118,6 +119,7 @@ export default function Auth() {
     if (!firstName.trim()) { toast.error("أدخل الاسم الأول"); return; }
     if (!email) { toast.error("أدخل البريد الإلكتروني"); return; }
     if (password.length < 8) { toast.error("كلمة المرور 8 أحرف على الأقل"); return; }
+    if (password !== password2) { toast.error("كلمتا المرور غير متطابقتين"); return; }
     if (!signUpLoaded) {
       toast.error("خدمة التسجيل لم تكتمل التحميل بعد. أعد المحاولة بعد ثانيتين.");
       console.error("[signup] Clerk signUp not loaded yet");
@@ -470,6 +472,21 @@ export default function Auth() {
             <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور (8 أحرف على الأقل)"
               value={password} onChange={e => setPassword(e.target.value)}
               className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary" dir="ltr" />
+          </div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="تأكيد كلمة المرور"
+              value={password2}
+              onChange={e => setPassword2(e.target.value)}
+              className={`w-full h-12 rounded-xl border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary ${
+                password2 && password2 !== password ? "border-red-400" : "border-border"
+              }`}
+              dir="ltr"
+            />
+            {password2 && password2 !== password && (
+              <p className="text-xs text-red-500 mt-1 pr-1">كلمتا المرور غير متطابقتين</p>
+            )}
           </div>
           <RememberMeBox />
           <button onClick={handleEmailSignup} disabled={loading || !signUpLoaded}

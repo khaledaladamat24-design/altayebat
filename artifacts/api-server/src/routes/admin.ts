@@ -6,11 +6,23 @@ import { eq, desc } from "drizzle-orm";
 const router = Router();
 
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+const FALLBACK_ADMIN_PASSWORD = "tayebat2024";
+
+function getAdminPassword(): string {
+  const env = process.env.ADMIN_PASSWORD;
+  if (env && env.length > 0) return env;
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[admin] ⚠️  ADMIN_PASSWORD env secret is not set — falling back to the legacy default. " +
+    "Set ADMIN_PASSWORD as a Replit Secret to secure the admin panel."
+  );
+  return FALLBACK_ADMIN_PASSWORD;
+}
 
 function isAdmin(req: Parameters<Parameters<typeof router.use>[0]>[0]): boolean {
   const adminEmail = req.headers["x-admin-email"] as string | undefined;
   const adminKey = req.headers["x-admin-key"] as string | undefined;
-  return adminKey === "tayebat2024" || adminEmail === SUPER_ADMIN_EMAIL;
+  return adminKey === getAdminPassword() || adminEmail === SUPER_ADMIN_EMAIL;
 }
 
 router.post("/admin/products", async (req, res) => {

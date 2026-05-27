@@ -9,8 +9,8 @@ import { toast } from "sonner";
 import { useAuth, useUser } from "@clerk/react";
 import { apiUrl } from "@/lib/api-url";
 
-const ADMIN_PASSWORD = "tayebat2024";
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+const ADMIN_PW_KEY = "al_tayebat_admin_pw";
 
 type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors";
 
@@ -41,8 +41,9 @@ export default function Admin() {
 
   const isSuperAdmin = user?.primaryEmailAddress?.emailAddress === SUPER_ADMIN_EMAIL;
 
+  const [adminKey, setAdminKey] = useState<string>(() => sessionStorage.getItem(ADMIN_PW_KEY) || "");
   const [authed, setAuthed] = useState(() =>
-    sessionStorage.getItem("admin_auth") === "1" || isSuperAdmin
+    !!sessionStorage.getItem(ADMIN_PW_KEY) || isSuperAdmin
   );
   const [pw, setPw] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,7 +66,13 @@ export default function Admin() {
     calories: "", protein: "", carbs: "", fats: "",
   });
 
-  const adminHeaders = { "Content-Type": "application/json", "x-admin-key": ADMIN_PASSWORD };
+  const adminHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(adminKey ? { "x-admin-key": adminKey } : {}),
+    ...(isSuperAdmin && user?.primaryEmailAddress?.emailAddress
+      ? { "x-admin-email": user.primaryEmailAddress.emailAddress }
+      : {}),
+  };
 
   useEffect(() => {
     if (authed && (tab === "orders" || tab === "users" || tab === "vendors")) {
@@ -90,12 +97,27 @@ export default function Admin() {
     setLoadingData(false);
   };
 
-  const handleLogin = () => {
-    if (pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem("admin_auth", "1");
+  const handleLogin = async () => {
+    if (!pw) { toast.error("أدخل كلمة المرور"); return; }
+    // Verify against the backend by hitting a protected endpoint with the entered password
+    try {
+      const res = await fetch(apiUrl("/api/admin/orders"), {
+        headers: { "Content-Type": "application/json", "x-admin-key": pw },
+      });
+      if (res.status === 401 || res.status === 403) {
+        toast.error("كلمة المرور غير صحيحة");
+        return;
+      }
+      if (!res.ok) {
+        toast.error("تعذّر التحقق — حاول مرة أخرى");
+        return;
+      }
+      sessionStorage.setItem(ADMIN_PW_KEY, pw);
+      setAdminKey(pw);
       setAuthed(true);
-    } else {
-      toast.error("كلمة المرور غير صحيحة");
+      setPw("");
+    } catch {
+      toast.error("فشل الاتصال بالخادم");
     }
   };
 
