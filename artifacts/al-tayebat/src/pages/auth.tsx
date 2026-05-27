@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useClerk, useSignIn, useSignUp } from "@clerk/react";
+import { useClerk } from "@clerk/react";
+import { useSignIn, useSignUp } from "@clerk/react/legacy";
 import { Mail, Phone, Eye, EyeOff, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { isConfigured, auth } from "@/lib/firebase";
