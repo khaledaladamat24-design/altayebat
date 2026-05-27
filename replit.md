@@ -60,6 +60,7 @@
 - Cart uses sessionId from localStorage key `al_tayebat_session`
 - **Admin password is the `ADMIN_PASSWORD` Replit Secret.** Backend falls back to legacy `tayebat2024` with a console warning if the secret is unset. Frontend never hardcodes it — the user types it on the `/admin` login page and it's cached in `sessionStorage` under `al_tayebat_admin_pw`. The super-admin email (`khaledaladamat24@gmail.com`) still bypasses the password.
 - **Checkout payment info** (CliQ alias + wallet number) is fetched live from the vendor of the first product in the cart via `/api/products/:id` → `/api/vendors/:vendorId`. If the vendor hasn't set them, the corresponding payment options are shown as disabled and only "الدفع عند الاستلام" remains available. This assumes single-vendor carts.
+- **Internal wallet** (`/wallet`): users top up via CliQ/e-wallet to platform numbers `PLATFORM_CLIQ_ALIAS` / `PLATFORM_WALLET_NUMBER` (env), upload a screenshot, admin approves in the "المحفظة" tab of `/admin`. Approved top-ups increase `wallets.balance`. Checkout adds a 4th payment method "الدفع من رصيد محفظتي" — disabled when balance < total. Balance deduction uses an atomic conditional UPDATE (`balance >= amount`) for race-safety, and is idempotent per `orderId` so a double-submit can't double-charge. `/api/wallet/:userId/*` endpoints are gated by Clerk session check that resolves the signed-in Clerk userId → `users.clerkId` → DB id and rejects mismatched access (admins bypass via `x-admin-email`).
 
 ## Android (Capacitor)
 

@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useClerk } from "@clerk/react";
+import { useClerk, useAuth } from "@clerk/react";
 import { useSignIn, useSignUp } from "@clerk/react/legacy";
 import { Mail, Phone, Eye, EyeOff, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { isConfigured, auth } from "@/lib/firebase";
 import { apiUrl } from "@/lib/api-url";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
+
+const REMEMBER_EMAIL_KEY = "al_tayebat_remember_email";
+const REMEMBER_PHONE_KEY = "al_tayebat_remember_phone";
 
 type Mode = "landing" | "email-login" | "email-signup" | "phone-input" | "otp-email" | "otp-phone";
 
@@ -20,12 +23,13 @@ declare global {
 export default function Auth() {
   const [, setLocation] = useLocation();
   const { openSignIn } = useClerk();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const { signIn, isLoaded: signInLoaded, setActive: setActiveSignIn } = useSignIn();
   const { signUp, isLoaded: signUpLoaded, setActive: setActiveSignUp } = useSignUp();
 
   const [mode, setMode] = useState<Mode>("landing");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem(REMEMBER_EMAIL_KEY) || "");
+  const [phone, setPhone] = useState(() => localStorage.getItem(REMEMBER_PHONE_KEY) || "");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +42,24 @@ export default function Auth() {
   const recaptchaRef = useRef<HTMLDivElement>(null);
 
   const firebaseEnabled = isConfigured();
+
+  // Auto-login: if a Clerk session is already active when opening the auth page,
+  // skip straight to the home screen. This is what makes "Remember me" feel automatic
+  // — Clerk persists the session across app launches, so returning users never see
+  // the login form again unless they explicitly sign out.
+  useEffect(() => {
+    if (authLoaded && isSignedIn) {
+      localStorage.setItem("al_tayebat_onboarded_v2", "1");
+      setLocation("/");
+    }
+  }, [authLoaded, isSignedIn, setLocation]);
+
+  // Persist or clear remembered identifier based on the rememberMe toggle.
+  const persistRemembered = (kind: "email" | "phone", value: string) => {
+    const key = kind === "email" ? REMEMBER_EMAIL_KEY : REMEMBER_PHONE_KEY;
+    if (rememberMe && value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  };
 
   useEffect(() => {
     return () => {
@@ -76,6 +98,7 @@ export default function Auth() {
             await setActiveSignIn({ session: r.createdSessionId });
             localStorage.setItem("al_tayebat_email", email);
             localStorage.setItem("al_tayebat_onboarded_v2", "1");
+            persistRemembered("email", email);
             toast.success("مرحباً بك في الطيبات!");
             setLocation("/");
             setLoading(false);
@@ -190,6 +213,7 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_email", email);
           if (firstName || lastName) localStorage.setItem("al_tayebat_name", `${firstName} ${lastName}`.trim());
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
+          persistRemembered("email", email);
           toast.success("تم إنشاء حسابك بنجاح 🎉");
           setLocation("/register");
         }
@@ -201,6 +225,7 @@ export default function Auth() {
           }
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
+          persistRemembered("email", email);
           toast.success("مرحباً بك في الطيبات!");
           setLocation("/");
         }
@@ -261,6 +286,7 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_firebase_uid", result.user.uid);
         localStorage.setItem("al_tayebat_phone", phone);
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
+        persistRemembered("phone", phone);
         const res = await fetch(apiUrl("/api/users/profile"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },

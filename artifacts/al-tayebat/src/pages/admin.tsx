@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown } from "lucide-react";
+import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,13 @@ import { apiUrl } from "@/lib/api-url";
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
 const ADMIN_PW_KEY = "al_tayebat_admin_pw";
 
-type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors";
+type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors" | "wallet";
+
+interface AdminWalletTx {
+  id: number; userId: number; type: string; amount: number; status: string;
+  description: string | null; paymentMethod: string | null;
+  screenshotUrl: string | null; orderId: number | null; createdAt: string;
+}
 
 interface AdminOrder {
   id: number; sessionId: string | null; status: string; paymentMethod: string;
@@ -53,6 +59,7 @@ export default function Admin() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [vendors, setVendors] = useState<AdminVendor[]>([]);
+  const [walletTxs, setWalletTxs] = useState<AdminWalletTx[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(null);
 
@@ -75,7 +82,7 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (authed && (tab === "orders" || tab === "users" || tab === "vendors")) {
+    if (authed && (tab === "orders" || tab === "users" || tab === "vendors" || tab === "wallet")) {
       fetchTabData();
     }
   }, [authed, tab]);
@@ -92,6 +99,9 @@ export default function Admin() {
       } else if (tab === "vendors") {
         const res = await fetch(apiUrl("/api/admin/vendors"), { headers: adminHeaders });
         setVendors(await res.json());
+      } else if (tab === "wallet") {
+        const res = await fetch(apiUrl("/api/admin/wallet/transactions"), { headers: adminHeaders });
+        setWalletTxs(await res.json());
       }
     } catch { toast.error("فشل تحميل البيانات"); }
     setLoadingData(false);
@@ -239,7 +249,18 @@ export default function Admin() {
     { id: "orders", icon: ShoppingBag, label: "الطلبات" },
     { id: "vendors", icon: Store, label: "الموردون" },
     { id: "users", icon: Users, label: "المستخدمون" },
+    { id: "wallet", icon: Wallet, label: "المحفظة" },
   ];
+
+  const reviewWalletTx = async (id: number, status: "approved" | "rejected") => {
+    const res = await fetch(apiUrl(`/api/admin/wallet/transactions/${id}`), {
+      method: "PATCH", headers: adminHeaders, body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      toast.success(status === "approved" ? "تم القبول وإضافة الرصيد" : "تم الرفض");
+      fetchTabData();
+    } else toast.error("فشلت العملية");
+  };
 
   return (
     <div className="pb-8 min-h-screen bg-muted/30">
@@ -524,6 +545,50 @@ export default function Admin() {
                   <button onClick={() => handleDeleteUser(u.id)} className="text-destructive p-2 hover:bg-destructive/10 rounded-lg">
                     <Trash2 className="w-4 h-4" />
                   </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Wallet Top-up Requests ── */}
+        {tab === "wallet" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{walletTxs.length} عملية محفظة</p>
+              <button onClick={fetchTabData} className="text-xs text-primary font-bold">تحديث</button>
+            </div>
+            {loadingData ? <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div> : walletTxs.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">لا توجد طلبات شحن بعد</div>
+            ) : walletTxs.map(t => (
+              <div key={t.id} className="bg-card rounded-xl border border-border p-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.type === "topup" ? "bg-green-100 text-green-700" : "bg-rose/10 text-rose"}`}>
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm">{t.type === "topup" ? "شحن رصيد" : t.type === "payment" ? "دفع طلب" : t.type}</p>
+                      {t.status === "pending" && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Clock className="w-3 h-3" />قيد المراجعة</span>}
+                      {t.status === "approved" && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />مقبول</span>}
+                      {t.status === "rejected" && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full flex items-center gap-1"><XCircle className="w-3 h-3" />مرفوض</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">المستخدم #{t.userId} · {t.paymentMethod || "—"} · {new Date(t.createdAt).toLocaleString("ar-JO")}</p>
+                  </div>
+                  <p className="font-black text-sm shrink-0">{t.amount.toFixed(2)} د.أ</p>
+                </div>
+                {(t.screenshotUrl || t.status === "pending") && (
+                  <div className="flex gap-2 mt-3">
+                    {t.screenshotUrl && (
+                      <button onClick={() => setPreviewScreenshot(t.screenshotUrl)} className="flex-1 text-xs bg-muted hover:bg-muted/70 py-2 rounded-lg font-bold flex items-center justify-center gap-1"><Eye className="w-3 h-3" />الإيصال</button>
+                    )}
+                    {t.status === "pending" && t.type === "topup" && (
+                      <>
+                        <button onClick={() => reviewWalletTx(t.id, "approved")} className="flex-1 text-xs bg-green-600 text-white hover:bg-green-700 py-2 rounded-lg font-bold flex items-center justify-center gap-1"><Check className="w-3 h-3" />قبول</button>
+                        <button onClick={() => reviewWalletTx(t.id, "rejected")} className="flex-1 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 py-2 rounded-lg font-bold flex items-center justify-center gap-1"><XCircle className="w-3 h-3" />رفض</button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

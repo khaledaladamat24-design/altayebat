@@ -8,6 +8,7 @@ import { LogOut, Store } from "lucide-react";
 import { useListOrders } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/api-url";
 
 export default function Account() {
   const [, setLocation] = useLocation();
@@ -16,6 +17,7 @@ export default function Account() {
   const { user } = useUser();
   const sessionId = useSession();
   const [vendorId, setVendorId] = useState<string | null>(() => localStorage.getItem("al_tayebat_vendor_id"));
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const [firebaseSignedIn, setFirebaseSignedIn] = useState(
     () => !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
@@ -39,7 +41,7 @@ export default function Account() {
     if (!isSignedIn || vendorId) return;
     const userId = localStorage.getItem("al_tayebat_user_id");
     if (!userId) return;
-    fetch(`/api/vendors/by-user/${userId}`).then(async r => {
+    fetch(apiUrl(`/api/vendors/by-user/${userId}`)).then(async r => {
       if (r.ok) {
         const v = await r.json();
         localStorage.setItem("al_tayebat_vendor_id", String(v.id));
@@ -47,6 +49,19 @@ export default function Account() {
       }
     }).catch(() => {});
   }, [isSignedIn, vendorId]);
+
+  // Load wallet balance for signed-in users
+  useEffect(() => {
+    if (!isSignedIn) { setWalletBalance(null); return; }
+    const userId = localStorage.getItem("al_tayebat_user_id");
+    if (!userId) return;
+    fetch(apiUrl(`/api/wallet/${userId}`)).then(async r => {
+      if (r.ok) {
+        const d = await r.json();
+        setWalletBalance(Number(d.balance));
+      }
+    }).catch(() => {});
+  }, [isSignedIn]);
 
   const handleSignOut = async () => {
     ["al_tayebat_firebase_uid","al_tayebat_user_id","al_tayebat_vendor_id","al_tayebat_email","al_tayebat_phone","al_tayebat_name","al_tayebat_role"].forEach(k => localStorage.removeItem(k));
@@ -149,13 +164,15 @@ export default function Account() {
               </div>
             </Link>
             {/* Wallet */}
-            <div className="flex flex-col items-center py-5 gap-1.5">
-              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-green-500" />
+            <Link href={isSignedIn ? "/wallet" : "/auth"}>
+              <div className="flex flex-col items-center py-5 gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-green-500" />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground">المحفظة</span>
+                <span className="text-lg font-black">{walletBalance !== null ? walletBalance.toFixed(2) : "—"}</span>
               </div>
-              <span className="text-xs font-bold text-muted-foreground">المحفظة</span>
-              <span className="text-lg font-black">0.00</span>
-            </div>
+            </Link>
             {/* Coupons */}
             <div className="flex flex-col items-center py-5 gap-1.5">
               <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center">

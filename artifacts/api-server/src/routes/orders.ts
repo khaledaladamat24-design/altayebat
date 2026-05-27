@@ -92,7 +92,7 @@ router.post("/orders", async (req, res) => {
         sessionId,
         status: "pending",
         paymentMethod,
-        paymentStatus: paymentScreenshotUrl ? "pending" : "cod",
+        paymentStatus: paymentMethod === "balance" ? "paid" : paymentScreenshotUrl ? "pending" : "cod",
         paymentScreenshotUrl,
         subtotal: subtotal.toFixed(3),
         deliveryFee: deliveryFee.toFixed(3),

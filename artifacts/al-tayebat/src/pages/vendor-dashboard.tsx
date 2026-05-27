@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useListCategories } from "@workspace/api-client-react";
 import { toast } from "sonner";
+import { apiUrl } from "@/lib/api-url";
 
 interface VendorProfile {
   id: number;
@@ -67,11 +68,11 @@ export default function VendorDashboard() {
       try {
         let v: VendorProfile | null = null;
         if (storedVendorId) {
-          const r = await fetch(`/api/vendors/${storedVendorId}`);
+          const r = await fetch(apiUrl(`/api/vendors/${storedVendorId}`));
           if (r.ok) v = await r.json();
         }
         if (!v && userId) {
-          const r = await fetch(`/api/vendors/by-user/${userId}`);
+          const r = await fetch(apiUrl(`/api/vendors/by-user/${userId}`));
           if (r.ok) {
             v = await r.json();
             if (v) localStorage.setItem("al_tayebat_vendor_id", String(v.id));
@@ -79,7 +80,7 @@ export default function VendorDashboard() {
         }
         setVendor(v);
         if (v && v.status === "approved") {
-          const pr = await fetch(`/api/vendors/${v.id}/products`);
+          const pr = await fetch(apiUrl(`/api/vendors/${v.id}/products`));
           if (pr.ok) setProducts(await pr.json());
         }
       } catch {
@@ -92,7 +93,7 @@ export default function VendorDashboard() {
 
   const refreshProducts = async () => {
     if (!vendor) return;
-    const pr = await fetch(`/api/vendors/${vendor.id}/products`);
+    const pr = await fetch(apiUrl(`/api/vendors/${vendor.id}/products`));
     if (pr.ok) setProducts(await pr.json());
   };
 
@@ -128,8 +129,8 @@ export default function VendorDashboard() {
     setSaving(true);
     try {
       const url = editingId
-        ? `/api/vendors/${vendor.id}/products/${editingId}`
-        : `/api/vendors/${vendor.id}/products`;
+        ? apiUrl(`/api/vendors/${vendor.id}/products/${editingId}`)
+        : apiUrl(`/api/vendors/${vendor.id}/products`);
       const method = editingId ? "PATCH" : "POST";
       const body = {
         ...form,
@@ -164,7 +165,7 @@ export default function VendorDashboard() {
   const handleDelete = async (id: number, nameAr: string) => {
     if (!vendor) return;
     if (!confirm(`حذف "${nameAr}"؟`)) return;
-    const res = await fetch(`/api/vendors/${vendor.id}/products/${id}`, { method: "DELETE" });
+    const res = await fetch(apiUrl(`/api/vendors/${vendor.id}/products/${id}`), { method: "DELETE" });
     if (res.ok) {
       toast.success("تم الحذف");
       setProducts(ps => ps.filter(p => p.id !== id));

@@ -25,7 +25,7 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-type PaymentMethod = "cod" | "cliq" | "wallet";
+type PaymentMethod = "cod" | "cliq" | "wallet" | "balance";
 
 type VendorPayment = {
   cliqAlias: string | null;
@@ -50,6 +50,8 @@ export default function Checkout() {
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [screenshotName, setScreenshotName] = useState("");
   const [vendorPayment, setVendorPayment] = useState<VendorPayment>(DEFAULT_VENDOR_PAYMENT);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const userId = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_user_id") : null;
 
   const { data: cart, isLoading } = useGetCart(
     { sessionId },
@@ -106,6 +108,17 @@ export default function Checkout() {
     return () => { cancelled = true; };
   }, [cart]);
 
+  // Load internal wallet balance for signed-in users
+  useEffect(() => {
+    if (!userId) return;
+    fetch(apiUrl(`/api/wallet/${userId}`)).then(async r => {
+      if (r.ok) {
+        const d = await r.json();
+        setWalletBalance(Number(d.balance));
+      }
+    }).catch(() => {});
+  }, [userId]);
+
   const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -119,9 +132,17 @@ export default function Checkout() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!sessionId || !cart || cart.items.length === 0) return;
 
-    if (paymentMethod !== "cod" && !screenshot) {
-      toast.error("يرجى رفع إيصال الدفع لإتمام الطلب");
-      return;
+    const total = Number(cart.subtotal) + Number(cart.deliveryFee || 0);
+
+    if (paymentMethod === "cliq" || paymentMethod === "wallet") {
+      if (!screenshot) { toast.error("يرجى رفع إيصال الدفع لإتمام الطلب"); return; }
+    }
+    if (paymentMethod === "balance") {
+      if (!userId) { toast.error("سجّل دخولك لاستخدام المحفظة"); return; }
+      if (walletBalance === null || walletBalance < total) {
+        toast.error(`رصيد المحفظة غير كافٍ (${(walletBalance ?? 0).toFixed(2)} د.أ)`);
+        return;
+      }
     }
 
     localStorage.setItem("al_tayebat_name", values.customerName);
@@ -138,7 +159,22 @@ export default function Checkout() {
         } as Parameters<typeof createOrder.mutate>[0]["data"],
       },
       {
-        onSuccess: (order) => {
+        onSuccess: async (order) => {
+          // If paying from internal wallet, deduct balance right after order created
+          if (paymentMethod === "balance" && userId) {
+            try {
+              const res = await fetch(apiUrl(`/api/wallet/${userId}/pay`), {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount: total, orderId: order.id, description: `دفع طلب #${order.id}` }),
+              });
+              if (!res.ok) {
+                const b = await res.json().catch(() => ({}));
+                toast.error(b.error || "فشل خصم الرصيد — تم إنشاء الطلب لكن لم يُخصم الرصيد");
+              }
+            } catch {
+              toast.error("فشل خصم الرصيد من المحفظة");
+            }
+          }
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
           toast.success("تم تأكيد طلبك بنجاح!");
           setLocation(`/orders/${order.id}`);
@@ -243,6 +279,15 @@ export default function Checkout() {
                 sub: vendorPayment.walletNumber ? `رقم المحفظة: ${vendorPayment.walletNumber}` : "المورد لم يفعّل الدفع بالمحفظة بعد",
                 disabled: !vendorPayment.walletNumber,
               },
+              {
+                id: "balance" as PaymentMethod, icon: Wallet, label: "الدفع من رصيد محفظتي",
+                sub: !userId
+                  ? "سجّل دخولك لاستخدام رصيد محفظتك"
+                  : walletBalance === null
+                    ? "جاري التحقق من الرصيد..."
+                    : `الرصيد المتاح: ${walletBalance.toFixed(2)} د.أ`,
+                disabled: !userId || walletBalance === null || walletBalance < (Number(cart.subtotal) + Number(cart.deliveryFee || 0)),
+              },
             ].map(opt => (
               <button key={opt.id} type="button" disabled={opt.disabled} onClick={() => !opt.disabled && setPaymentMethod(opt.id)}
                 className={`w-full border-2 rounded-xl p-4 flex items-center gap-3 transition-all ${opt.disabled ? "opacity-50 cursor-not-allowed border-border bg-muted/10" : paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}>
@@ -258,8 +303,15 @@ export default function Checkout() {
             ))}
           </div>
 
-          {/* Payment screenshot upload */}
-          {paymentMethod !== "cod" && (
+          {/* Internal wallet info banner */}
+          {paymentMethod === "balance" && walletBalance !== null && (
+            <div className="mt-4 bg-green-50 dark:bg-green-950/30 rounded-xl p-3 border border-green-200 dark:border-green-800 text-xs text-green-700 dark:text-green-400 leading-relaxed">
+              ✅ سيُخصم مبلغ الطلب ({(Number(cart.subtotal) + Number(cart.deliveryFee || 0)).toFixed(2)} د.أ) من رصيد محفظتك تلقائياً عند تأكيد الطلب.
+            </div>
+          )}
+
+          {/* Payment screenshot upload (only for external CliQ / e-wallet) */}
+          {(paymentMethod === "cliq" || paymentMethod === "wallet") && (
             <div className="mt-4 space-y-2">
               <p className="text-sm font-bold">
                 {paymentMethod === "cliq"
