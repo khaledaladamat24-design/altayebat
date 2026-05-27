@@ -9,8 +9,14 @@ import { setBaseUrl } from "@workspace/api-client-react";
 // In Capacitor/Android builds, the web bundle is served from the local
 // filesystem so relative `/api` URLs do not reach the Replit backend.
 // Set VITE_API_BASE_URL (e.g. https://your-app.replit.app/api) for native builds.
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
-if (apiBaseUrl) setBaseUrl(apiBaseUrl);
+// Orval-generated hooks call paths like `/api/categories`. setBaseUrl prepends
+// without rewriting, so the secret MUST be just the origin (no `/api` suffix)
+// to avoid `/api/api/...`. Normalize either form so users can set either.
+const rawApiBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
+if (rawApiBase) {
+  const origin = rawApiBase.replace(/\/+$/, "").replace(/\/api$/, "");
+  setBaseUrl(origin);
+}
 
 // Detect Capacitor native shell — affects router base and Clerk proxy config.
 const isNative =
