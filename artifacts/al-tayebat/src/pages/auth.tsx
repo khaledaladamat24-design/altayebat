@@ -20,8 +20,8 @@ declare global {
 export default function Auth() {
   const [, setLocation] = useLocation();
   const { openSignIn } = useClerk();
-  const { signIn, isLoaded: signInLoaded } = useSignIn();
-  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  const { signIn, isLoaded: signInLoaded, setActive: setActiveSignIn } = useSignIn();
+  const { signUp, isLoaded: signUpLoaded, setActive: setActiveSignUp } = useSignUp();
 
   const [mode, setMode] = useState<Mode>("landing");
   const [email, setEmail] = useState("");
@@ -50,27 +50,65 @@ export default function Auth() {
     setLocation("/");
   };
 
-  /* ── Email Login ── */
+  /* ── Email Login (supports both password and passwordless instances) ── */
   const handleEmailLogin = async () => {
     if (!email) { toast.error("أدخل البريد الإلكتروني"); return; }
-    if (!password) { toast.error("أدخل كلمة المرور"); return; }
     if (!signInLoaded) return;
     setLoading(true);
+
+    type Factor = { strategy: string; emailAddressId?: string };
+    type CreateResult = { status: string; createdSessionId?: string | null; supportedFirstFactors?: Factor[] };
+
     try {
-      const result = await signIn.create({ identifier: email, password });
-      if (result.status === "complete") {
-        localStorage.setItem("al_tayebat_email", email);
-        localStorage.setItem("al_tayebat_onboarded_v2", "1");
-        toast.success("مرحباً بك في الطيبات!");
-        setLocation("/");
-      } else if (result.status === "needs_first_factor") {
+      const result = (await signIn.create({ identifier: email })) as unknown as CreateResult;
+      const factors = result.supportedFirstFactors || [];
+      const hasPassword = factors.some(f => f.strategy === "password");
+      const emailFactor = factors.find(f => f.strategy === "email_code");
+
+      // Path A: password is enabled AND user provided one → try password
+      if (hasPassword && password) {
+        try {
+          const r = (await (signIn as unknown as {
+            attemptFirstFactor: (p: { strategy: string; password: string }) => Promise<CreateResult>;
+          }).attemptFirstFactor({ strategy: "password", password }));
+          if (r.status === "complete" && r.createdSessionId && setActiveSignIn) {
+            await setActiveSignIn({ session: r.createdSessionId });
+            localStorage.setItem("al_tayebat_email", email);
+            localStorage.setItem("al_tayebat_onboarded_v2", "1");
+            toast.success("مرحباً بك في الطيبات!");
+            setLocation("/");
+            setLoading(false);
+            return;
+          }
+        } catch (e1: unknown) {
+          // Password wrong → fall through to email_code if available
+          if (!emailFactor) throw e1;
+          console.warn("[signin] password failed, falling back to email code:", e1);
+        }
+      }
+
+      // Path B: send email code as OTP
+      if (emailFactor?.emailAddressId) {
+        await (signIn as unknown as {
+          prepareFirstFactor: (p: { strategy: string; emailAddressId: string }) => Promise<unknown>;
+        }).prepareFirstFactor({ strategy: "email_code", emailAddressId: emailFactor.emailAddressId });
         setPendingSignUp(false);
         setMode("otp-email");
-        toast("تم إرسال رمز التحقق إلى بريدك");
+        toast("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
+      } else {
+        toast.error("لا توجد طريقة دخول مفعّلة لهذا الحساب");
       }
     } catch (err: unknown) {
-      const msg = (err as { errors?: { message: string }[] })?.errors?.[0]?.message;
-      toast.error(msg === "Invalid credentials." ? "البريد أو كلمة المرور غير صحيحة" : (msg || "خطأ في تسجيل الدخول"));
+      console.error("[signin] full error:", err);
+      const er = (err as { errors?: { code?: string; longMessage?: string; message?: string }[] })?.errors?.[0];
+      const friendly = er?.longMessage || er?.message;
+      if (er?.code === "form_identifier_not_found") {
+        toast.error("لا يوجد حساب بهذا البريد. أنشئ حساباً جديداً.");
+        setMode("email-signup");
+      } else {
+        const codeHint = er?.code ? ` (${er.code})` : "";
+        toast.error(friendly ? friendly + codeHint : `خطأ في تسجيل الدخول${codeHint}`);
+      }
     }
     setLoading(false);
   };
@@ -125,7 +163,13 @@ export default function Auth() {
       const friendly = er?.longMessage || er?.message;
       const codeHint = er?.code ? ` (${er.code})` : "";
       const netHint = (err as Error)?.message?.includes("fetch") ? " — تحقق من الاتصال بالإنترنت" : "";
-      toast.error((friendly ? friendly + codeHint : `حدث خطأ في إنشاء الحساب${codeHint}${netHint}`));
+      // Email already exists → switch to sign-in mode
+      if (er?.code === "form_identifier_exists") {
+        toast.error("هذا البريد مسجّل مسبقاً. سجّل الدخول بدلاً من ذلك.");
+        setMode("email-login");
+      } else {
+        toast.error((friendly ? friendly + codeHint : `حدث خطأ في إنشاء الحساب${codeHint}${netHint}`));
+      }
     }
     setLoading(false);
   };
@@ -136,8 +180,11 @@ export default function Auth() {
     setLoading(true);
     try {
       if (pendingSignUp && signUpLoaded) {
-        const result = await signUp.attemptEmailAddressVerification({ code: otp });
+        const result = await signUp.attemptEmailAddressVerification({ code: otp }) as unknown as { status: string; createdSessionId?: string | null };
         if (result.status === "complete") {
+          if (result.createdSessionId && setActiveSignUp) {
+            await setActiveSignUp({ session: result.createdSessionId });
+          }
           localStorage.setItem("al_tayebat_email", email);
           if (firstName || lastName) localStorage.setItem("al_tayebat_name", `${firstName} ${lastName}`.trim());
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
@@ -145,8 +192,11 @@ export default function Auth() {
           setLocation("/register");
         }
       } else if (signInLoaded) {
-        const result = await (signIn as unknown as { attemptFirstFactor: (p: { strategy: string; code: string }) => Promise<{ status: string }> }).attemptFirstFactor({ strategy: "email_code", code: otp });
+        const result = await (signIn as unknown as { attemptFirstFactor: (p: { strategy: string; code: string }) => Promise<{ status: string; createdSessionId?: string | null }> }).attemptFirstFactor({ strategy: "email_code", code: otp });
         if (result.status === "complete") {
+          if (result.createdSessionId && setActiveSignIn) {
+            await setActiveSignIn({ session: result.createdSessionId });
+          }
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           toast.success("مرحباً بك في الطيبات!");
