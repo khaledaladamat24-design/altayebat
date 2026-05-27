@@ -79,17 +79,52 @@ export default function Auth() {
     if (!firstName.trim()) { toast.error("أدخل الاسم الأول"); return; }
     if (!email) { toast.error("أدخل البريد الإلكتروني"); return; }
     if (password.length < 8) { toast.error("كلمة المرور 8 أحرف على الأقل"); return; }
-    if (!signUpLoaded) return;
+    if (!signUpLoaded) {
+      toast.error("خدمة التسجيل لم تكتمل التحميل بعد. أعد المحاولة بعد ثانيتين.");
+      console.error("[signup] Clerk signUp not loaded yet");
+      return;
+    }
     setLoading(true);
+
+    type ClerkErr = { code?: string; message?: string; longMessage?: string; meta?: { paramName?: string } };
+    const extract = (e: unknown): ClerkErr | null => {
+      const arr = (e as { errors?: ClerkErr[] })?.errors;
+      return Array.isArray(arr) && arr.length ? arr[0] : null;
+    };
+
+    const attemptCreate = async (withNames: boolean) => {
+      const payload: Record<string, string> = { emailAddress: email, password };
+      if (withNames) {
+        payload.firstName = firstName;
+        if (lastName) payload.lastName = lastName;
+      }
+      return signUp.create(payload as Parameters<typeof signUp.create>[0]);
+    };
+
     try {
-      await signUp.create({ firstName, lastName, emailAddress: email, password });
+      try {
+        await attemptCreate(true);
+      } catch (e1: unknown) {
+        const er = extract(e1);
+        // Retry without name fields if Clerk instance has them disabled
+        if (er?.code === "form_param_unknown" || er?.code === "form_param_not_allowed") {
+          console.warn("[signup] Clerk rejected name fields, retrying without:", er);
+          await attemptCreate(false);
+        } else {
+          throw e1;
+        }
+      }
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setPendingSignUp(true);
       setMode("otp-email");
       toast("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
     } catch (err: unknown) {
-      const msg = (err as { errors?: { message: string }[] })?.errors?.[0]?.message;
-      toast.error(msg || "حدث خطأ في إنشاء الحساب");
+      console.error("[signup] full error:", err);
+      const er = extract(err);
+      const friendly = er?.longMessage || er?.message;
+      const codeHint = er?.code ? ` (${er.code})` : "";
+      const netHint = (err as Error)?.message?.includes("fetch") ? " — تحقق من الاتصال بالإنترنت" : "";
+      toast.error((friendly ? friendly + codeHint : `حدث خطأ في إنشاء الحساب${codeHint}${netHint}`));
     }
     setLoading(false);
   };
