@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { useEffect, useRef, useState } from "react";
 import { MapPicker } from "@/components/map-picker";
+import { apiUrl } from "@/lib/api-url";
 
 const formSchema = z.object({
   customerName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل" }),
@@ -26,9 +27,16 @@ const formSchema = z.object({
 
 type PaymentMethod = "cod" | "cliq" | "wallet";
 
-const DEMO_VENDOR = {
-  cliqAlias: "altayebat",
-  walletNumber: "0791234567",
+type VendorPayment = {
+  cliqAlias: string | null;
+  walletNumber: string | null;
+  storeName: string;
+};
+
+// Fallback used only when the cart's vendor has not set its payment info yet
+const DEFAULT_VENDOR_PAYMENT: VendorPayment = {
+  cliqAlias: null,
+  walletNumber: null,
   storeName: "الطيبات",
 };
 
@@ -41,6 +49,7 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [screenshotName, setScreenshotName] = useState("");
+  const [vendorPayment, setVendorPayment] = useState<VendorPayment>(DEFAULT_VENDOR_PAYMENT);
 
   const { data: cart, isLoading } = useGetCart(
     { sessionId },
@@ -64,6 +73,38 @@ export default function Checkout() {
       setLocation("/cart");
     }
   }, [cart, setLocation, createOrder.isSuccess]);
+
+  // Look up the vendor's payment details (CliQ alias + wallet number) based on the
+  // first product in the cart. We assume a single-vendor cart for now; if items
+  // from multiple vendors are mixed in the future, this should be revisited.
+  useEffect(() => {
+    let cancelled = false;
+    const firstProductId = cart?.items?.[0]?.productId;
+    if (!firstProductId) return;
+    (async () => {
+      try {
+        const pRes = await fetch(apiUrl(`/api/products/${firstProductId}`));
+        if (!pRes.ok) return;
+        const product = await pRes.json() as { vendorId?: number | null };
+        if (!product.vendorId) return;
+        const vRes = await fetch(apiUrl(`/api/vendors/${product.vendorId}`));
+        if (!vRes.ok) return;
+        const v = await vRes.json() as {
+          storeNameAr?: string | null; storeName?: string | null;
+          cliqAlias?: string | null; walletNumber?: string | null;
+        };
+        if (cancelled) return;
+        setVendorPayment({
+          cliqAlias: v.cliqAlias ?? null,
+          walletNumber: v.walletNumber ?? null,
+          storeName: v.storeNameAr || v.storeName || "الطيبات",
+        });
+      } catch {
+        // Keep default — checkout still works (COD always available)
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [cart]);
 
   const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -191,12 +232,20 @@ export default function Checkout() {
 
           <div className="space-y-3">
             {[
-              { id: "cod" as PaymentMethod, icon: CheckCircle2, label: "الدفع عند الاستلام", sub: "ادفع نقداً عند استلام طلبك", color: "primary" },
-              { id: "cliq" as PaymentMethod, icon: Smartphone, label: "تحويل كليك CliQ", sub: `معرف كليك: ${DEMO_VENDOR.cliqAlias}@`, color: "blue" },
-              { id: "wallet" as PaymentMethod, icon: Wallet, label: "محفظة إلكترونية", sub: `رقم المحفظة: ${DEMO_VENDOR.walletNumber}`, color: "rose" },
+              { id: "cod" as PaymentMethod, icon: CheckCircle2, label: "الدفع عند الاستلام", sub: "ادفع نقداً عند استلام طلبك", disabled: false },
+              {
+                id: "cliq" as PaymentMethod, icon: Smartphone, label: "تحويل كليك CliQ",
+                sub: vendorPayment.cliqAlias ? `معرف كليك: ${vendorPayment.cliqAlias}@` : "المورد لم يفعّل الدفع عبر كليك بعد",
+                disabled: !vendorPayment.cliqAlias,
+              },
+              {
+                id: "wallet" as PaymentMethod, icon: Wallet, label: "محفظة إلكترونية",
+                sub: vendorPayment.walletNumber ? `رقم المحفظة: ${vendorPayment.walletNumber}` : "المورد لم يفعّل الدفع بالمحفظة بعد",
+                disabled: !vendorPayment.walletNumber,
+              },
             ].map(opt => (
-              <button key={opt.id} type="button" onClick={() => setPaymentMethod(opt.id)}
-                className={`w-full border-2 rounded-xl p-4 flex items-center gap-3 transition-all ${paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}>
+              <button key={opt.id} type="button" disabled={opt.disabled} onClick={() => !opt.disabled && setPaymentMethod(opt.id)}
+                className={`w-full border-2 rounded-xl p-4 flex items-center gap-3 transition-all ${opt.disabled ? "opacity-50 cursor-not-allowed border-border bg-muted/10" : paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${paymentMethod === opt.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                   <opt.icon className="w-5 h-5" />
                 </div>
@@ -214,8 +263,8 @@ export default function Checkout() {
             <div className="mt-4 space-y-2">
               <p className="text-sm font-bold">
                 {paymentMethod === "cliq"
-                  ? `حوّل المبلغ إلى كليك: ${DEMO_VENDOR.cliqAlias}@ ثم ارفع إيصال الدفع`
-                  : `حوّل المبلغ إلى المحفظة: ${DEMO_VENDOR.walletNumber} ثم ارفع إيصال الدفع`}
+                  ? `حوّل المبلغ إلى كليك: ${vendorPayment.cliqAlias}@ ثم ارفع إيصال الدفع`
+                  : `حوّل المبلغ إلى المحفظة: ${vendorPayment.walletNumber} ثم ارفع إيصال الدفع`}
               </p>
 
               {screenshot ? (
@@ -240,14 +289,24 @@ export default function Checkout() {
 
               <input ref={fileRef} type="file" accept="image/*" onChange={handleScreenshot} className="hidden" />
 
-              {paymentMethod === "cliq" && (
+              {paymentMethod === "cliq" && vendorPayment.cliqAlias && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-blue-600" />
                     <p className="text-xs font-bold text-blue-700 dark:text-blue-400">بيانات كليك للتحويل</p>
                   </div>
-                  <p className="text-sm font-black text-blue-800 dark:text-blue-300 mt-1 text-center" dir="ltr">@{DEMO_VENDOR.cliqAlias}</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 text-center">{DEMO_VENDOR.storeName}</p>
+                  <p className="text-sm font-black text-blue-800 dark:text-blue-300 mt-1 text-center" dir="ltr">@{vendorPayment.cliqAlias}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 text-center">{vendorPayment.storeName}</p>
+                </div>
+              )}
+              {paymentMethod === "wallet" && vendorPayment.walletNumber && (
+                <div className="bg-rose-50 dark:bg-rose-950/30 rounded-xl p-3 border border-rose-200 dark:border-rose-800">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-rose-600" />
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-400">رقم المحفظة الإلكترونية</p>
+                  </div>
+                  <p className="text-sm font-black text-rose-800 dark:text-rose-300 mt-1 text-center" dir="ltr">{vendorPayment.walletNumber}</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 text-center">{vendorPayment.storeName}</p>
                 </div>
               )}
             </div>

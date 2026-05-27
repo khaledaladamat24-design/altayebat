@@ -58,6 +58,8 @@
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`
 - Products route must declare `/featured` and `/bestsellers` BEFORE `/:id` to avoid routing conflicts
 - Cart uses sessionId from localStorage key `al_tayebat_session`
+- **Admin password is the `ADMIN_PASSWORD` Replit Secret.** Backend falls back to legacy `tayebat2024` with a console warning if the secret is unset. Frontend never hardcodes it — the user types it on the `/admin` login page and it's cached in `sessionStorage` under `al_tayebat_admin_pw`. The super-admin email (`khaledaladamat24@gmail.com`) still bypasses the password.
+- **Checkout payment info** (CliQ alias + wallet number) is fetched live from the vendor of the first product in the cart via `/api/products/:id` → `/api/vendors/:vendorId`. If the vendor hasn't set them, the corresponding payment options are shown as disabled and only "الدفع عند الاستلام" remains available. This assumes single-vendor carts.
 
 ## Android (Capacitor)
 
