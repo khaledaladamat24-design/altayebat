@@ -55,17 +55,23 @@ Thumbs.db
 *.env
 *secret*
 firebase_config.js
-google-services.json
 GoogleService-Info.plist
 
 # ── Android build artifacts ──
-android/
+# Native android project IS tracked (like Tulip). Only ignore generated build outputs.
 ios/
 *.apk
 *.aab
 *.keystore
 *.jks
 key.properties
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/captures/
+android/app/release/
+android/app/debug/
 
 # ── Firebase ──
 .firebase/
