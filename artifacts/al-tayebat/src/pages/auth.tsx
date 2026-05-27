@@ -124,9 +124,20 @@ export default function Auth() {
     setLoading(false);
   };
 
+  /* ── Normalize JO phone: user types "07XXXXXXXX" → "+9627XXXXXXXX" ── */
+  const toE164JO = (raw: string): string | null => {
+    const digits = raw.replace(/\D/g, "");
+    if (/^07\d{8}$/.test(digits)) return "+962" + digits.slice(1);
+    if (/^7\d{8}$/.test(digits)) return "+962" + digits;
+    if (/^9627\d{8}$/.test(digits)) return "+" + digits;
+    if (/^009627\d{8}$/.test(digits)) return "+" + digits.slice(2);
+    return null;
+  };
+
   /* ── Firebase Phone Send OTP ── */
   const handleSendPhoneOtp = async () => {
-    if (!phone || phone.length < 9) { toast.error("أدخل رقم الهاتف بالكامل مع مفتاح الدولة"); return; }
+    const e164 = toE164JO(phone);
+    if (!e164) { toast.error("أدخل رقمك الأردني بالشكل 07XXXXXXXX (10 أرقام)"); return; }
 
     if (!firebaseEnabled) {
       toast.error("خدمة OTP الهاتفية غير مُفعّلة بعد. أضف مفاتيح Firebase في إعدادات المشروع.");
@@ -140,7 +151,7 @@ export default function Auth() {
           size: "invisible",
         });
       }
-      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier!);
+      const confirmation = await signInWithPhoneNumber(auth, e164, window.recaptchaVerifier!);
       window.confirmationResult = confirmation;
       setMode("otp-phone");
       toast("تم إرسال رمز التحقق إلى هاتفك");
@@ -267,19 +278,13 @@ export default function Auth() {
           </button>
           <div>
             <h2 className="text-2xl font-black">رقم الهاتف</h2>
-            <p className="text-muted-foreground text-sm mt-1">أدخل رقمك الأردني (يبدأ بـ 07) — سيُضاف +962 تلقائياً</p>
+            <p className="text-muted-foreground text-sm mt-1">أدخل رقمك الأردني (يبدأ بـ 07) — 10 أرقام</p>
           </div>
           <div className="relative">
             <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input type="tel" placeholder="07XXXXXXXX" value={phone} onChange={e => {
-              let v = e.target.value.replace(/[^\d+]/g, "");
-              if (v.startsWith("00962")) v = "+" + v.slice(2);
-              else if (v.startsWith("962") && !v.startsWith("+962")) v = "+" + v;
-              else if (v.startsWith("0")) v = "+962" + v.slice(1);
-              else if (/^7\d/.test(v)) v = "+962" + v;
-              setPhone(v);
-            }}
-              className="w-full h-14 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 text-lg outline-none focus:border-primary transition-colors" dir="ltr" />
+            <input type="tel" inputMode="numeric" placeholder="07XXXXXXXX" value={phone} maxLength={10}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              className="w-full h-14 rounded-2xl border border-border bg-muted/30 pr-12 pl-4 text-lg outline-none focus:border-primary transition-colors tracking-wider" dir="ltr" />
           </div>
 
           {!firebaseEnabled && (
