@@ -57,6 +57,9 @@ Thumbs.db
 firebase_config.js
 GoogleService-Info.plist
 
+# ── GitHub workflows (Replit OAuth lacks `workflow` scope; add via GitHub Web UI) ──
+.github/
+
 # ── Android build artifacts ──
 # Native android project IS tracked (like Tulip). Only ignore generated build outputs.
 ios/
