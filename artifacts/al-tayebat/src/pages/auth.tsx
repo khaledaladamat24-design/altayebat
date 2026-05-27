@@ -369,10 +369,10 @@ export default function Auth() {
               className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 py-3.5 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
           </div>
           <RememberMeBox />
-          <button onClick={handleEmailLogin} disabled={loading}
+          <button onClick={handleEmailLogin} disabled={loading || !signInLoaded}
             className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+            {(loading || !signInLoaded) ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {!signInLoaded ? "جاري تحميل خدمة الدخول..." : (loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول")}
           </button>
           <div className="flex items-center gap-3"><div className="flex-1 h-px bg-border" /><span className="text-muted-foreground text-xs">أو</span><div className="flex-1 h-px bg-border" /></div>
           <button onClick={() => setMode("email-signup")}
@@ -421,10 +421,10 @@ export default function Auth() {
               className="w-full h-12 rounded-xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary" dir="ltr" />
           </div>
           <RememberMeBox />
-          <button onClick={handleEmailSignup} disabled={loading}
+          <button onClick={handleEmailSignup} disabled={loading || !signUpLoaded}
             className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
+            {(loading || !signUpLoaded) ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {!signUpLoaded ? "جاري تحميل خدمة التسجيل..." : (loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب")}
           </button>
           <p className="text-center text-xs text-muted-foreground">
             لديك حساب؟{" "}
