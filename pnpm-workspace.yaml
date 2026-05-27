@@ -33,6 +33,10 @@ minimumReleaseAgeExclude:
   # this setting guards against does not apply to our own packages.
   - '@replit/*'
   - stripe-replit-sync
+  # Security CVE fix: tmp@0.2.6 patches GHSA-ph9p-34f9-6g65 (path traversal).
+  # The patched version was published very recently; remove this exclusion once
+  # the 1-day window has passed.
+  - tmp
 
 packages:
   - artifacts/*
@@ -158,3 +162,9 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Security CVE fixes for transitive dependencies
+  tar: "^7.5.11"
+  minimatch: "^3.1.4"
+  tmp: "^0.2.6"
+  uuid: "^11.1.1"
+  qs: "^6.15.2"
