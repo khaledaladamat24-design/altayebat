@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
-  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin,
+  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin, Loader2, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ export default function Settings() {
   const [showAddrModal, setShowAddrModal] = useState(false);
   const [city, setCity] = useState(() => localStorage.getItem("al_tayebat_city") || "");
   const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("al_tayebat_address") || "");
+  const [locating, setLocating] = useState(false);
   const savedAddrLabel = [city, neighborhood].filter(Boolean).join("، ") || "لم يُحدَّد";
 
   const handleSaveAddress = () => {
@@ -46,6 +47,51 @@ export default function Settings() {
     localStorage.setItem("al_tayebat_address", neighborhood.trim());
     toast.success("تم حفظ العنوان");
     setShowAddrModal(false);
+  };
+
+  const handleUseMyLocation = async () => {
+    if (!("geolocation" in navigator)) {
+      toast.error("جهازك لا يدعم تحديد الموقع");
+      return;
+    }
+    setLocating(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true, timeout: 15000, maximumAge: 60000,
+        });
+      });
+      const { latitude, longitude } = pos.coords;
+      // Reverse geocode via OpenStreetMap Nominatim (free, no key needed)
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=ar`,
+        { headers: { "User-Agent": "AlTayebat/1.0" } }
+      );
+      if (!res.ok) throw new Error("فشل الاتصال بخدمة الخرائط");
+      const data = await res.json();
+      const addr = data.address || {};
+      const detectedCity =
+        addr.city || addr.town || addr.village || addr.state || addr.county || "";
+      const detectedNeighborhood =
+        addr.neighbourhood || addr.suburb || addr.quarter || addr.hamlet || addr.road || "";
+
+      if (detectedCity) setCity(detectedCity);
+      if (detectedNeighborhood) setNeighborhood(detectedNeighborhood);
+
+      if (!detectedCity && !detectedNeighborhood) {
+        toast("لم نتمكن من تحديد العنوان من الخريطة — أدخله يدوياً");
+      } else {
+        toast.success("تم تحديد موقعك ✅ — اضغط حفظ");
+      }
+    } catch (err: unknown) {
+      const e = err as GeolocationPositionError & { message?: string };
+      const code = (e as GeolocationPositionError).code;
+      if (code === 1) toast.error("لم تسمح بالوصول للموقع. فعّل الإذن من إعدادات التطبيق.");
+      else if (code === 2) toast.error("تعذّر تحديد الموقع — تأكد من تفعيل GPS");
+      else if (code === 3) toast.error("انتهت مهلة تحديد الموقع — حاول مرة أخرى");
+      else toast.error(e?.message || "فشل تحديد الموقع");
+    }
+    setLocating(false);
   };
 
   const handleClearCache = () => {
@@ -247,14 +293,38 @@ export default function Settings() {
               <button onClick={() => setShowAddrModal(false)} className="p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleUseMyLocation}
+                disabled={locating}
+                className="w-full h-12 rounded-xl border-primary/40 text-primary hover:bg-primary/5 flex items-center justify-center gap-2"
+              >
+                {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                {locating ? "جاري تحديد موقعك..." : "استخدم موقعي الحالي 📍"}
+              </Button>
+
+              <div className="flex items-center gap-2 my-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">أو أدخله يدوياً</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">المدينة</label>
-                <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-11 rounded-md bg-muted px-3 text-sm" dir="rtl">
-                  <option value="">— اختر المدينة —</option>
+                <Input
+                  value={city}
+                  onChange={e => setCity(e.target.value)}
+                  list="city-list"
+                  placeholder="ابحث أو اختر المدينة..."
+                  className="h-11 bg-muted border-none"
+                  dir="rtl"
+                />
+                <datalist id="city-list">
                   {["عمان","الزرقاء","إربد","العقبة","المفرق","الكرك","مادبا","السلط","جرش","عجلون","الطفيلة","معان"].map(c => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c} />
                   ))}
-                </select>
+                </datalist>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">الحي / المنطقة (اختياري)</label>
