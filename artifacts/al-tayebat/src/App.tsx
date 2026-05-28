@@ -67,7 +67,12 @@ function SplashGate({ children }: { children: React.ReactNode }) {
       setLocation("/splash");
       return;
     }
-    const signedIn = !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("__clerk_db_jwt");
+    // Treat any of: Firebase OTP, Clerk JWT, or our own phone+password user_id
+    // as "signed in". Without the last one, password-only phone users get
+    // bounced back to /auth in an infinite loop and the home page stays blank.
+    const signedIn = !!localStorage.getItem("al_tayebat_firebase_uid")
+      || !!localStorage.getItem("__clerk_db_jwt")
+      || !!localStorage.getItem("al_tayebat_user_id");
     if (!signedIn && !localStorage.getItem(AUTH_SKIPPED_KEY)) {
       setLocation("/auth");
     }

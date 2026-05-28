@@ -85,11 +85,14 @@ export default function Auth() {
     try {
       const result = (await signIn.create({ identifier: email })) as unknown as CreateResult;
       const factors = result.supportedFirstFactors || [];
-      const hasPassword = factors.some(f => f.strategy === "password");
       const emailFactor = factors.find(f => f.strategy === "email_code");
 
-      // Path A: password is enabled AND user provided one → try password
-      if (hasPassword && password) {
+      // Path A: user provided a password → ALWAYS try password first, even if
+      // factor detection didn't report "password" (some Clerk instances list
+      // factors lazily). Only fall through to email_code if the attempt
+      // explicitly fails. This is what makes "re-login with the same password"
+      // work without re-OTP-ing the user every single time.
+      if (password) {
         try {
           const r = (await (signIn as unknown as {
             attemptFirstFactor: (p: { strategy: string; password: string }) => Promise<CreateResult>;
@@ -297,8 +300,9 @@ export default function Auth() {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "فشل حفظ كلمة المرور");
       localStorage.setItem("al_tayebat_user_id", String(body.id));
+      localStorage.setItem("al_tayebat_onboarded_v2", "1");
       toast.success("تم حفظ كلمة المرور — يمكنك تسجيل الدخول لاحقاً بدون رمز");
-      setLocation("/register");
+      setLocation("/");
     } catch (err) {
       toast.error((err as Error).message);
     }
