@@ -1,10 +1,23 @@
 import { useGetOrder } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
-import { ChevronRight, Package, Truck, CheckCircle2, Clock } from "lucide-react";
+import { ChevronRight, Package, Truck, CheckCircle2, Clock, Phone, ExternalLink, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/api-url";
+import { toast } from "sonner";
+
+interface TrackInfo {
+  trackingNumber: string | null;
+  awbUrl?: string | null;
+  status?: string | null;
+  statusAr?: string | null;
+  providerName?: string | null;
+  providerPhone?: string | null;
+  notConfigured?: boolean;
+}
 
 const statusConfig = {
   pending: { label: "قيد الانتظار", icon: Clock, color: "text-amber-500", bg: "bg-amber-500" },
@@ -24,6 +37,19 @@ export default function OrderDetail() {
   const { data: order, isLoading } = useGetOrder(orderId!, {
     query: { enabled: !!orderId }
   });
+
+  // Tracking lives outside the OpenAPI Order schema for now (server side has
+  // delivery_* columns but they're not exposed via /api/orders). We fetch it
+  // separately from /api/delivery/orders/:id/track which returns null tracking
+  // for orders that haven't been shipped yet.
+  const [track, setTrack] = useState<TrackInfo | null>(null);
+  useEffect(() => {
+    if (!orderId) return;
+    fetch(apiUrl(`/api/delivery/orders/${orderId}/track`))
+      .then(r => (r.ok ? r.json() : null))
+      .then(setTrack)
+      .catch(() => setTrack(null));
+  }, [orderId]);
 
   if (isLoading || !order) {
     return (
@@ -138,6 +164,56 @@ export default function OrderDetail() {
             </div>
           </div>
         </div>
+
+        {track?.trackingNumber && (
+          <div className="bg-card p-5 rounded-2xl shadow-sm border border-border">
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Truck className="w-5 h-5 text-primary" /> الشحن</h3>
+            <div className="space-y-3 text-sm">
+              {track.providerName && (
+                <div>
+                  <span className="text-muted-foreground block text-xs mb-1">شركة التوصيل</span>
+                  <span className="font-bold">{track.providerName}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-muted-foreground block text-xs mb-1">رقم التتبع</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-primary" dir="ltr">{track.trackingNumber}</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(track.trackingNumber!); toast.success("تم نسخ رقم التتبع"); }}
+                    className="p-1.5 hover:bg-muted rounded-md" aria-label="نسخ">
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+              {track.statusAr && (
+                <div>
+                  <span className="text-muted-foreground block text-xs mb-1">حالة الشحنة</span>
+                  <span className="font-medium">{track.statusAr}</span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {track.awbUrl && (
+                  <a href={track.awbUrl} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-bold">
+                    <ExternalLink className="w-3 h-3" /> بوليصة الشحن (AWB)
+                  </a>
+                )}
+                {track.providerPhone && (
+                  <a href={`tel:${track.providerPhone}`}
+                    className="flex items-center gap-1 text-xs bg-muted px-3 py-1.5 rounded-lg font-bold">
+                    <Phone className="w-3 h-3" /> {track.providerPhone}
+                  </a>
+                )}
+              </div>
+              {track.notConfigured && (
+                <p className="text-[11px] text-amber-600 bg-amber-50 p-2 rounded-md">
+                  هذه الشركة لم يتم ربط API الخاص بها بعد — رقم التتبع يدوي.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="bg-card p-5 rounded-2xl shadow-sm border border-border mb-8">
           <h3 className="font-bold text-lg mb-4">بيانات التوصيل</h3>

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { db } from "@workspace/db";
 import { productsTable, ordersTable, orderItemsTable, usersTable, vendorProfilesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -19,7 +19,7 @@ function getAdminPassword(): string {
   return FALLBACK_ADMIN_PASSWORD;
 }
 
-function isAdmin(req: Parameters<Parameters<typeof router.use>[0]>[0]): boolean {
+function isAdmin(req: Request): boolean {
   const adminEmail = req.headers["x-admin-email"] as string | undefined;
   const adminKey = req.headers["x-admin-key"] as string | undefined;
   return adminKey === getAdminPassword() || adminEmail === SUPER_ADMIN_EMAIL;

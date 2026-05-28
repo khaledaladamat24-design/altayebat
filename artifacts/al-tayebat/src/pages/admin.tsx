@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown, Wallet } from "lucide-react";
+import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown, Wallet, Truck } from "lucide-react";
+import { AdminDeliveryTab } from "@/components/admin-delivery-tab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +13,7 @@ import { apiUrl } from "@/lib/api-url";
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
 const ADMIN_PW_KEY = "al_tayebat_admin_pw";
 
-type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors" | "wallet";
+type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors" | "wallet" | "delivery";
 
 interface AdminWalletTx {
   id: number; userId: number; type: string; amount: number; status: string;
@@ -250,7 +251,24 @@ export default function Admin() {
     { id: "vendors", icon: Store, label: "الموردون" },
     { id: "users", icon: Users, label: "المستخدمون" },
     { id: "wallet", icon: Wallet, label: "المحفظة" },
+    { id: "delivery", icon: Truck, label: "التوصيل" },
   ];
+
+  const handleShipOrder = async (id: number) => {
+    const res = await fetch(apiUrl(`/api/delivery/orders/${id}/shipment`), {
+      method: "POST", headers: adminHeaders, body: JSON.stringify({}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      if (data.alreadyShipped) toast.info(`الطلب مشحون بالفعل · رقم: ${data.trackingNumber}`);
+      else toast.success(`تم إنشاء الشحنة · رقم التتبع: ${data.trackingNumber}`);
+      fetchTabData();
+    } else if (data.notConfigured) {
+      toast.error(`${data.error} · افتح تبويب "التوصيل" وأضف المفاتيح.`);
+    } else {
+      toast.error(data.error || "فشل إنشاء الشحنة. تأكد من تفعيل شركة افتراضية في تبويب التوصيل.");
+    }
+  };
 
   const reviewWalletTx = async (id: number, status: "approved" | "rejected") => {
     const res = await fetch(apiUrl(`/api/admin/wallet/transactions/${id}`), {
@@ -457,6 +475,12 @@ export default function Admin() {
                     <button onClick={() => handleUpdateOrderStatus(order.id, "delivered")}
                       className="flex-1 text-xs bg-green-50 text-green-600 border border-green-200 rounded-xl py-2 font-bold">تم التوصيل</button>
                   )}
+                  {(order.status === "processing" || order.status === "pending") && (
+                    <button onClick={() => handleShipOrder(order.id)}
+                      className="flex-1 text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl py-2 font-bold flex items-center justify-center gap-1">
+                      <Truck className="w-3 h-3" /> شحن
+                    </button>
+                  )}
                   {order.paymentScreenshotUrl && order.paymentStatus !== "confirmed" && (
                     <button onClick={() => handleConfirmPayment(order.id)}
                       className="flex-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-xl py-2 font-bold flex items-center justify-center gap-1">
@@ -593,6 +617,10 @@ export default function Admin() {
               </div>
             ))}
           </div>
+        )}
+
+        {tab === "delivery" && (
+          <AdminDeliveryTab adminHeaders={adminHeaders} />
         )}
       </div>
     </div>

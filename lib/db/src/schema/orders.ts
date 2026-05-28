@@ -19,6 +19,11 @@ export const ordersTable = pgTable("orders", {
   customerPhone: text("customer_phone"),
   notes: text("notes"),
   estimatedDelivery: text("estimated_delivery"),
+  deliveryProviderId: integer("delivery_provider_id"),
+  deliveryTrackingNumber: text("delivery_tracking_number"),
+  deliveryAwbUrl: text("delivery_awb_url"),
+  deliveryStatus: text("delivery_status"),
+  deliveryShippedAt: timestamp("delivery_shipped_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
