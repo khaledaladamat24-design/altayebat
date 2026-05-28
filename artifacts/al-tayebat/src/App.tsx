@@ -130,7 +130,7 @@ function FatalScreen({ title, detail }: { title: string; detail: string }) {
     }}>
       <div style={{ fontSize: "48px", marginBottom: "12px" }}>⚠️</div>
       <h1 style={{ fontSize: "20px", fontWeight: 900, color: "#1f5135", marginBottom: "12px" }}>{title}</h1>
-      <p style={{ fontSize: "14px", color: "#6b7280", maxWidth: "320px", lineHeight: 1.7 }}>{detail}</p>
+      <pre style={{ fontSize: "11px", color: "#6b7280", maxWidth: "340px", lineHeight: 1.5, whiteSpace: "pre-wrap", textAlign: "right", fontFamily: "monospace", maxHeight: "50vh", overflow: "auto" }}>{detail}</pre>
       <button onClick={() => window.location.reload()} style={{
         marginTop: "20px", padding: "12px 24px", borderRadius: "12px",
         background: "#1f5135", color: "white", border: "none", fontWeight: 700, fontSize: "14px",
@@ -139,15 +139,23 @@ function FatalScreen({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; stack: string }> {
+  state = { error: null as Error | null, stack: "" };
+  static getDerivedStateFromError(error: Error) { return { error, stack: "" }; }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info);
+    this.setState({ error, stack: info.componentStack || "" });
   }
   render() {
     if (this.state.error) {
-      return <FatalScreen title="حدث خطأ غير متوقع" detail={String(this.state.error?.message || this.state.error)} />;
+      const msg = String(this.state.error?.message || this.state.error);
+      const top = this.state.stack.split("\n").slice(0, 8).join("\n");
+      return (
+        <FatalScreen
+          title="حدث خطأ غير متوقع"
+          detail={`${msg}\n\n— أين حدث —\n${top}`}
+        />
+      );
     }
     return this.props.children;
   }
