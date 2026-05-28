@@ -55,6 +55,41 @@ export default function VendorDashboard() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const openNameEditor = () => {
+    if (!vendor) return;
+    setNameDraft(vendor.storeNameAr || vendor.storeName || "");
+    setEditingName(true);
+  };
+
+  const saveStoreName = async () => {
+    if (!vendor) return;
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      toast.error("الرجاء إدخال اسم المتجر");
+      return;
+    }
+    setSavingName(true);
+    try {
+      const r = await fetch(apiUrl(`/api/vendors/${vendor.id}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeNameAr: trimmed }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      const updated = await r.json();
+      setVendor((prev) => prev ? { ...prev, storeNameAr: updated.storeNameAr ?? trimmed, storeName: updated.storeName ?? prev.storeName } : prev);
+      setEditingName(false);
+      toast.success("تم تحديث اسم المتجر");
+    } catch {
+      toast.error("فشل تحديث الاسم");
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const userId = localStorage.getItem("al_tayebat_user_id");
   const storedVendorId = localStorage.getItem("al_tayebat_vendor_id");
@@ -222,7 +257,27 @@ export default function VendorDashboard() {
           <ChevronRight className="w-5 h-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-bold">{vendor.storeNameAr || vendor.storeName}</h1>
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                className="h-8 text-foreground text-sm bg-background/90 border-none rounded-md"
+                autoFocus
+              />
+              <button onClick={saveStoreName} disabled={savingName} className="p-1 rounded-md bg-background/20 hover:bg-background/30 disabled:opacity-50">
+                <Check className="w-4 h-4" />
+              </button>
+              <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 rounded-md bg-background/20 hover:bg-background/30">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={openNameEditor} className="flex items-center gap-1.5 text-right group">
+              <h1 className="text-lg font-bold">{vendor.storeNameAr || vendor.storeName}</h1>
+              <Pencil className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
+            </button>
+          )}
           <p className="text-xs text-primary-foreground/80 flex items-center gap-1">
             <Check className="w-3 h-3" /> متجر مفعّل · {products.length} منتج
           </p>

@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { productsTable, categoriesTable } from "@workspace/db";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { productsTable, categoriesTable, vendorProfilesTable } from "@workspace/db";
+import { eq, and, or, ilike, sql } from "drizzle-orm";
 
 const router = Router();
 
-function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categoriesTable.$inferSelect | null) {
+type VendorLite = Pick<typeof vendorProfilesTable.$inferSelect, "id" | "storeName" | "storeNameAr"> | null;
+
+function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categoriesTable.$inferSelect | null, v: VendorLite = null) {
   return {
     id: p.id,
     name: p.name,
@@ -31,17 +33,20 @@ function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categor
     carbs: p.carbs ? Number(p.carbs) : null,
     fats: p.fats ? Number(p.fats) : null,
     vendorId: p.vendorId ?? null,
+    vendorName: v?.storeName ?? null,
+    vendorNameAr: v?.storeNameAr ?? null,
   };
 }
 
 router.get("/products/featured", async (req, res) => {
   try {
     const rows = await db
-      .select({ p: productsTable, c: categoriesTable })
+      .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
       .where(eq(productsTable.isFeatured, true));
-    res.json(rows.map((r) => buildProductRow(r.p, r.c)));
+    res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list featured products");
     res.status(500).json({ error: "Internal server error" });
@@ -51,11 +56,12 @@ router.get("/products/featured", async (req, res) => {
 router.get("/products/bestsellers", async (req, res) => {
   try {
     const rows = await db
-      .select({ p: productsTable, c: categoriesTable })
+      .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
       .where(eq(productsTable.isBestseller, true));
-    res.json(rows.map((r) => buildProductRow(r.p, r.c)));
+    res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
     res.status(500).json({ error: "Internal server error" });
@@ -72,15 +78,28 @@ router.get("/products", async (req, res) => {
       if (!isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
     }
     if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
-    if (search) conditions.push(ilike(productsTable.nameAr, `%${search}%`));
+    // Search across product name AND vendor store name so a user can find
+    // "خبز كيتو" (product) or "أم علي" (restaurant) with the same input.
+    if (search) {
+      const q = `%${search}%`;
+      const matchers = [
+        ilike(productsTable.nameAr, q),
+        ilike(productsTable.name, q),
+        ilike(vendorProfilesTable.storeNameAr, q),
+        ilike(vendorProfilesTable.storeName, q),
+      ];
+      const orExpr = or(...matchers);
+      if (orExpr) conditions.push(orExpr);
+    }
 
     const rows = await db
-      .select({ p: productsTable, c: categoriesTable })
+      .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
       .where(conditions.length ? and(...conditions) : undefined);
 
-    res.json(rows.map((r) => buildProductRow(r.p, r.c)));
+    res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list products");
     res.status(500).json({ error: "Internal server error" });
@@ -93,13 +112,14 @@ router.get("/products/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
     const rows = await db
-      .select({ p: productsTable, c: categoriesTable })
+      .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
       .where(eq(productsTable.id, id));
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json(buildProductRow(rows[0].p, rows[0].c));
+    res.json(buildProductRow(rows[0].p, rows[0].c, rows[0].v));
   } catch (err) {
     req.log.error({ err }, "Failed to get product");
     res.status(500).json({ error: "Internal server error" });

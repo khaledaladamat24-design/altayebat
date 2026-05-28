@@ -7,8 +7,12 @@ import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Search() {
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Allow deep-linking ?q=... from e.g. the product-detail "vendor" chip.
+  const initialQuery = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("q") || ""
+    : "";
+  const [query, setQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
 
   useEffect(() => {
     const timer = setTimeout(() => {

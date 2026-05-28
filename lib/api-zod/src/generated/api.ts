@@ -79,7 +79,10 @@ export const ListProductsResponseItem = zod.object({
   "isOrganic": zod.boolean().optional(),
   "weightOrVolume": zod.string().nullish(),
   "rating": zod.number().nullish(),
-  "reviewCount": zod.number().optional()
+  "reviewCount": zod.number().optional(),
+  "vendorId": zod.number().nullish(),
+  "vendorName": zod.string().nullish(),
+  "vendorNameAr": zod.string().nullish()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -110,7 +113,10 @@ export const GetProductResponse = zod.object({
   "isOrganic": zod.boolean().optional(),
   "weightOrVolume": zod.string().nullish(),
   "rating": zod.number().nullish(),
-  "reviewCount": zod.number().optional()
+  "reviewCount": zod.number().optional(),
+  "vendorId": zod.number().nullish(),
+  "vendorName": zod.string().nullish(),
+  "vendorNameAr": zod.string().nullish()
 })
 
 
@@ -136,7 +142,10 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "isOrganic": zod.boolean().optional(),
   "weightOrVolume": zod.string().nullish(),
   "rating": zod.number().nullish(),
-  "reviewCount": zod.number().optional()
+  "reviewCount": zod.number().optional(),
+  "vendorId": zod.number().nullish(),
+  "vendorName": zod.string().nullish(),
+  "vendorNameAr": zod.string().nullish()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
 
@@ -163,7 +172,10 @@ export const ListBestsellersResponseItem = zod.object({
   "isOrganic": zod.boolean().optional(),
   "weightOrVolume": zod.string().nullish(),
   "rating": zod.number().nullish(),
-  "reviewCount": zod.number().optional()
+  "reviewCount": zod.number().optional(),
+  "vendorId": zod.number().nullish(),
+  "vendorName": zod.string().nullish(),
+  "vendorNameAr": zod.string().nullish()
 })
 export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 

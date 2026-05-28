@@ -409,6 +409,12 @@ components:
           type: ["number", "null"]
         reviewCount:
           type: integer
+        vendorId:
+          type: ["integer", "null"]
+        vendorName:
+          type: ["string", "null"]
+        vendorNameAr:
+          type: ["string", "null"]
 
     CartItem:
       type: object

@@ -49,6 +49,12 @@ export interface Product {
   /** @nullable */
   rating?: number | null;
   reviewCount?: number;
+  /** @nullable */
+  vendorId?: number | null;
+  /** @nullable */
+  vendorName?: string | null;
+  /** @nullable */
+  vendorNameAr?: string | null;
 }
 
 export interface CartItem {

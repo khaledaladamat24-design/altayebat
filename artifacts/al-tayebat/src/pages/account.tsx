@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
 import {
   ChevronLeft, MapPin, Heart, Package, Globe, Settings,
-  CreditCard, Zap, Gift, UserCircle,
+  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X,
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { LogOut, Store } from "lucide-react";
+import { toast } from "sonner";
 import { useListOrders } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
@@ -80,13 +81,50 @@ export default function Account() {
   // Clerk profile → cached name → cached phone/email → "ضيف" (guest).
   const cachedPhone = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_phone") : null;
   const cachedEmail = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_email") : null;
+  const [cachedName, setCachedName] = useState<string | null>(
+    typeof window !== "undefined" ? localStorage.getItem("al_tayebat_name") : null
+  );
   const displayName =
+    cachedName ||
     user?.fullName ||
-    localStorage.getItem("al_tayebat_name") ||
     user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
     (isSignedIn && cachedPhone ? cachedPhone : null) ||
     (isSignedIn && cachedEmail ? cachedEmail.split("@")[0] : null) ||
     "ضيف";
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const openNameEditor = () => {
+    if (!isSignedIn) { setLocation("/auth"); return; }
+    setNameDraft(cachedName || (typeof displayName === "string" && displayName !== "ضيف" ? displayName : ""));
+    setEditingName(true);
+  };
+
+  const saveName = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) { toast.error("الرجاء إدخال اسم"); return; }
+    const userId = localStorage.getItem("al_tayebat_user_id");
+    if (!userId) { toast.error("الحساب غير معروف"); return; }
+    setSavingName(true);
+    try {
+      const r = await fetch(apiUrl(`/api/users/${userId}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      localStorage.setItem("al_tayebat_name", trimmed);
+      setCachedName(trimmed);
+      setEditingName(false);
+      toast.success("تم تحديث الاسم");
+    } catch {
+      toast.error("فشل تحديث الاسم");
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const ordersCount = orders?.length ?? 0;
 
@@ -115,13 +153,34 @@ export default function Account() {
             )}
             <div>
               <p className="text-xs text-muted-foreground">مرحباً</p>
-              <button
-                onClick={() => isSignedIn ? null : setLocation("/auth")}
-                className="flex items-center gap-1 font-black text-base"
-              >
-                {displayName}
-                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-              </button>
+              {editingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    className="h-7 px-2 text-sm font-bold rounded border border-border bg-background w-32"
+                    autoFocus
+                  />
+                  <button onClick={saveName} disabled={savingName} className="p-1 text-primary disabled:opacity-50">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 text-muted-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={isSignedIn ? openNameEditor : () => setLocation("/auth")}
+                  className="flex items-center gap-1 font-black text-base group"
+                >
+                  {displayName}
+                  {isSignedIn ? (
+                    <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-70 group-hover:opacity-100" />
+                  ) : (
+                    <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
           {/* Sign out / Support */}

@@ -1,6 +1,6 @@
 import { useGetProduct, useAddToCart, getGetCartQueryKey, useListProducts } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
-import { ChevronRight, Plus, Minus, ShoppingBag } from "lucide-react";
+import { ChevronRight, Plus, Minus, ShoppingBag, Store } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -99,8 +99,16 @@ export default function Product() {
 
         <h1 className="text-2xl font-bold mb-1">{product.nameAr}</h1>
         {product.weightOrVolume && (
-          <p className="text-sm text-muted-foreground mb-4">{product.weightOrVolume}</p>
+          <p className="text-sm text-muted-foreground mb-2">{product.weightOrVolume}</p>
         )}
+        {product.vendorNameAr || product.vendorName ? (
+          <Link href={`/search?q=${encodeURIComponent(product.vendorNameAr || product.vendorName || "")}`}>
+            <div className="inline-flex items-center gap-1.5 bg-primary/5 text-primary text-sm font-bold px-3 py-1.5 rounded-full mb-4 cursor-pointer hover:bg-primary/10 transition-colors">
+              <Store className="w-4 h-4" />
+              <span>{product.vendorNameAr || product.vendorName}</span>
+            </div>
+          </Link>
+        ) : null}
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex flex-col">
