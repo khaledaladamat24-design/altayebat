@@ -7,6 +7,7 @@ on:
       - "artifacts/al-tayebat/**"
       - "lib/**"
       - "pnpm-workspace.yaml"
+      - ".github/workflows/main.yml"
       - ".github/workflows/android-build.yml"
   workflow_dispatch:
 

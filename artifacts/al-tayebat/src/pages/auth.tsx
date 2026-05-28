@@ -11,7 +11,7 @@ import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } fro
 const REMEMBER_EMAIL_KEY = "al_tayebat_remember_email";
 const REMEMBER_PHONE_KEY = "al_tayebat_remember_phone";
 
-type Mode = "landing" | "email-login" | "email-signup" | "phone-input" | "otp-email" | "otp-phone";
+type Mode = "landing" | "email-login" | "email-signup" | "phone-input" | "otp-email" | "otp-phone" | "phone-set-password";
 
 declare global {
   interface Window {
@@ -247,6 +247,64 @@ export default function Auth() {
     return null;
   };
 
+  /* ── Phone + Password Login (no OTP for returning users) ── */
+  const handlePhonePasswordLogin = async () => {
+    if (!phone || phone.length < 10) { toast.error("أدخل رقمك بالشكل 07XXXXXXXX"); return; }
+    if (!password) { toast.error("أدخل كلمة المرور"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(apiUrl("/api/auth/phone-login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404) {
+          toast.error(body.error || "لا يوجد حساب — استخدم زر إرسال الرمز لإنشاء حساب جديد");
+        } else {
+          toast.error(body.error || "فشل تسجيل الدخول");
+        }
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem("al_tayebat_user_id", String(body.id));
+      localStorage.setItem("al_tayebat_phone", phone);
+      if (body.name) localStorage.setItem("al_tayebat_name", body.name);
+      if (body.firebaseUid) localStorage.setItem("al_tayebat_firebase_uid", body.firebaseUid);
+      localStorage.setItem("al_tayebat_onboarded_v2", "1");
+      persistRemembered("phone", phone);
+      toast.success("مرحباً بك في الطيبات!");
+      setLocation("/");
+    } catch (err) {
+      toast.error((err as Error).message || "فشل تسجيل الدخول");
+    }
+    setLoading(false);
+  };
+
+  /* ── After OTP verify: persist password so future logins skip OTP ── */
+  const handlePhoneSetPassword = async () => {
+    if (password.length < 6) { toast.error("كلمة المرور 6 أحرف على الأقل"); return; }
+    if (password !== password2) { toast.error("كلمتا المرور غير متطابقتين"); return; }
+    setLoading(true);
+    try {
+      const firebaseUid = localStorage.getItem("al_tayebat_firebase_uid") || undefined;
+      const res = await fetch(apiUrl("/api/auth/set-password"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, firebaseUid, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "فشل حفظ كلمة المرور");
+      localStorage.setItem("al_tayebat_user_id", String(body.id));
+      toast.success("تم حفظ كلمة المرور — يمكنك تسجيل الدخول لاحقاً بدون رمز");
+      setLocation("/register");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+    setLoading(false);
+  };
+
   /* ── Firebase Phone Send OTP ── */
   const handleSendPhoneOtp = async () => {
     const e164 = toE164JO(phone);
@@ -298,8 +356,9 @@ export default function Auth() {
         }
         const profile = await res.json();
         localStorage.setItem("al_tayebat_user_id", String(profile.id));
-        toast.success("تم التحقق بنجاح! 🎉");
-        setLocation("/register");
+        toast.success("تم التحقق! اختر كلمة المرور للدخول لاحقاً بدون رمز");
+        setPassword(""); setPassword2("");
+        setMode("phone-set-password");
       }
     } catch (err) {
       toast.error((err as Error).message || "الرمز غير صحيح أو منتهي الصلاحية");
@@ -409,16 +468,72 @@ export default function Auth() {
             </div>
           )}
 
+          <div className="relative">
+            <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute left-4 top-1/2 -translate-y-1/2">
+              {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
+            </button>
+            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور (لمن لديه حساب)"
+              value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && password && handlePhonePasswordLogin()}
+              className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 py-3.5 text-sm outline-none focus:border-primary transition-colors" dir="ltr" />
+          </div>
+
           <RememberMeBox />
 
+          <button onClick={handlePhonePasswordLogin} disabled={loading || !password}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+            تسجيل الدخول بكلمة المرور
+          </button>
+
+          <div className="flex items-center gap-3"><div className="flex-1 h-px bg-border" /><span className="text-muted-foreground text-xs">أو حساب جديد</span><div className="flex-1 h-px bg-border" /></div>
+
           <button onClick={handleSendPhoneOtp} disabled={loading}
-            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            className="w-full h-13 border-2 border-primary text-primary font-black rounded-2xl hover:bg-primary/5 transition-all flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
-            {loading ? "جاري الإرسال..." : "إرسال الرمز"}
+            إنشاء حساب جديد — إرسال الرمز
           </button>
 
           <button onClick={skipAuth} className="w-full text-center text-sm text-muted-foreground py-2">تخطّى — تصفح كضيف</button>
           <div ref={recaptchaRef} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Set Password after phone OTP signup ── */
+  if (mode === "phone-set-password") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+        {headerImg}
+        <div className="flex-1 px-6 py-8 space-y-5">
+          <div>
+            <h2 className="text-2xl font-black">اختر كلمة المرور</h2>
+            <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
+              سنحفظ هذه الكلمة لرقمك <span className="font-bold text-foreground" dir="ltr">{phone}</span> — في المرات القادمة تدخل بالرقم وكلمة المرور فقط بدون رمز.
+            </p>
+          </div>
+          <div className="relative">
+            <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute left-4 top-1/2 -translate-y-1/2">
+              {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+            </button>
+            <input type={showPassword ? "text" : "password"} placeholder="كلمة المرور (6 أحرف على الأقل)"
+              value={password} onChange={e => setPassword(e.target.value)}
+              className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary" dir="ltr" />
+          </div>
+          <div className="relative">
+            <input type={showPassword ? "text" : "password"} placeholder="تأكيد كلمة المرور"
+              value={password2} onChange={e => setPassword2(e.target.value)}
+              className={`w-full h-13 rounded-2xl border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary ${password2 && password2 !== password ? "border-red-400" : "border-border"}`} dir="ltr" />
+            {password2 && password2 !== password && (<p className="text-xs text-red-500 mt-1 pr-1">كلمتا المرور غير متطابقتين</p>)}
+          </div>
+          <button onClick={handlePhoneSetPassword} disabled={loading || password.length < 6 || password !== password2}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+            حفظ والمتابعة
+          </button>
+          <button onClick={() => { localStorage.setItem("al_tayebat_onboarded_v2", "1"); setLocation("/register"); }}
+            className="w-full text-center text-sm text-muted-foreground py-2">تخطّى الآن (يمكنك إضافتها لاحقاً)</button>
         </div>
       </div>
     );

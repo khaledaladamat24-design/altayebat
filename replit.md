@@ -53,6 +53,14 @@
 - Jordan market focus (JD currency, د.أ)
 - Payment integration to be added later
 
+## Auth flows
+
+- **Email:** Clerk handles password + email_code OTP. Re-login uses password (no fresh OTP).
+- **Phone:** Firebase OTP is used **only for new accounts** to prove ownership. Right after OTP verify, the user is taken to a "Set Password" screen which `POST /api/auth/set-password`s a bcrypt hash into `users.password_hash`. Subsequent logins go through `POST /api/auth/phone-login` (phone + password) — **no OTP on returning logins**.
+- `lib/db/src/schema/users.ts` has `passwordHash` column (added 2026-05).
+- Phone numbers are normalized server-side: `0791234567`, `+962791234567`, and `00962791234567` all resolve to the same account (`07XXXXXXXX` canonical form).
+- `GET /api/auth/check?phone=...` returns `{exists, hasPassword}` so the UI can decide whether to show password vs OTP.
+
 ## Gotchas
 
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`
