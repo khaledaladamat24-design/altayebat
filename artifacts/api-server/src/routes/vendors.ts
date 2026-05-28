@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { vendorProfilesTable, productsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { vendorProfilesTable, productsTable, ordersTable, orderItemsTable } from "@workspace/db";
+import { eq, desc, and, inArray } from "drizzle-orm";
+import { requireVendorOwner } from "../lib/vendor-auth";
 
 const router = Router();
 
@@ -209,9 +210,9 @@ router.post("/vendors", async (req, res) => {
 
 // Editable vendor profile fields (everything except status / userId / id / createdAt).
 // Status changes go through the dedicated /vendors/:id/status admin route.
-router.patch("/vendors/:id", async (req, res) => {
+router.patch("/vendors/:id", requireVendorOwner("id"), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { storeName, storeNameAr, category, description, phone, city,
             cliqAlias, walletNumber, bankAccount,
@@ -229,6 +230,7 @@ router.patch("/vendors/:id", async (req, res) => {
     if (deliveryFeeFixed !== undefined) patch.deliveryFeeFixed = deliveryFeeFixed;
     if (deliveryZones !== undefined) patch.deliveryZones = deliveryZones;
     if (freeDeliveryAbove !== undefined) patch.freeDeliveryAbove = freeDeliveryAbove;
+    if (req.body?.isOnline !== undefined) patch.isOnline = Boolean(req.body.isOnline);
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ error: "No editable fields provided" });
     }
@@ -266,6 +268,58 @@ router.delete("/vendors/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete vendor");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// List all orders for a vendor's products. Used by the vendor dashboard to
+// poll for new "pending" orders and trigger the audio alert.
+router.get("/vendors/:id/orders", requireVendorOwner("id"), async (req, res) => {
+  try {
+    const vendorId = parseInt(String(req.params.id));
+    if (isNaN(vendorId)) return res.status(400).json({ error: "Invalid id" });
+    const status = typeof req.query.status === "string" ? req.query.status : null;
+
+    const conditions = [eq(ordersTable.vendorId, vendorId)];
+    if (status) conditions.push(eq(ordersTable.status, status));
+
+    const orders = await db.select().from(ordersTable)
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+      .orderBy(desc(ordersTable.createdAt));
+
+    const orderIds = orders.map((o) => o.id);
+    const items = orderIds.length
+      ? await db.select({ oi: orderItemsTable, p: productsTable })
+          .from(orderItemsTable)
+          .leftJoin(productsTable, eq(orderItemsTable.productId, productsTable.id))
+          .where(inArray(orderItemsTable.orderId, orderIds))
+      : [];
+
+    res.json(orders.map((o) => ({
+      id: o.id,
+      status: o.status,
+      paymentMethod: o.paymentMethod,
+      paymentStatus: o.paymentStatus,
+      subtotal: Number(o.subtotal),
+      deliveryFee: Number(o.deliveryFee),
+      total: Number(o.total),
+      deliveryAddress: o.deliveryAddress,
+      customerName: o.customerName,
+      customerPhone: o.customerPhone,
+      notes: o.notes,
+      createdAt: o.createdAt.toISOString(),
+      items: items.filter((r) => r.oi.orderId === o.id).map((r) => ({
+        id: r.oi.id,
+        productName: r.p?.name ?? "",
+        productNameAr: r.p?.nameAr ?? "",
+        productImageUrl: r.p?.imageUrl ?? null,
+        quantity: r.oi.quantity,
+        unitPrice: Number(r.oi.unitPrice),
+        totalPrice: Number(r.oi.totalPrice),
+      })),
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list vendor orders");
     res.status(500).json({ error: "Internal server error" });
   }
 });

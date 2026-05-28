@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { productsTable, categoriesTable, vendorProfilesTable } from "@workspace/db";
-import { eq, and, or, ilike, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
+
+// Products without a vendor (admin-uploaded) stay visible. Products linked to
+// a vendor only appear when that vendor is marked online — this lets vendors
+// pause incoming orders by flipping their "Online" switch off.
+const vendorOnlineCondition = or(
+  isNull(productsTable.vendorId),
+  eq(vendorProfilesTable.isOnline, true),
+);
 
 const router = Router();
 
@@ -45,7 +53,7 @@ router.get("/products/featured", async (req, res) => {
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(eq(productsTable.isFeatured, true));
+      .where(and(eq(productsTable.isFeatured, true), vendorOnlineCondition));
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list featured products");
@@ -60,7 +68,7 @@ router.get("/products/bestsellers", async (req, res) => {
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(eq(productsTable.isBestseller, true));
+      .where(and(eq(productsTable.isBestseller, true), vendorOnlineCondition));
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
@@ -78,6 +86,7 @@ router.get("/products", async (req, res) => {
       if (!isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
     }
     if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
+    if (vendorOnlineCondition) conditions.push(vendorOnlineCondition);
     // Search across product name AND vendor store name so a user can find
     // "خبز كيتو" (product) or "أم علي" (restaurant) with the same input.
     if (search) {

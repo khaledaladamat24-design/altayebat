@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -17,6 +17,7 @@ export const vendorProfilesTable = pgTable("vendor_profiles", {
   deliveryFeeFixed: text("delivery_fee_fixed").default("1.500"),
   deliveryZones: text("delivery_zones"),
   freeDeliveryAbove: text("free_delivery_above").default("20.000"),
+  isOnline: boolean("is_online").notNull().default(true),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

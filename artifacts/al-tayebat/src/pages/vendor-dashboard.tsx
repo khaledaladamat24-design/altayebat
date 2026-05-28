@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Trash2, Pencil, Store, Clock, X } from "lucide-react";
+import { ChevronRight, Plus, Check, Package, Trash2, Pencil, Store, Clock, X, Bell, Phone, MapPin, Power, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,20 @@ interface VendorProfile {
   category: string;
   city: string | null;
   status: "pending" | "approved" | "suspended";
+  isOnline: boolean;
+}
+
+interface VendorOrder {
+  id: number;
+  status: string;
+  paymentMethod: string;
+  total: number;
+  deliveryAddress: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  notes: string | null;
+  createdAt: string;
+  items: { id: number; productNameAr: string; productName: string; quantity: number; totalPrice: number }[];
 }
 
 interface VendorProduct {
@@ -52,12 +66,19 @@ export default function VendorDashboard() {
   const [loading, setLoading] = useState(true);
   const [vendor, setVendor] = useState<VendorProfile | null>(null);
   const [products, setProducts] = useState<VendorProduct[]>([]);
-  const [tab, setTab] = useState<"list" | "add">("list");
+  const [tab, setTab] = useState<"orders" | "list" | "add">("orders");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [orders, setOrders] = useState<VendorOrder[]>([]);
+  const [muted, setMuted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("al_tayebat_vendor_muted") === "1";
+  });
+  const [togglingOnline, setTogglingOnline] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [savingName, setSavingName] = useState(false);
 
   const openNameEditor = () => {
@@ -131,6 +152,151 @@ export default function VendorDashboard() {
     if (!vendor) return;
     const pr = await fetch(apiUrl(`/api/vendors/${vendor.id}/products`));
     if (pr.ok) setProducts(await pr.json());
+  };
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Order polling — every 5 s while the dashboard is mounted and the vendor
+  // is approved. Pulls only "pending" orders so we can drive the audio alert.
+  // ──────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!vendor || vendor.status !== "approved") return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const r = await fetch(apiUrl(`/api/vendors/${vendor.id}/orders?status=pending`));
+        if (!r.ok || cancelled) return;
+        const data: VendorOrder[] = await r.json();
+        if (!cancelled) setOrders(data);
+      } catch { /* ignore transient network errors during polling */ }
+    };
+    tick();
+    const interval = window.setInterval(tick, 5000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [vendor]);
+
+  const pendingCount = orders.filter((o) => o.status === "pending").length;
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Looping audio alert. Uses Web Audio API to synthesise a short beep so we
+  // don't need to ship an mp3 (Capacitor APK + iOS friendly). Plays every
+  // 1.4 s while there's at least one pending order AND the vendor hasn't
+  // muted it. Stops the moment pendingCount → 0 or the user accepts.
+  // ──────────────────────────────────────────────────────────────────────────
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const beepIntervalRef = useRef<number | null>(null);
+  useEffect(() => {
+    const cleanup = () => {
+      if (beepIntervalRef.current !== null) {
+        window.clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = null;
+      }
+    };
+    if (muted || pendingCount === 0) { cleanup(); return; }
+
+    const playBeep = () => {
+      try {
+        const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (!AC) return;
+        if (!audioCtxRef.current) audioCtxRef.current = new AC();
+        const ctx = audioCtxRef.current;
+        if (ctx.state === "suspended") ctx.resume().catch(() => {});
+        const now = ctx.currentTime;
+        // Two-tone "ding-dong" pulse — ~600 ms total.
+        [
+          { f: 880, t: 0 },
+          { f: 660, t: 0.18 },
+          { f: 880, t: 0.36 },
+        ].forEach(({ f, t }) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = f;
+          gain.gain.setValueAtTime(0.0001, now + t);
+          gain.gain.exponentialRampToValueAtTime(0.5, now + t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.16);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + t);
+          osc.stop(now + t + 0.18);
+        });
+      } catch { /* audio unavailable — silent fallback */ }
+    };
+
+    playBeep();
+    beepIntervalRef.current = window.setInterval(playBeep, 1400);
+    return cleanup;
+  }, [pendingCount, muted]);
+
+  // Unmount: tear down the AudioContext so leaving the page silences us.
+  useEffect(() => () => {
+    if (beepIntervalRef.current !== null) window.clearInterval(beepIntervalRef.current);
+    audioCtxRef.current?.close().catch(() => {});
+  }, []);
+
+  const toggleMuted = () => {
+    setMuted((m) => {
+      const next = !m;
+      try { window.localStorage.setItem("al_tayebat_vendor_muted", next ? "1" : "0"); } catch {}
+      return next;
+    });
+  };
+
+  const toggleOnline = async () => {
+    if (!vendor || togglingOnline) return;
+    const next = !vendor.isOnline;
+    setTogglingOnline(true);
+    try {
+      const r = await fetch(apiUrl(`/api/vendors/${vendor.id}`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOnline: next }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      const updated = await r.json();
+      setVendor((prev) => prev ? { ...prev, isOnline: Boolean(updated.isOnline) } : prev);
+      toast.success(next ? "متجرك الآن متصل ويستقبل الطلبات" : "متجرك الآن غير متصل — لن تظهر منتجاتك للزبائن");
+    } catch {
+      toast.error("فشل تحديث حالة المتجر");
+    } finally {
+      setTogglingOnline(false);
+    }
+  };
+
+  const acceptOrder = async (orderId: number) => {
+    setAcceptingId(orderId);
+    try {
+      const r = await fetch(apiUrl(`/api/orders/${orderId}/status`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "preparing" }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      // Optimistically drop it from the pending list so the beep stops instantly.
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      toast.success(`بدأت تحضير الطلب #${orderId}`);
+    } catch {
+      toast.error("فشل قبول الطلب");
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const rejectOrder = async (orderId: number) => {
+    if (!confirm(`رفض الطلب #${orderId}؟`)) return;
+    setAcceptingId(orderId);
+    try {
+      const r = await fetch(apiUrl(`/api/orders/${orderId}/status`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      toast.success("تم رفض الطلب");
+    } catch {
+      toast.error("فشل رفض الطلب");
+    } finally {
+      setAcceptingId(null);
+    }
   };
 
   const startEdit = (p: VendorProduct) => {
@@ -279,26 +445,134 @@ export default function VendorDashboard() {
               <Pencil className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
             </button>
           )}
-          <p className="text-xs text-primary-foreground/80 flex items-center gap-1">
-            <Check className="w-3 h-3" /> متجر مفعّل · {products.length} منتج
+          <p className="text-xs text-primary-foreground/80 flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1">
+              <Check className="w-3 h-3" /> متجر مفعّل · {products.length} منتج
+            </span>
+            <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${vendor.isOnline ? "bg-emerald-500/30" : "bg-zinc-500/40"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? "bg-emerald-300" : "bg-zinc-300"}`} />
+              {vendor.isOnline ? "متصل" : "غير متصل"}
+            </span>
           </p>
         </div>
+
+        {/* Online/Offline toggle — pauses incoming orders by hiding products from the home feed */}
+        <button
+          onClick={toggleOnline}
+          disabled={togglingOnline}
+          aria-pressed={vendor.isOnline}
+          aria-label={vendor.isOnline ? "إيقاف استقبال الطلبات" : "تشغيل استقبال الطلبات"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-50 ${vendor.isOnline ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"}`}
+        >
+          <Power className="w-3.5 h-3.5" />
+          {vendor.isOnline ? "متصل" : "غير متصل"}
+        </button>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border bg-background sticky top-0 z-10">
         {[
+          { id: "orders" as const, icon: Bell, label: "الطلبات" },
           { id: "list" as const, icon: Package, label: "منتجاتي" },
           { id: "add" as const, icon: Plus, label: editingId ? "تعديل المنتج" : "إضافة منتج" },
         ].map(t => (
           <button key={t.id} onClick={() => { if (t.id === "list") cancelEdit(); else setTab(t.id); }}
-            className={`flex-1 py-3 text-sm font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${tab === t.id ? "border-rose text-rose" : "border-transparent text-muted-foreground"}`}>
+            className={`relative flex-1 py-3 text-sm font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${tab === t.id ? "border-rose text-rose" : "border-transparent text-muted-foreground"}`}>
             <t.icon className="w-4 h-4" /> {t.label}
+            {t.id === "orders" && pendingCount > 0 && (
+              <span className="absolute top-1.5 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-rose text-white text-[10px] font-bold flex items-center justify-center">
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
+      {tab === "orders" && pendingCount > 0 && !muted && (
+        <div className="bg-amber-100 border-y border-amber-300 px-4 py-2 flex items-center justify-between text-sm">
+          <span className="font-bold text-amber-800 flex items-center gap-1.5">
+            <Bell className="w-4 h-4 animate-pulse" /> {pendingCount} طلب جديد بانتظار القبول
+          </span>
+          <button onClick={toggleMuted} className="text-amber-800 flex items-center gap-1 text-xs font-bold hover:underline">
+            <VolumeX className="w-3.5 h-3.5" /> إيقاف الصوت
+          </button>
+        </div>
+      )}
+      {tab === "orders" && muted && (
+        <div className="bg-zinc-100 border-y border-zinc-300 px-4 py-2 flex items-center justify-between text-xs">
+          <span className="text-zinc-700">الصوت متوقف</span>
+          <button onClick={toggleMuted} className="text-primary font-bold hover:underline">تشغيل التنبيه الصوتي</button>
+        </div>
+      )}
+
       <div className="px-4 py-5">
+        {tab === "orders" && (
+          <div className="space-y-3">
+            {orders.length === 0 ? (
+              <div className="text-center py-16">
+                <Bell className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">لا توجد طلبات جديدة حالياً</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">سنشغّل تنبيهاً صوتياً عند وصول أي طلب</p>
+              </div>
+            ) : orders.map((o) => (
+              <div key={o.id} className="bg-card rounded-xl border-2 border-rose/40 p-4 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm">طلب #{o.id}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(o.createdAt).toLocaleString("ar-JO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
+                    </p>
+                  </div>
+                  <span className="text-xs bg-rose/10 text-rose px-2 py-1 rounded-full font-bold">جديد</span>
+                </div>
+
+                <div className="text-xs space-y-1 text-muted-foreground">
+                  {o.customerName && <p className="font-bold text-foreground">{o.customerName}</p>}
+                  {o.customerPhone && (
+                    <a href={`tel:${o.customerPhone}`} className="flex items-center gap-1 text-primary hover:underline" dir="ltr">
+                      <Phone className="w-3 h-3" /> {o.customerPhone}
+                    </a>
+                  )}
+                  <p className="flex items-start gap-1"><MapPin className="w-3 h-3 mt-0.5 shrink-0" /> {o.deliveryAddress}</p>
+                  {o.notes && <p className="italic">"{o.notes}"</p>}
+                </div>
+
+                <div className="border-t border-border pt-2 space-y-1">
+                  {o.items.map((it) => (
+                    <div key={it.id} className="flex justify-between text-xs">
+                      <span>{it.productNameAr || it.productName} × {it.quantity}</span>
+                      <span className="text-muted-foreground">{Number(it.totalPrice).toFixed(3)} د.أ</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-xs text-muted-foreground">{o.paymentMethod}</span>
+                  <span className="font-bold text-sm">{Number(o.total).toFixed(3)} د.أ</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => acceptOrder(o.id)}
+                    disabled={acceptingId === o.id}
+                    className="flex-1 rounded-xl gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Check className="w-4 h-4" /> قبول وبدء التحضير
+                  </Button>
+                  <Button
+                    onClick={() => rejectOrder(o.id)}
+                    disabled={acceptingId === o.id}
+                    variant="outline"
+                    className="rounded-xl gap-1.5 border-destructive text-destructive hover:bg-destructive/10"
+                  >
+                    <X className="w-4 h-4" /> رفض
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {tab === "list" && (
           <div className="space-y-3">
             {products.length === 0 ? (

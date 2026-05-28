@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, cartItemsTable, productsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import { requireOrderVendorOwner } from "../lib/vendor-auth";
 
 const router = Router();
 
@@ -86,10 +87,15 @@ router.post("/orders", async (req, res) => {
     const paymentMethod = req.body.paymentMethod || "cod";
     const paymentScreenshotUrl = req.body.paymentScreenshotUrl || null;
 
+    // Single-vendor cart assumption (per replit.md): take the vendorId from
+    // the first cart item's product so vendors can list "their" orders.
+    const cartVendorId = cartItems.find((r) => r.p?.vendorId)?.p?.vendorId ?? null;
+
     const [newOrder] = await db
       .insert(ordersTable)
       .values({
         sessionId,
+        vendorId: cartVendorId,
         status: "pending",
         paymentMethod,
         paymentStatus: paymentMethod === "balance" ? "paid" : paymentScreenshotUrl ? "pending" : "cod",
@@ -135,6 +141,44 @@ router.get("/orders/:id", async (req, res) => {
     res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to get order");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Vendors and admins use this to move an order through its lifecycle
+// (pending → preparing → ready → out_for_delivery → delivered, or cancelled).
+// Allowed forward transitions. The guard verifies vendor ownership; we then
+// only flip the row if the current status matches an allowed predecessor —
+// this is the atomic conditional update the architect asked for and prevents
+// a stale "accept" from undoing a later "deliver".
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  preparing: ["pending"],
+  ready: ["preparing"],
+  out_for_delivery: ["ready"],
+  delivered: ["out_for_delivery"],
+  cancelled: ["pending", "preparing"],
+};
+
+router.patch("/orders/:id/status", requireOrderVendorOwner("id"), async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const status = String(req.body?.status ?? "");
+    const fromStates = STATUS_TRANSITIONS[status];
+    if (!fromStates) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+    const [updated] = await db.update(ordersTable)
+      .set({ status })
+      .where(and(eq(ordersTable.id, id), inArray(ordersTable.status, fromStates)))
+      .returning();
+    if (!updated) {
+      // Either the order disappeared or it's in a state we won't transition from.
+      return res.status(409).json({ error: "Order is not in a state that allows this transition" });
+    }
+    res.json({ id: updated.id, status: updated.status });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update order status");
     res.status(500).json({ error: "Internal server error" });
   }
 });

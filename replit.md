@@ -61,6 +61,15 @@
 - Phone numbers are normalized server-side: `0791234567`, `+962791234567`, and `00962791234567` all resolve to the same account (`07XXXXXXXX` canonical form).
 - `GET /api/auth/check?phone=...` returns `{exists, hasPassword}` so the UI can decide whether to show password vs OTP.
 
+## Vendor dashboard (live orders)
+
+- `/vendor-dashboard` polls `GET /api/vendors/:id/orders?status=pending` every 5 s and shows them in a new "الطلبات" tab. Each card has Accept (→ `PATCH /api/orders/:id/status {status:"preparing"}`) and Reject (→ `cancelled`).
+- An audio alert loops every 1.4 s using the Web Audio API (synthesised ding-dong, no mp3 asset, Capacitor/iOS friendly) while there are pending orders. It stops the instant the last pending order is accepted/rejected or the user toggles mute. Mute pref persists in `localStorage` key `al_tayebat_vendor_muted`.
+- Online/Offline toggle in the dashboard header → `PATCH /api/vendors/:id {isOnline}`. When offline, the vendor's products are excluded from `/api/products`, `/api/products/featured`, and `/api/products/bestsellers` via `or(isNull(productsTable.vendorId), eq(vendorProfilesTable.isOnline, true))`. Single-product GET and category endpoints are *not* filtered, so existing carts/checkouts keep working.
+- New orders' `vendorId` is set from the first cart item's product (single-vendor cart assumption). Pre-existing orders have NULL `vendorId` and won't appear in any vendor's dashboard.
+- **Authz**: `GET /api/vendors/:id/orders`, `PATCH /api/vendors/:id`, and `PATCH /api/orders/:id/status` are gated by `requireVendorOwner` / `requireOrderVendorOwner` (in `artifacts/api-server/src/lib/vendor-auth.ts`). Caller must be the signed-in Clerk user whose `users.id` matches the vendor's `userId`. Super-admin email + `x-admin-key` bypass. Same-origin fetches from the dashboard send the Clerk session cookie automatically.
+- **Status transitions** are server-enforced (atomic conditional UPDATE): `pending→preparing|cancelled`, `preparing→ready|cancelled`, `ready→out_for_delivery`, `out_for_delivery→delivered`. Returns 409 on stale/invalid transitions so a late "accept" can't overwrite a "delivered" state.
+
 ## Gotchas
 
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`
