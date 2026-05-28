@@ -2,11 +2,19 @@ import { Link, useLocation } from "wouter";
 import { Home, Grid, ShoppingCart, ListOrdered, User } from "lucide-react";
 import { useGetCart } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
+import { useMemo } from "react";
 
 export function BottomNav() {
   const [location] = useLocation();
   const sessionId = useSession();
-  const { data: cart } = useGetCart({ sessionId }, { query: { enabled: !!sessionId } });
+  // Stable references prevent Orval's useQuery from re-subscribing every render,
+  // which on Android WebView could cascade into React error #185.
+  const cartParams = useMemo(() => ({ sessionId }), [sessionId]);
+  const cartOptions = useMemo(
+    () => ({ query: { enabled: !!sessionId } }),
+    [sessionId],
+  );
+  const { data: cart } = useGetCart(cartParams, cartOptions);
 
   const navItems = [
     { name: "الرئيسية", path: "/", icon: Home },
