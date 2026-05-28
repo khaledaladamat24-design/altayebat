@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown, Wallet, Truck } from "lucide-react";
+import { ChevronRight, Plus, Check, Package, Users, Store, ShoppingBag, Trash2, Eye, CheckCircle2, XCircle, Clock, Crown, Wallet, Truck, Pencil, X } from "lucide-react";
 import { AdminDeliveryTab } from "@/components/admin-delivery-tab";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
@@ -68,12 +68,45 @@ export default function Admin() {
   const { data: categories } = useListCategories();
   const { data: products, refetch } = useListProducts({});
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     nameAr: "", name: "", descriptionAr: "", description: "",
     price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
     isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true,
     calories: "", protein: "", carbs: "", fats: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  const startEditProduct = (p: any) => {
+    setEditingId(p.id);
+    setForm({
+      nameAr: p.nameAr ?? "",
+      name: p.name ?? "",
+      descriptionAr: p.descriptionAr ?? "",
+      description: p.description ?? "",
+      price: p.price != null ? String(p.price) : "",
+      originalPrice: p.originalPrice != null ? String(p.originalPrice) : "",
+      categoryId: p.categoryId != null ? String(p.categoryId) : "",
+      imageUrl: p.imageUrl ?? "",
+      weightOrVolume: p.weightOrVolume ?? "",
+      isKeto: !!p.isKeto,
+      isOrganic: !!p.isOrganic,
+      isFeatured: !!p.isFeatured,
+      isBestseller: !!p.isBestseller,
+      inStock: p.inStock !== false,
+      calories: p.calories != null ? String(p.calories) : "",
+      protein: p.protein != null ? String(p.protein) : "",
+      carbs: p.carbs != null ? String(p.carbs) : "",
+      fats: p.fats != null ? String(p.fats) : "",
+    });
+    setTab("products-add");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+  };
 
   const adminHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -140,30 +173,36 @@ export default function Admin() {
     }
     setSaving(true);
     try {
-      const res = await fetch(apiUrl("/api/admin/products"), {
-        method: "POST",
-        headers: adminHeaders,
-        body: JSON.stringify({
-          ...form,
-          price: Number(form.price),
-          originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-          categoryId: Number(form.categoryId),
-          calories: form.calories || null,
-          protein: form.protein || null,
-          carbs: form.carbs || null,
-          fats: form.fats || null,
-        }),
-      });
+      const isEdit = editingId != null;
+      const res = await fetch(
+        apiUrl(isEdit ? `/api/admin/products/${editingId}` : "/api/admin/products"),
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: adminHeaders,
+          body: JSON.stringify({
+            ...form,
+            price: Number(form.price),
+            originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
+            categoryId: Number(form.categoryId),
+            calories: form.calories || null,
+            protein: form.protein || null,
+            carbs: form.carbs || null,
+            fats: form.fats || null,
+          }),
+        }
+      );
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(errBody.error || `HTTP ${res.status}`);
       }
       setSuccess(true);
-      toast.success("تم إضافة المنتج بنجاح");
-      setForm({ nameAr: "", name: "", descriptionAr: "", description: "", price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "", isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true, calories: "", protein: "", carbs: "", fats: "" });
+      toast.success(isEdit ? "تم تحديث المنتج" : "تم إضافة المنتج بنجاح");
+      setForm(emptyForm);
+      setEditingId(null);
       refetch();
+      if (isEdit) setTab("products-list");
       setTimeout(() => setSuccess(false), 2500);
-    } catch { toast.error("حدث خطأ أثناء إضافة المنتج"); }
+    } catch { toast.error(editingId != null ? "فشل تحديث المنتج" : "حدث خطأ أثناء إضافة المنتج"); }
     setSaving(false);
   };
 
@@ -247,7 +286,7 @@ export default function Admin() {
 
   const tabs = [
     { id: "products-list", icon: Package, label: "المنتجات" },
-    { id: "products-add", icon: Plus, label: "إضافة" },
+    { id: "products-add", icon: editingId != null ? Pencil : Plus, label: editingId != null ? "تعديل" : "إضافة" },
     { id: "orders", icon: ShoppingBag, label: "الطلبات" },
     { id: "vendors", icon: Store, label: "الموردون" },
     { id: "users", icon: Users, label: "المستخدمون" },
@@ -331,9 +370,14 @@ export default function Admin() {
                     {!p.inStock && <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">نفد</span>}
                   </div>
                 </div>
-                <button onClick={() => handleDeleteProduct(p.id, p.nameAr)} className="text-destructive p-2 hover:bg-destructive/10 rounded-lg">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => startEditProduct(p)} className="text-primary p-2 hover:bg-primary/10 rounded-lg" title="تعديل">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDeleteProduct(p.id, p.nameAr)} className="text-destructive p-2 hover:bg-destructive/10 rounded-lg" title="حذف">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -342,6 +386,17 @@ export default function Admin() {
         {/* ── Add Product ── */}
         {tab === "products-add" && (
           <form onSubmit={handleAddProduct} className="space-y-4">
+            {editingId != null && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-amber-700" />
+                  <span className="text-sm font-bold text-amber-800">وضع التعديل — منتج #{editingId}</span>
+                </div>
+                <button type="button" onClick={cancelEdit} className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                  <X className="w-3 h-3" /> إلغاء
+                </button>
+              </div>
+            )}
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
               <h2 className="font-bold text-sm text-muted-foreground mb-2">معلومات المنتج</h2>
               <div className="grid grid-cols-2 gap-3">
@@ -429,7 +484,12 @@ export default function Admin() {
             </div>
 
             <Button type="submit" disabled={saving || success} className={`w-full h-13 rounded-xl text-base font-bold gap-2 ${success ? "bg-green-600 hover:bg-green-600" : "bg-rose hover:bg-rose/90"}`}>
-              {success ? <><Check className="w-5 h-5" /> تمت الإضافة</> : saving ? "جاري الحفظ..." : <><Plus className="w-5 h-5" /> إضافة المنتج</>}
+              {success
+                ? <><Check className="w-5 h-5" /> {editingId != null ? "تم التحديث" : "تمت الإضافة"}</>
+                : saving ? "جاري الحفظ..."
+                : editingId != null
+                  ? <><Check className="w-5 h-5" /> حفظ التعديلات</>
+                  : <><Plus className="w-5 h-5" /> إضافة المنتج</>}
             </Button>
           </form>
         )}
