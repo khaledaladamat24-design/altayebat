@@ -40,17 +40,19 @@ router.get("/vendors/:id/products", async (req, res) => {
   }
 });
 
-async function ensureVendorApproved(vendorId: number) {
+// Vendor approval is auto-granted on signup, so product CRUD only needs to
+// verify the vendor exists (not that admin manually approved it).
+async function ensureVendorExists(vendorId: number) {
   const [v] = await db.select().from(vendorProfilesTable)
     .where(eq(vendorProfilesTable.id, vendorId)).limit(1);
-  return v && v.status === "approved" ? v : null;
+  return v || null;
 }
 
 router.post("/vendors/:id/products", async (req, res) => {
   try {
     const vendorId = parseInt(req.params.id);
-    const vendor = await ensureVendorApproved(vendorId);
-    if (!vendor) return res.status(403).json({ error: "متجرك بانتظار موافقة الإدارة" });
+    const vendor = await ensureVendorExists(vendorId);
+    if (!vendor) return res.status(404).json({ error: "المتجر غير موجود" });
     const { nameAr, name, descriptionAr, description, price, originalPrice,
       categoryId, imageUrl, isKeto, isOrganic, weightOrVolume, inStock,
       calories, protein, carbs, fats } = req.body;
@@ -84,8 +86,8 @@ router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
   try {
     const vendorId = parseInt(req.params.vendorId);
     const productId = parseInt(req.params.productId);
-    const vendor = await ensureVendorApproved(vendorId);
-    if (!vendor) return res.status(403).json({ error: "غير مصرّح" });
+    const vendor = await ensureVendorExists(vendorId);
+    if (!vendor) return res.status(404).json({ error: "المتجر غير موجود" });
     const [existing] = await db.select().from(productsTable)
       .where(eq(productsTable.id, productId)).limit(1);
     if (!existing || existing.vendorId !== vendorId) {

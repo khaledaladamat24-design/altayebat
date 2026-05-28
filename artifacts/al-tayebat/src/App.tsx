@@ -43,6 +43,7 @@ import Register from "@/pages/register";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import VendorDashboard from "@/pages/vendor-dashboard";
 import WalletPage from "@/pages/wallet";
+import PaymentMethods from "@/pages/payment-methods";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +85,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/vendor-dashboard" component={VendorDashboard} />
       <Route path="/wallet" component={WalletPage} />
+      <Route path="/payment-methods" component={PaymentMethods} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route>
         <SplashGate>

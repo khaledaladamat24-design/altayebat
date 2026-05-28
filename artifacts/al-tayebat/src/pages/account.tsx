@@ -76,16 +76,22 @@ export default function Account() {
     { query: { enabled: !!sessionId } }
   );
 
+  // Show the best available identity for the signed-in user. Falls back through
+  // Clerk profile → cached name → cached phone/email → "ضيف" (guest).
+  const cachedPhone = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_phone") : null;
+  const cachedEmail = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_email") : null;
   const displayName =
     user?.fullName ||
-    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
     localStorage.getItem("al_tayebat_name") ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    (isSignedIn && cachedPhone ? cachedPhone : null) ||
+    (isSignedIn && cachedEmail ? cachedEmail.split("@")[0] : null) ||
     "ضيف";
 
   const ordersCount = orders?.length ?? 0;
 
   const menuRows = [
-    { icon: CreditCard, label: "طرق الدفع", iconColor: "text-blue-500", href: null },
+    { icon: CreditCard, label: "طرق الدفع", iconColor: "text-blue-500", href: vendorId ? "/payment-methods" : "/wallet" },
     { icon: MapPin, label: "العنوان", iconColor: "text-rose", href: null },
     { icon: Heart, label: "المفضلة", iconColor: "text-pink-500", href: null },
     { icon: Zap, label: "ضمان التوصيل في الوقت المحدد", iconColor: "text-green-500", href: null },

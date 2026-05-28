@@ -135,7 +135,12 @@ export default function Checkout() {
     const total = Number(cart.subtotal) + Number(cart.deliveryFee || 0);
 
     if (paymentMethod === "cliq" || paymentMethod === "wallet") {
-      if (!screenshot) { toast.error("يرجى رفع إيصال الدفع لإتمام الطلب"); return; }
+      if (!screenshot) {
+        toast.error("يرجى رفع إيصال الدفع لإتمام الطلب");
+        // Scroll user straight to the payment/upload section for convenience
+        document.getElementById("payment-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
     }
     if (paymentMethod === "balance") {
       if (!userId) { toast.error("سجّل دخولك لاستخدام المحفظة"); return; }
@@ -191,7 +196,7 @@ export default function Checkout() {
   }
 
   return (
-    <div className="pb-28 min-h-screen bg-muted/30">
+    <div className="pb-40 min-h-screen bg-muted/30">
       <div className="bg-background pt-8 pb-4 px-4 sticky top-0 z-20 border-b border-border/50 flex items-center gap-4">
         <Link href="/cart">
           <div className="p-2 -mr-2 text-foreground cursor-pointer">
@@ -260,7 +265,7 @@ export default function Checkout() {
         </div>
 
         {/* Step 2 — Payment Method */}
-        <div className="bg-card p-5 rounded-2xl shadow-sm border border-border">
+        <div id="payment-section" className="bg-card p-5 rounded-2xl shadow-sm border border-border">
           <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
             <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">2</span>
             طريقة الدفع
@@ -401,14 +406,22 @@ export default function Checkout() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-50 max-w-md mx-auto">
+      <div className="fixed bottom-16 left-0 right-0 p-3 bg-background border-t border-border z-40 max-w-md mx-auto">
         <Button
           type="submit"
           form="checkout-form"
-          className="w-full h-14 rounded-full text-lg shadow-lg"
+          className="w-full h-13 rounded-full text-base shadow-lg"
           disabled={createOrder.isPending}
         >
-          {createOrder.isPending ? "جاري التأكيد..." : "تأكيد الطلب ✓"}
+          {createOrder.isPending
+            ? "جاري التأكيد..."
+            : paymentMethod === "cliq"
+              ? "ادفع عبر كليك ↙"
+              : paymentMethod === "wallet"
+                ? "ادفع عبر المحفظة ↙"
+                : paymentMethod === "balance"
+                  ? `ادفع ${(Number(cart.subtotal) + Number(cart.deliveryFee || 0)).toFixed(2)} د.أ من رصيدي`
+                  : "تأكيد الطلب ✓"}
         </Button>
       </div>
     </div>

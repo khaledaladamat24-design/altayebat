@@ -116,8 +116,9 @@ export default function Register() {
       localStorage.setItem("al_tayebat_role", "vendor");
       localStorage.setItem("al_tayebat_user_id", String(userProfile.id));
       localStorage.setItem("al_tayebat_vendor_id", String(vendor.id));
-      toast.success("تم تسجيل متجرك بنجاح!");
-      setStep("done");
+      toast.success("تم تسجيل متجرك بنجاح! 🎉");
+      // No more "waiting for approval" — vendors get instant access to their dashboard
+      setLocation("/vendor-dashboard");
     } catch (err) {
       toast.error((err as Error).message || "حدث خطأ أثناء تسجيل المتجر");
     }
@@ -135,22 +136,6 @@ export default function Register() {
     </div>
   );
 
-  if (step === "done") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6 max-w-md mx-auto" dir="rtl">
-        <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-primary" />
-        </div>
-        <div className="text-center">
-          <h2 className="text-2xl font-black">تم التسجيل بنجاح! 🎉</h2>
-          <p className="text-muted-foreground mt-2">تم إرسال طلب متجرك للمراجعة. سنتواصل معك قريباً لتفعيله.</p>
-        </div>
-        <button onClick={() => setLocation("/")} className="w-full h-14 bg-primary text-primary-foreground font-black text-lg rounded-2xl">
-          العودة للتطبيق
-        </button>
-      </div>
-    );
-  }
 
   if (step === "vendor-payout") {
     return (
