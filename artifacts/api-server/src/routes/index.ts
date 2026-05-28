@@ -12,6 +12,7 @@ import vendorsRouter from "./vendors";
 import walletRouter from "./wallet";
 import authRouter from "./auth";
 import deliveryRouter from "./delivery";
+import uploadsRouter from "./uploads";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(vendorsRouter);
 router.use(walletRouter);
 router.use(authRouter);
 router.use(deliveryRouter);
+router.use(uploadsRouter);
 
 export default router;

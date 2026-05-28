@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useListCategories } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
+import { ImageUpload } from "@/components/image-upload";
 
 interface VendorProfile {
   id: number;
@@ -389,11 +390,7 @@ export default function VendorDashboard() {
                   <Input value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" placeholder="500g" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">رابط الصورة</label>
-                <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" placeholder="https://..." />
-                {form.imageUrl && <img src={form.imageUrl} alt="" className="h-20 rounded-lg object-cover mt-2" onError={e => (e.currentTarget.style.display = "none")} />}
-              </div>
+              <ImageUpload value={form.imageUrl} onChange={url => setForm(f => ({ ...f, imageUrl: url }))} />
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
