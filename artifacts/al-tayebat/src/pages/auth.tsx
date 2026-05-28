@@ -47,12 +47,17 @@ export default function Auth() {
   // skip straight to the home screen. This is what makes "Remember me" feel automatic
   // — Clerk persists the session across app launches, so returning users never see
   // the login form again unless they explicitly sign out.
+  const redirectedRef = useRef(false);
   useEffect(() => {
-    if (authLoaded && isSignedIn) {
+    if (authLoaded && isSignedIn && !redirectedRef.current) {
+      redirectedRef.current = true;
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
       setLocation("/");
     }
-  }, [authLoaded, isSignedIn, setLocation]);
+    // setLocation omitted: wouter v3 may return a new reference per render,
+    // which would loop the effect (React #185) on Android WebView.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, isSignedIn]);
 
   // Persist or clear remembered identifier based on the rememberMe toggle.
   const persistRemembered = (kind: "email" | "phone", value: string) => {

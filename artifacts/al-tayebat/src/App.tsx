@@ -63,20 +63,23 @@ function SplashGate({ children }: { children: React.ReactNode }) {
     const excluded = SPLASH_EXCLUDED.some(p => location.startsWith(p));
     if (excluded) return;
 
+    // Guard: never navigate to the location we're already on. Without this,
+    // an unstable setLocation reference from wouter v3 can trigger React #185
+    // (Maximum update depth) on Android WebView.
     if (!localStorage.getItem(ONBOARD_KEY)) {
-      setLocation("/splash");
+      if (location !== "/splash") setLocation("/splash");
       return;
     }
-    // Treat any of: Firebase OTP, Clerk JWT, or our own phone+password user_id
-    // as "signed in". Without the last one, password-only phone users get
-    // bounced back to /auth in an infinite loop and the home page stays blank.
     const signedIn = !!localStorage.getItem("al_tayebat_firebase_uid")
       || !!localStorage.getItem("__clerk_db_jwt")
       || !!localStorage.getItem("al_tayebat_user_id");
-    if (!signedIn && !localStorage.getItem(AUTH_SKIPPED_KEY)) {
+    if (!signedIn && !localStorage.getItem(AUTH_SKIPPED_KEY) && location !== "/auth") {
       setLocation("/auth");
     }
-  }, [location, setLocation]);
+    // setLocation intentionally omitted — wouter v3 may return a new reference
+    // each render, which would cause this effect to loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
   return <>{children}</>;
 }
 
