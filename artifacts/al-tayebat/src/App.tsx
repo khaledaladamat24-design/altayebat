@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider } from "@clerk/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect } from "react";
+import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { setBaseUrl } from "@workspace/api-client-react";
 
 // In Capacitor/Android builds, the web bundle is served from the local
@@ -115,29 +115,74 @@ function Router() {
   );
 }
 
-function App() {
+// Diagnostic fallback so blank screens on native APK builds surface a useful
+// message instead of just white. Most common cause: missing VITE_CLERK_*/VITE_API_BASE_URL
+// in the GitHub Actions build secrets.
+function FatalScreen({ title, detail }: { title: string; detail: string }) {
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      {...(import.meta.env.PROD && !isNative ? { proxyUrl: "/api/__clerk" } : {})}
-      appearance={{
-        variables: {
-          colorPrimary: "hsl(152 41% 30%)",
-          colorDanger: "hsl(349 68% 62%)",
-          borderRadius: "0.75rem",
-          fontFamily: "Cairo, sans-serif",
-        },
-      }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster position="top-center" rtl={true} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <div dir="rtl" style={{
+      minHeight: "100vh", padding: "24px",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      background: "#fafaf7", color: "#1f2937", fontFamily: "Cairo, system-ui, sans-serif", textAlign: "center",
+    }}>
+      <div style={{ fontSize: "48px", marginBottom: "12px" }}>⚠️</div>
+      <h1 style={{ fontSize: "20px", fontWeight: 900, color: "#1f5135", marginBottom: "12px" }}>{title}</h1>
+      <p style={{ fontSize: "14px", color: "#6b7280", maxWidth: "320px", lineHeight: 1.7 }}>{detail}</p>
+      <button onClick={() => window.location.reload()} style={{
+        marginTop: "20px", padding: "12px 24px", borderRadius: "12px",
+        background: "#1f5135", color: "white", border: "none", fontWeight: 700, fontSize: "14px",
+      }}>إعادة المحاولة</button>
+    </div>
+  );
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[ErrorBoundary]", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return <FatalScreen title="حدث خطأ غير متوقع" detail={String(this.state.error?.message || this.state.error)} />;
+    }
+    return this.props.children;
+  }
+}
+
+function App() {
+  if (!clerkPubKey) {
+    return (
+      <FatalScreen
+        title="إعدادات ناقصة"
+        detail="مفتاح Clerk (VITE_CLERK_PUBLISHABLE_KEY) غير موجود في هذه النسخة من التطبيق. أعد بناء APK بعد إضافة المتغيرات المطلوبة في GitHub Secrets."
+      />
+    );
+  }
+  return (
+    <ErrorBoundary>
+      <ClerkProvider
+        publishableKey={clerkPubKey}
+        {...(import.meta.env.PROD && !isNative ? { proxyUrl: "/api/__clerk" } : {})}
+        appearance={{
+          variables: {
+            colorPrimary: "hsl(152 41% 30%)",
+            colorDanger: "hsl(349 68% 62%)",
+            borderRadius: "0.75rem",
+            fontFamily: "Cairo, sans-serif",
+          },
+        }}
+      >
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <WouterRouter base={isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster position="top-center" rtl={true} />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ClerkProvider>
+    </ErrorBoundary>
   );
 }
 

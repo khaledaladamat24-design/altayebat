@@ -73,57 +73,34 @@ export default function Auth() {
     setLocation("/");
   };
 
-  /* ── Email Login (supports both password and passwordless instances) ── */
+  /* ── Email Login: password ONLY. OTP is a separate "forgot password" flow. ──
+   * Re-login should NEVER trigger an OTP email — that was the user's explicit
+   * requirement. If the password is wrong, we surface a clear error instead of
+   * silently falling back to email_code.
+   */
   const handleEmailLogin = async () => {
     if (!email) { toast.error("أدخل البريد الإلكتروني"); return; }
+    if (!password) { toast.error("أدخل كلمة المرور"); return; }
     if (!signInLoaded) return;
     setLoading(true);
 
-    type Factor = { strategy: string; emailAddressId?: string };
-    type CreateResult = { status: string; createdSessionId?: string | null; supportedFirstFactors?: Factor[] };
+    type CreateResult = { status: string; createdSessionId?: string | null };
 
     try {
-      const result = (await signIn.create({ identifier: email })) as unknown as CreateResult;
-      const factors = result.supportedFirstFactors || [];
-      const emailFactor = factors.find(f => f.strategy === "email_code");
+      await signIn.create({ identifier: email });
+      const r = (await (signIn as unknown as {
+        attemptFirstFactor: (p: { strategy: string; password: string }) => Promise<CreateResult>;
+      }).attemptFirstFactor({ strategy: "password", password }));
 
-      // Path A: user provided a password → ALWAYS try password first, even if
-      // factor detection didn't report "password" (some Clerk instances list
-      // factors lazily). Only fall through to email_code if the attempt
-      // explicitly fails. This is what makes "re-login with the same password"
-      // work without re-OTP-ing the user every single time.
-      if (password) {
-        try {
-          const r = (await (signIn as unknown as {
-            attemptFirstFactor: (p: { strategy: string; password: string }) => Promise<CreateResult>;
-          }).attemptFirstFactor({ strategy: "password", password }));
-          if (r.status === "complete" && r.createdSessionId && setActiveSignIn) {
-            await setActiveSignIn({ session: r.createdSessionId });
-            localStorage.setItem("al_tayebat_email", email);
-            localStorage.setItem("al_tayebat_onboarded_v2", "1");
-            persistRemembered("email", email);
-            toast.success("مرحباً بك في الطيبات!");
-            setLocation("/");
-            setLoading(false);
-            return;
-          }
-        } catch (e1: unknown) {
-          // Password wrong → fall through to email_code if available
-          if (!emailFactor) throw e1;
-          console.warn("[signin] password failed, falling back to email code:", e1);
-        }
-      }
-
-      // Path B: send email code as OTP
-      if (emailFactor?.emailAddressId) {
-        await (signIn as unknown as {
-          prepareFirstFactor: (p: { strategy: string; emailAddressId: string }) => Promise<unknown>;
-        }).prepareFirstFactor({ strategy: "email_code", emailAddressId: emailFactor.emailAddressId });
-        setPendingSignUp(false);
-        setMode("otp-email");
-        toast("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
+      if (r.status === "complete" && r.createdSessionId && setActiveSignIn) {
+        await setActiveSignIn({ session: r.createdSessionId });
+        localStorage.setItem("al_tayebat_email", email);
+        localStorage.setItem("al_tayebat_onboarded_v2", "1");
+        persistRemembered("email", email);
+        toast.success("مرحباً بك في الطيبات!");
+        setLocation("/");
       } else {
-        toast.error("لا توجد طريقة دخول مفعّلة لهذا الحساب");
+        toast.error("تعذّر إكمال تسجيل الدخول");
       }
     } catch (err: unknown) {
       console.error("[signin] full error:", err);
@@ -132,9 +109,45 @@ export default function Auth() {
       if (er?.code === "form_identifier_not_found") {
         toast.error("لا يوجد حساب بهذا البريد. أنشئ حساباً جديداً.");
         setMode("email-signup");
+      } else if (er?.code === "form_password_incorrect" || er?.code === "form_password_pwned") {
+        toast.error("كلمة المرور غير صحيحة. إذا نسيتها، اضغط (نسيت كلمة المرور؟)");
+      } else if (er?.code === "strategy_for_user_invalid") {
+        toast.error("هذا الحساب لا يحتوي على كلمة مرور. اضغط (نسيت كلمة المرور؟) لإرسال رمز");
       } else {
         const codeHint = er?.code ? ` (${er.code})` : "";
         toast.error(friendly ? friendly + codeHint : `خطأ في تسجيل الدخول${codeHint}`);
+      }
+    }
+    setLoading(false);
+  };
+
+  /* ── Forgot Password: explicit OTP-based recovery (user choice, not silent fallback) ── */
+  const handleEmailForgotPassword = async () => {
+    if (!email) { toast.error("أدخل البريد الإلكتروني أولاً"); return; }
+    if (!signInLoaded) return;
+    setLoading(true);
+    try {
+      type Factor = { strategy: string; emailAddressId?: string };
+      type CreateResult = { supportedFirstFactors?: Factor[] };
+      const result = (await signIn.create({ identifier: email })) as unknown as CreateResult;
+      const emailFactor = (result.supportedFirstFactors || []).find(f => f.strategy === "email_code");
+      if (!emailFactor?.emailAddressId) {
+        toast.error("لا يمكن إرسال رمز لهذا الحساب");
+        setLoading(false);
+        return;
+      }
+      await (signIn as unknown as {
+        prepareFirstFactor: (p: { strategy: string; emailAddressId: string }) => Promise<unknown>;
+      }).prepareFirstFactor({ strategy: "email_code", emailAddressId: emailFactor.emailAddressId });
+      setPendingSignUp(false);
+      setMode("otp-email");
+      toast.success("تم إرسال رمز التحقق إلى بريدك");
+    } catch (err: unknown) {
+      const er = (err as { errors?: { code?: string; message?: string }[] })?.errors?.[0];
+      if (er?.code === "form_identifier_not_found") {
+        toast.error("لا يوجد حساب بهذا البريد");
+      } else {
+        toast.error(er?.message || "تعذّر إرسال الرمز");
       }
     }
     setLoading(false);
@@ -571,6 +584,10 @@ export default function Auth() {
             className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
             {(loading || !signInLoaded) ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
             {!signInLoaded ? "جاري تحميل خدمة الدخول..." : (loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول")}
+          </button>
+          <button type="button" onClick={handleEmailForgotPassword} disabled={loading || !email}
+            className="w-full text-center text-sm text-muted-foreground hover:text-primary disabled:opacity-40 underline">
+            نسيت كلمة المرور؟ أرسل لي رمز تحقق
           </button>
           <div className="flex items-center gap-3"><div className="flex-1 h-px bg-border" /><span className="text-muted-foreground text-xs">أو</span><div className="flex-1 h-px bg-border" /></div>
           <button onClick={() => setMode("email-signup")}
