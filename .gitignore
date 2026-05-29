@@ -62,6 +62,7 @@ GoogleService-Info.plist
 !.github/workflows
 .github/workflows/*
 !.github/workflows/main.yml
+!.github/workflows/checks.yml
 .github/instructions/nx.instructions.md
 
 # ── Android build artifacts ──
