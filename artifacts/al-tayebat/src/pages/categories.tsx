@@ -1,13 +1,22 @@
 import { useListCategories } from "@workspace/api-client-react";
 import { Link } from "wouter";
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/contexts/language";
 import { LanguageToggle } from "@/components/language-toggle";
 
+type Zone = "healthy" | "regular";
+const ZONE_STORAGE_KEY = "al_tayebat_zone";
+
 export default function Categories() {
   const { lang, dir, tr } = useLanguage();
-  const { data: categories, isLoading } = useListCategories();
+  const [zone] = useState<Zone>(() => {
+    if (typeof window === "undefined") return "healthy";
+    const saved = localStorage.getItem(ZONE_STORAGE_KEY);
+    return saved === "regular" ? "regular" : "healthy";
+  });
+  const { data: categories, isLoading } = useListCategories({ foodType: zone });
 
   return (
     <div className="pb-8" dir={dir}>
@@ -17,7 +26,11 @@ export default function Categories() {
             <ChevronRight className="w-5 h-5" />
           </div>
         </Link>
-        <h1 className="text-xl font-bold flex-1">{tr("جميع الأقسام", "All Categories")}</h1>
+        <h1 className="text-xl font-bold flex-1">
+          {zone === "regular"
+            ? tr("أقسام القسم العادي", "Regular Categories")
+            : tr("أقسام القسم الصحي", "Healthy Categories")}
+        </h1>
         <LanguageToggle />
       </div>
 
