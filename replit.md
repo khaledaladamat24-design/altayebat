@@ -103,11 +103,16 @@
 ## Android (Capacitor)
 
 - Native shell config: `artifacts/al-tayebat/capacitor.config.ts` (appId `com.altayebat.app`, name "الطيبات")
-- CI: `.github/workflows/android-build.yml` builds a debug APK on every push to `main` and is downloadable from the workflow run's Artifacts panel
+- CI: `.github/workflows/main.yml` ("Build Android App") runs on every push to `main` (paths-filtered) and on `workflow_dispatch`. It now builds a **signed release APK + AAB** (`al-tayebat-release-apk` / `al-tayebat-release-aab`) downloadable from the workflow run's Artifacts panel. It falls back to an unsigned debug APK only if `ANDROID_KEYSTORE_BASE64` is unset.
 - For native builds, `VITE_API_BASE_URL` must point to the deployed Replit API (e.g. `https://<your-app>.replit.app/api`) — relative `/api` URLs won't reach the backend from the device filesystem
 - Required GitHub repo secrets: `VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_FIREBASE_*` (6 values)
 - Local Android build (needs Android Studio + JDK 21): `pnpm --filter @workspace/al-tayebat cap:add:android` once, then `pnpm --filter @workspace/al-tayebat cap:sync` before each rebuild
-- For Play Store release: generate a keystore, add 4 keystore secrets to the repo, then uncomment the "signed release build" block in the workflow
+
+### Play Store signing (configured 2026-05)
+
+- A release keystore (`PKCS12`, RSA 2048, alias `altayebat`, 10000-day validity, `CN=Al-Tayebat`) was generated and the 4 signing secrets are set on GitHub Actions: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. The workflow decodes the keystore, injects a `signingConfigs.release` block into `android/app/build.gradle`, and runs `assembleRelease` + `bundleRelease`.
+- Verified: a `workflow_dispatch` run produced both signed artifacts (the debug-fallback steps were skipped).
+- **Keystore backup**: the keystore + its passwords live (gitignored) at `.local/android-signing/release.keystore` and `.local/android-signing/CREDENTIALS.txt`. **Back these up offline** — Google Play requires the *same* signing key for every future update; losing it blocks updates to the listing. (Alternatively enroll in Google Play App Signing and let Google manage the upload→app key.)
 
 ## Pointers
 

@@ -41,3 +41,9 @@ id = "1AbKlgIuF5NZirrs1jW78"
 uri = "file://.local/keystore/credentials.txt"
 type = "text"
 title = "🔐 credentials.txt (كلمة السر)"
+
+[[outputs]]
+id = "6N9_NEe3SJytXGpcw4Bhm"
+uri = "file://.local/android-signing/al-tayebat-android-signing-backup.tar.gz"
+type = "unspecified"
+title = "Android signing backup — keystore + passwords (STORE OFFLINE)"
