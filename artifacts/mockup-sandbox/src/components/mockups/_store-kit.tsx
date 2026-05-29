@@ -6,8 +6,7 @@ export const GREEN_DARK = "hsl(152 50% 12%)";
 export const ROSE = "hsl(349 68% 62%)";
 export const CREAM = "hsl(65 33% 98%)";
 
-export const AR_FONT =
-  "'Cairo', 'Tajawal', system-ui, sans-serif";
+export const AR_FONT = "'Cairo', 'Tajawal', system-ui, sans-serif";
 
 export function brandBg(): CSSProperties {
   return {
@@ -96,11 +95,7 @@ export function Phone({
             zIndex: 2,
           }}
         />
-        <img
-          src={src}
-          alt=""
-          style={{ width: "100%", display: "block" }}
-        />
+        <img src={src} alt="" style={{ width: "100%", display: "block" }} />
       </div>
     </div>
   );

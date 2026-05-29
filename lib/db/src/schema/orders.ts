@@ -1,4 +1,11 @@
-import { pgTable, serial, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  numeric,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,7 +19,9 @@ export const ordersTable = pgTable("orders", {
   paymentStatus: text("payment_status").notNull().default("pending"),
   paymentScreenshotUrl: text("payment_screenshot_url"),
   subtotal: numeric("subtotal", { precision: 10, scale: 3 }).notNull(),
-  deliveryFee: numeric("delivery_fee", { precision: 10, scale: 3 }).notNull().default("1.500"),
+  deliveryFee: numeric("delivery_fee", { precision: 10, scale: 3 })
+    .notNull()
+    .default("1.500"),
   total: numeric("total", { precision: 10, scale: 3 }).notNull(),
   deliveryAddress: text("delivery_address").notNull(),
   customerName: text("customer_name"),
@@ -37,8 +46,14 @@ export const orderItemsTable = pgTable("order_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
-export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true, createdAt: true });
+export const insertOrderSchema = createInsertSchema(ordersTable).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type Order = typeof ordersTable.$inferSelect;

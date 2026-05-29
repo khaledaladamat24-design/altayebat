@@ -46,7 +46,10 @@ export default function PrivacyPolicy() {
       ],
     },
     {
-      title: tr("3. مشاركة البيانات وإخلاء المسؤولية", "3. Data Sharing and Disclaimer"),
+      title: tr(
+        "3. مشاركة البيانات وإخلاء المسؤولية",
+        "3. Data Sharing and Disclaimer",
+      ),
       content: [
         tr(
           "يتم مشاركة موقع المستهلك ورقم هاتفه مع المورد لإتمام وتوصيل الطلب.",
@@ -57,8 +60,8 @@ export default function PrivacyPolicy() {
           "Phone numbers are sent to Firebase solely for OTP verification.",
         ),
         tr(
-          "تطبيق \"الطيبات\" هو وسيط تقني مجاني ولا يتقاضى عمولات حالياً.",
-          "\"Al-Tayebat\" is a free technical intermediary and currently charges no commissions.",
+          'تطبيق "الطيبات" هو وسيط تقني مجاني ولا يتقاضى عمولات حالياً.',
+          '"Al-Tayebat" is a free technical intermediary and currently charges no commissions.',
         ),
         tr(
           "الموردون مسؤولون قانونياً عن جودة الأغذية وامتلاكهم التراخيص والشهادات الصحية اللازمة من الجهات الرسمية (مؤسسة الغذاء والدواء وأمانة عمان).",
@@ -67,7 +70,10 @@ export default function PrivacyPolicy() {
       ],
     },
     {
-      title: tr("4. حقوق المستخدم والمسؤول", "4. User and Administrator Rights"),
+      title: tr(
+        "4. حقوق المستخدم والمسؤول",
+        "4. User and Administrator Rights",
+      ),
       content: [
         tr(
           "يحق للمستخدمين (مستهلكين وموردين) تعديل بياناتهم الشخصية أو طلب حذف حساباتهم في أي وقت.",
@@ -97,7 +103,10 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-background max-w-md mx-auto" dir={dir}>
       <div className="bg-primary text-primary-foreground pt-10 pb-5 px-4 rounded-b-3xl">
-        <button onClick={() => setLocation(-1 as unknown as string)} className="p-2 -mr-2 mb-2">
+        <button
+          onClick={() => setLocation(-1 as unknown as string)}
+          className="p-2 -mr-2 mb-2"
+        >
           <ChevronRight className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-3">
@@ -105,8 +114,15 @@ export default function PrivacyPolicy() {
             <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black">{tr("سياسة الخصوصية", "Privacy Policy")}</h1>
-            <p className="text-primary-foreground/70 text-xs">{tr("تاريخ آخر تحديث: 26 مايو 2026", "Last updated: May 26, 2026")}</p>
+            <h1 className="text-xl font-black">
+              {tr("سياسة الخصوصية", "Privacy Policy")}
+            </h1>
+            <p className="text-primary-foreground/70 text-xs">
+              {tr(
+                "تاريخ آخر تحديث: 26 مايو 2026",
+                "Last updated: May 26, 2026",
+              )}
+            </p>
           </div>
         </div>
       </div>
@@ -114,11 +130,8 @@ export default function PrivacyPolicy() {
       <div className="px-4 py-6 space-y-6">
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
           <p className="text-sm leading-relaxed text-foreground">
-            {tr(
-              "أهلاً بك في تطبيق ",
-              "Welcome to the ",
-            )}
-            <strong>{tr("\"الطيبات\"", "\"Al-Tayebat\"")}</strong>
+            {tr("أهلاً بك في تطبيق ", "Welcome to the ")}
+            <strong>{tr('"الطيبات"', '"Al-Tayebat"')}</strong>
             {tr(
               ". نحن نولي أهمية قصوى لخصوصية بياناتك وأمانها. توضح هذه السياسة كيفية جمع البيانات، استخدامها، ومشاركتها عند استخدامك للتطبيق داخل المملكة الأردنية الهاشمية.",
               " app. We take the privacy and security of your data very seriously. This policy explains how data is collected, used, and shared when you use the app within the Hashemite Kingdom of Jordan.",
@@ -128,12 +141,24 @@ export default function PrivacyPolicy() {
 
         {sections.map((section) => (
           <div key={section.title} className="space-y-3">
-            <h2 className="font-black text-base text-primary">{section.title}</h2>
+            <h2 className="font-black text-base text-primary">
+              {section.title}
+            </h2>
             <ul className="space-y-2">
               {section.content.map((item, i) => (
-                <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/80">
+                <li
+                  key={i}
+                  className="flex gap-2 text-sm leading-relaxed text-foreground/80"
+                >
                   <span className="text-primary mt-1 shrink-0">•</span>
-                  <span dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: item.replace(
+                        /\*\*(.*?)\*\*/g,
+                        "<strong>$1</strong>",
+                      ),
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -143,8 +168,8 @@ export default function PrivacyPolicy() {
         <div className="bg-muted rounded-2xl p-4">
           <p className="text-xs text-muted-foreground text-center leading-relaxed">
             {tr(
-              "بتحميلك واستخدامك لتطبيق \"الطيبات\"، فإنك توافق على شروط سياسة الخصوصية هذه.",
-              "By downloading and using the \"Al-Tayebat\" app, you agree to the terms of this privacy policy.",
+              'بتحميلك واستخدامك لتطبيق "الطيبات"، فإنك توافق على شروط سياسة الخصوصية هذه.',
+              'By downloading and using the "Al-Tayebat" app, you agree to the terms of this privacy policy.',
             )}
           </p>
         </div>

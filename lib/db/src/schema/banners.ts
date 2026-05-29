@@ -17,6 +17,9 @@ export const bannersTable = pgTable("banners", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertBannerSchema = createInsertSchema(bannersTable).omit({ id: true, createdAt: true });
+export const insertBannerSchema = createInsertSchema(bannersTable).omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertBanner = z.infer<typeof insertBannerSchema>;
 export type Banner = typeof bannersTable.$inferSelect;

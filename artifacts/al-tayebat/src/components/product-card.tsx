@@ -18,16 +18,21 @@ type ProductWithMacros = Product & {
 
 export function ProductCard({ product: rawProduct }: { product: Product }) {
   const product = rawProduct as ProductWithMacros;
-  const hasMacros = product.calories != null || product.protein != null || product.carbs != null || product.fats != null;
+  const hasMacros =
+    product.calories != null ||
+    product.protein != null ||
+    product.carbs != null ||
+    product.fats != null;
   // Only treat it as a real discount when the original price is genuinely higher
   // than the current price — avoids a misleading strike-through.
   const hasDiscount =
-    product.originalPrice != null && Number(product.originalPrice) > Number(product.price);
+    product.originalPrice != null &&
+    Number(product.originalPrice) > Number(product.price);
   const sessionId = useSession();
   const queryClient = useQueryClient();
   const addToCart = useAddToCart();
   const { lang, tr } = useLanguage();
-  const title = lang === "en" ? (product.name || product.nameAr) : product.nameAr;
+  const title = lang === "en" ? product.name || product.nameAr : product.nameAr;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -37,10 +42,14 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
       { data: { productId: product.id, quantity: 1, sessionId } },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-          toast.success(tr(`تمت إضافة ${title} إلى السلة`, `${title} added to cart`));
+          queryClient.invalidateQueries({
+            queryKey: getGetCartQueryKey({ sessionId }),
+          });
+          toast.success(
+            tr(`تمت إضافة ${title} إلى السلة`, `${title} added to cart`),
+          );
         },
-      }
+      },
     );
   };
 
@@ -49,7 +58,11 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
       <div className="bg-card border border-card-border rounded-xl overflow-hidden cursor-pointer h-full flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
         <div className="relative aspect-square bg-muted">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.nameAr} className="w-full h-full object-cover" />
+            <img
+              src={product.imageUrl}
+              alt={product.nameAr}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
               {tr("صورة المنتج", "Product image")}
@@ -79,7 +92,9 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
 
           {product.isBestseller && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose/80 to-transparent py-1 px-2">
-              <span className="text-white text-[10px] font-bold">{tr("الأكثر مبيعاً", "Bestseller")}</span>
+              <span className="text-white text-[10px] font-bold">
+                {tr("الأكثر مبيعاً", "Bestseller")}
+              </span>
             </div>
           )}
         </div>
@@ -113,14 +128,20 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
           )}
 
           {product.weightOrVolume && (
-            <p className="text-xs text-muted-foreground mb-2">{product.weightOrVolume}</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              {product.weightOrVolume}
+            </p>
           )}
 
           <div className="mt-auto flex items-center justify-between pt-2">
             <div className="flex flex-col">
-              <span className="font-bold text-primary text-sm">{formatPrice(product.price)}</span>
+              <span className="font-bold text-primary text-sm">
+                {formatPrice(product.price)}
+              </span>
               {hasDiscount && (
-                <span className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice!)}</span>
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatPrice(product.originalPrice!)}
+                </span>
               )}
             </div>
 

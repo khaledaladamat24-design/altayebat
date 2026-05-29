@@ -12,7 +12,10 @@ export default function Splash() {
   };
 
   return (
-    <div className="relative min-h-screen w-full max-w-md mx-auto overflow-hidden" dir={dir}>
+    <div
+      className="relative min-h-screen w-full max-w-md mx-auto overflow-hidden"
+      dir={dir}
+    >
       {/* Background food image */}
       <div className="absolute inset-0">
         <img
@@ -29,7 +32,9 @@ export default function Splash() {
         {/* Logo */}
         <div className="flex justify-center pt-16 pb-4">
           <div className="bg-white/15 backdrop-blur-sm border border-white/30 rounded-3xl px-6 py-2 shadow-lg">
-            <span className="text-white text-2xl font-black tracking-wide drop-shadow">{tr("الطيبات", "Al-Tayebat")}</span>
+            <span className="text-white text-2xl font-black tracking-wide drop-shadow">
+              {tr("الطيبات", "Al-Tayebat")}
+            </span>
           </div>
         </div>
 
@@ -44,7 +49,10 @@ export default function Splash() {
               {tr("أهلاً بك في الطيبات", "Welcome to Al-Tayebat")}
             </h1>
             <p className="text-white/85 text-base font-medium drop-shadow">
-              {tr("تناول طعاماً أفضل وعيش حياةً أفضل", "Eat better, live better")}
+              {tr(
+                "تناول طعاماً أفضل وعيش حياةً أفضل",
+                "Eat better, live better",
+              )}
             </p>
           </div>
 
@@ -59,9 +67,17 @@ export default function Splash() {
 
           {/* Privacy */}
           <p className="text-center text-white/65 text-xs leading-relaxed px-2">
-            {tr("بالمتابعة، فإنك توافق على ", "By continuing, you agree to our ")}
-            <span className="underline text-white/85 cursor-pointer">{tr("سياسة الخصوصية", "Privacy Policy")}</span>
-            {tr(" الخاصة بنا. تحتاج الطيبات إلى الوصول لموقعك لتسهيل توصيل الطلبات وتقديم توصيات مخصصة لك.", ". Al-Tayebat needs access to your location to facilitate order delivery and provide personalized recommendations.")}
+            {tr(
+              "بالمتابعة، فإنك توافق على ",
+              "By continuing, you agree to our ",
+            )}
+            <span className="underline text-white/85 cursor-pointer">
+              {tr("سياسة الخصوصية", "Privacy Policy")}
+            </span>
+            {tr(
+              " الخاصة بنا. تحتاج الطيبات إلى الوصول لموقعك لتسهيل توصيل الطلبات وتقديم توصيات مخصصة لك.",
+              ". Al-Tayebat needs access to your location to facilitate order delivery and provide personalized recommendations.",
+            )}
           </p>
         </div>
       </div>

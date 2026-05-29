@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 function readOrCreateSession(): string {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === "undefined") return "";
   try {
-    let sid = window.localStorage.getItem('al_tayebat_session');
+    let sid = window.localStorage.getItem("al_tayebat_session");
     if (!sid) {
-      sid = 'session_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      window.localStorage.setItem('al_tayebat_session', sid);
+      sid =
+        "session_" +
+        Math.random().toString(36).substring(2, 15) +
+        Date.now().toString(36);
+      window.localStorage.setItem("al_tayebat_session", sid);
     }
     return sid;
   } catch {
-    return '';
+    return "";
   }
 }
 

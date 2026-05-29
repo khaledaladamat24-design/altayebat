@@ -9,8 +9,19 @@ import { DeliveryNotConfiguredError } from "../delivery/types";
 const router = Router();
 
 const PUBLIC_FIELDS = [
-  "id", "code", "name", "nameAr", "type", "baseUrl", "enabled", "isDefault",
-  "contactPhone", "contactWhatsapp", "settings", "createdAt", "updatedAt",
+  "id",
+  "code",
+  "name",
+  "nameAr",
+  "type",
+  "baseUrl",
+  "enabled",
+  "isDefault",
+  "contactPhone",
+  "contactWhatsapp",
+  "settings",
+  "createdAt",
+  "updatedAt",
 ] as const;
 
 /** Strip credentials before returning a provider to the client. */
@@ -42,10 +53,17 @@ router.get("/delivery/providers", requireAdmin, async (req, res) => {
 router.post("/delivery/providers", requireAdmin, async (req, res) => {
   try {
     const {
-      code, name, nameAr, type = "manual", baseUrl,
-      enabled = false, isDefault = false,
-      contactPhone, contactWhatsapp,
-      credentials = {}, settings = {},
+      code,
+      name,
+      nameAr,
+      type = "manual",
+      baseUrl,
+      enabled = false,
+      isDefault = false,
+      contactPhone,
+      contactWhatsapp,
+      credentials = {},
+      settings = {},
     } = req.body ?? {};
     if (!code || !name || !nameAr) {
       return res.status(400).json({ error: "code, name, nameAr are required" });
@@ -56,12 +74,22 @@ router.post("/delivery/providers", requireAdmin, async (req, res) => {
     if (isDefault) {
       await db.update(deliveryProvidersTable).set({ isDefault: false });
     }
-    const [created] = await db.insert(deliveryProvidersTable).values({
-      code, name, nameAr, type, baseUrl,
-      enabled, isDefault,
-      contactPhone, contactWhatsapp,
-      credentials, settings,
-    }).returning();
+    const [created] = await db
+      .insert(deliveryProvidersTable)
+      .values({
+        code,
+        name,
+        nameAr,
+        type,
+        baseUrl,
+        enabled,
+        isDefault,
+        contactPhone,
+        contactWhatsapp,
+        credentials,
+        settings,
+      })
+      .returning();
     return res.status(201).json(sanitize(created));
   } catch (err) {
     req.log.error({ err }, "Failed to create delivery provider");
@@ -77,17 +105,35 @@ router.patch("/delivery/providers/:id", requireAdmin, async (req, res) => {
     const body = req.body ?? {};
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     const editable = [
-      "code", "name", "nameAr", "type", "baseUrl", "enabled", "isDefault",
-      "contactPhone", "contactWhatsapp", "credentials", "settings",
+      "code",
+      "name",
+      "nameAr",
+      "type",
+      "baseUrl",
+      "enabled",
+      "isDefault",
+      "contactPhone",
+      "contactWhatsapp",
+      "credentials",
+      "settings",
     ];
     for (const k of editable) if (k in body) patch[k] = body[k];
     if (patch.type && !getAdapter(String(patch.type))) {
-      return res.status(400).json({ error: `Unknown delivery type: ${patch.type}` });
+      return res
+        .status(400)
+        .json({ error: `Unknown delivery type: ${patch.type}` });
     }
     if (patch.isDefault === true) {
-      await db.update(deliveryProvidersTable).set({ isDefault: false }).where(sql`${deliveryProvidersTable.id} <> ${id}`);
+      await db
+        .update(deliveryProvidersTable)
+        .set({ isDefault: false })
+        .where(sql`${deliveryProvidersTable.id} <> ${id}`);
     }
-    const [updated] = await db.update(deliveryProvidersTable).set(patch).where(eq(deliveryProvidersTable.id, id)).returning();
+    const [updated] = await db
+      .update(deliveryProvidersTable)
+      .set(patch)
+      .where(eq(deliveryProvidersTable.id, id))
+      .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
     return res.json(sanitize(updated));
   } catch (err) {
@@ -101,7 +147,9 @@ router.delete("/delivery/providers/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-    await db.delete(deliveryProvidersTable).where(eq(deliveryProvidersTable.id, id));
+    await db
+      .delete(deliveryProvidersTable)
+      .where(eq(deliveryProvidersTable.id, id));
     return res.status(204).end();
   } catch (err) {
     req.log.error({ err }, "Failed to delete delivery provider");
@@ -111,76 +159,135 @@ router.delete("/delivery/providers/:id", requireAdmin, async (req, res) => {
 
 // POST /api/delivery/orders/:orderId/shipment — create a shipment for an order via the chosen
 // (or default) provider. Admin only. Idempotent: if a tracking number already exists, returns it.
-router.post("/delivery/orders/:orderId/shipment", requireAdmin, async (req, res) => {
-  try {
-    const orderId = parseInt(String(req.params.orderId));
-    if (isNaN(orderId)) return res.status(400).json({ error: "Invalid orderId" });
-    const providerId = req.body?.providerId ? parseInt(req.body.providerId) : null;
-
-    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    if (order.deliveryTrackingNumber) {
-      return res.json({ trackingNumber: order.deliveryTrackingNumber, awbUrl: order.deliveryAwbUrl, status: order.deliveryStatus, alreadyShipped: true });
-    }
-
-    let provider: DeliveryProvider | undefined;
-    if (providerId) {
-      [provider] = await db.select().from(deliveryProvidersTable).where(eq(deliveryProvidersTable.id, providerId)).limit(1);
-    } else {
-      [provider] = await db.select().from(deliveryProvidersTable).where(eq(deliveryProvidersTable.isDefault, true)).limit(1);
-    }
-    if (!provider) return res.status(400).json({ error: "No delivery provider available. Configure one in the admin panel first." });
-    if (!provider.enabled) return res.status(400).json({ error: `Provider ${provider.nameAr} is disabled.` });
-
-    const adapter = getAdapter(provider.type);
-    if (!adapter) return res.status(500).json({ error: `Unknown provider type: ${provider.type}` });
-
+router.post(
+  "/delivery/orders/:orderId/shipment",
+  requireAdmin,
+  async (req, res) => {
     try {
-      const result = await adapter.createShipment(provider, {
-        order,
-        recipientName: order.customerName ?? "",
-        recipientPhone: order.customerPhone ?? "",
-        recipientAddress: order.deliveryAddress,
-        totalCod: order.paymentMethod === "cod" ? Number(order.total) : 0,
-        notes: order.notes,
-      });
-      await db.update(ordersTable).set({
-        deliveryProviderId: provider.id,
-        deliveryTrackingNumber: result.trackingNumber,
-        deliveryAwbUrl: result.awbUrl ?? null,
-        deliveryStatus: result.status ?? "shipped",
-        deliveryShippedAt: new Date(),
-        status: order.status === "pending" ? "shipped" : order.status,
-      }).where(eq(ordersTable.id, orderId));
-      return res.json(result);
-    } catch (err) {
-      if (err instanceof DeliveryNotConfiguredError) {
-        return res.status(400).json({ error: err.message, notConfigured: true });
+      const orderId = parseInt(String(req.params.orderId));
+      if (isNaN(orderId))
+        return res.status(400).json({ error: "Invalid orderId" });
+      const providerId = req.body?.providerId
+        ? parseInt(req.body.providerId)
+        : null;
+
+      const [order] = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, orderId))
+        .limit(1);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      if (order.deliveryTrackingNumber) {
+        return res.json({
+          trackingNumber: order.deliveryTrackingNumber,
+          awbUrl: order.deliveryAwbUrl,
+          status: order.deliveryStatus,
+          alreadyShipped: true,
+        });
       }
-      throw err;
+
+      let provider: DeliveryProvider | undefined;
+      if (providerId) {
+        [provider] = await db
+          .select()
+          .from(deliveryProvidersTable)
+          .where(eq(deliveryProvidersTable.id, providerId))
+          .limit(1);
+      } else {
+        [provider] = await db
+          .select()
+          .from(deliveryProvidersTable)
+          .where(eq(deliveryProvidersTable.isDefault, true))
+          .limit(1);
+      }
+      if (!provider)
+        return res.status(400).json({
+          error:
+            "No delivery provider available. Configure one in the admin panel first.",
+        });
+      if (!provider.enabled)
+        return res
+          .status(400)
+          .json({ error: `Provider ${provider.nameAr} is disabled.` });
+
+      const adapter = getAdapter(provider.type);
+      if (!adapter)
+        return res
+          .status(500)
+          .json({ error: `Unknown provider type: ${provider.type}` });
+
+      try {
+        const result = await adapter.createShipment(provider, {
+          order,
+          recipientName: order.customerName ?? "",
+          recipientPhone: order.customerPhone ?? "",
+          recipientAddress: order.deliveryAddress,
+          totalCod: order.paymentMethod === "cod" ? Number(order.total) : 0,
+          notes: order.notes,
+        });
+        await db
+          .update(ordersTable)
+          .set({
+            deliveryProviderId: provider.id,
+            deliveryTrackingNumber: result.trackingNumber,
+            deliveryAwbUrl: result.awbUrl ?? null,
+            deliveryStatus: result.status ?? "shipped",
+            deliveryShippedAt: new Date(),
+            status: order.status === "pending" ? "shipped" : order.status,
+          })
+          .where(eq(ordersTable.id, orderId));
+        return res.json(result);
+      } catch (err) {
+        if (err instanceof DeliveryNotConfiguredError) {
+          return res
+            .status(400)
+            .json({ error: err.message, notConfigured: true });
+        }
+        throw err;
+      }
+    } catch (err) {
+      req.log.error({ err }, "Failed to create shipment");
+      return res.status(500).json({ error: "Internal server error" });
     }
-  } catch (err) {
-    req.log.error({ err }, "Failed to create shipment");
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+  },
+);
 
 // GET /api/delivery/orders/:orderId/track — public tracking by order id. Returns nothing sensitive.
 router.get("/delivery/orders/:orderId/track", async (req, res) => {
   try {
     const orderId = parseInt(String(req.params.orderId));
-    if (isNaN(orderId)) return res.status(400).json({ error: "Invalid orderId" });
-    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+    if (isNaN(orderId))
+      return res.status(400).json({ error: "Invalid orderId" });
+    const [order] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (!order.deliveryTrackingNumber || !order.deliveryProviderId) {
       return res.json({ status: order.status, trackingNumber: null });
     }
-    const [provider] = await db.select().from(deliveryProvidersTable).where(eq(deliveryProvidersTable.id, order.deliveryProviderId)).limit(1);
-    if (!provider) return res.json({ status: order.deliveryStatus ?? order.status, trackingNumber: order.deliveryTrackingNumber });
+    const [provider] = await db
+      .select()
+      .from(deliveryProvidersTable)
+      .where(eq(deliveryProvidersTable.id, order.deliveryProviderId))
+      .limit(1);
+    if (!provider)
+      return res.json({
+        status: order.deliveryStatus ?? order.status,
+        trackingNumber: order.deliveryTrackingNumber,
+      });
     const adapter = getAdapter(provider.type);
-    if (!adapter) return res.json({ status: order.deliveryStatus, trackingNumber: order.deliveryTrackingNumber });
+    if (!adapter)
+      return res.json({
+        status: order.deliveryStatus,
+        trackingNumber: order.deliveryTrackingNumber,
+      });
     try {
-      const track = await adapter.trackShipment(provider, order.deliveryTrackingNumber);
+      const track = await adapter.trackShipment(
+        provider,
+        order.deliveryTrackingNumber,
+      );
       return res.json({
         trackingNumber: order.deliveryTrackingNumber,
         awbUrl: order.deliveryAwbUrl,

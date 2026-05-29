@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import request from "supertest";
 import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
@@ -14,7 +18,11 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as unknown as { log: unknown }).log = { error() {}, info() {}, warn() {} };
+    (req as unknown as { log: unknown }).log = {
+      error() {},
+      info() {},
+      warn() {},
+    };
     next();
   });
   app.use("/api", deliveryRouter);
@@ -63,8 +71,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (orderIds.length) await db.delete(ordersTable).where(inArray(ordersTable.id, orderIds));
-  if (providerIds.length) await db.delete(deliveryProvidersTable).where(inArray(deliveryProvidersTable.id, providerIds));
+  if (orderIds.length)
+    await db.delete(ordersTable).where(inArray(ordersTable.id, orderIds));
+  if (providerIds.length)
+    await db
+      .delete(deliveryProvidersTable)
+      .where(inArray(deliveryProvidersTable.id, providerIds));
 });
 
 describe("GET /api/delivery/providers — admin authz", () => {
@@ -220,7 +232,9 @@ describe("DELETE /api/delivery/providers/:id — admin authz", () => {
 
 describe("POST /api/delivery/orders/:orderId/shipment — admin authz", () => {
   it("rejects a caller with no admin header (403)", async () => {
-    const res = await request(app).post(`/api/delivery/orders/${orderIds[0]}/shipment`).send({});
+    const res = await request(app)
+      .post(`/api/delivery/orders/${orderIds[0]}/shipment`)
+      .send({});
     expect(res.status).toBe(403);
   });
 

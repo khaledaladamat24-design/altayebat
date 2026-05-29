@@ -13,7 +13,12 @@ export function BottomNav() {
   // which on Android WebView could cascade into React error #185.
   const cartParams = useMemo(() => ({ sessionId }), [sessionId]);
   const cartOptions = useMemo(
-    () => ({ query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }),
+    () => ({
+      query: {
+        enabled: !!sessionId,
+        queryKey: getGetCartQueryKey({ sessionId }),
+      },
+    }),
     [sessionId],
   );
   const { data: cart } = useGetCart(cartParams, cartOptions);
@@ -21,7 +26,12 @@ export function BottomNav() {
   const navItems = [
     { name: tr("الرئيسية", "Home"), path: "/", icon: Home },
     { name: tr("الأقسام", "Categories"), path: "/categories", icon: Grid },
-    { name: tr("السلة", "Cart"), path: "/cart", icon: ShoppingCart, badge: cart?.itemCount || 0 },
+    {
+      name: tr("السلة", "Cart"),
+      path: "/cart",
+      icon: ShoppingCart,
+      badge: cart?.itemCount || 0,
+    },
     { name: tr("طلباتي", "My Orders"), path: "/orders", icon: ListOrdered },
     { name: tr("حسابي", "Account"), path: "/account", icon: User },
   ];
@@ -54,7 +64,9 @@ export function BottomNav() {
                           : ""
                       }`}
                     >
-                      <item.icon className={`${isActive ? "w-5 h-5" : "w-6 h-6"}`} />
+                      <item.icon
+                        className={`${isActive ? "w-5 h-5" : "w-6 h-6"}`}
+                      />
                       {(item.badge ?? 0) > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 bg-rose text-white text-[10px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center shadow-sm">
                           {item.badge}
@@ -63,7 +75,9 @@ export function BottomNav() {
                     </div>
                   ) : (
                     <>
-                      <item.icon className={`w-6 h-6 ${isActive ? "fill-current opacity-20 stroke-current" : ""}`} />
+                      <item.icon
+                        className={`w-6 h-6 ${isActive ? "fill-current opacity-20 stroke-current" : ""}`}
+                      />
                       {(item.badge ?? 0) > 0 && (
                         <span className="absolute -top-2 -right-2 bg-rose text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                           {item.badge}
@@ -72,7 +86,9 @@ export function BottomNav() {
                     </>
                   )}
                 </div>
-                <span className={`text-[10px] font-medium ${isActive && isCart ? "text-rose" : ""}`}>
+                <span
+                  className={`text-[10px] font-medium ${isActive && isCart ? "text-rose" : ""}`}
+                >
                   {item.name}
                 </span>
               </div>

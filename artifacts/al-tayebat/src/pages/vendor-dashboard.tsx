@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Trash2, Pencil, Store, Clock, X, Bell, Phone, MapPin, Power, VolumeX } from "lucide-react";
+import {
+  ChevronRight,
+  Plus,
+  Check,
+  Package,
+  Trash2,
+  Pencil,
+  Store,
+  Clock,
+  X,
+  Bell,
+  Phone,
+  MapPin,
+  Power,
+  VolumeX,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +46,13 @@ interface VendorOrder {
   customerPhone: string | null;
   notes: string | null;
   createdAt: string;
-  items: { id: number; productNameAr: string; productName: string; quantity: number; totalPrice: number }[];
+  items: {
+    id: number;
+    productNameAr: string;
+    productName: string;
+    quantity: number;
+    totalPrice: number;
+  }[];
 }
 
 interface VendorProduct {
@@ -58,10 +79,24 @@ interface VendorProduct {
 }
 
 const emptyForm = {
-  nameAr: "", name: "", descriptionAr: "", description: "",
-  price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
-  isKeto: false, isOrganic: false, inStock: true, isOnSale: false,
-  calories: "", protein: "", carbs: "", fats: "", subcategory: "",
+  nameAr: "",
+  name: "",
+  descriptionAr: "",
+  description: "",
+  price: "",
+  originalPrice: "",
+  categoryId: "",
+  imageUrl: "",
+  weightOrVolume: "",
+  isKeto: false,
+  isOrganic: false,
+  inStock: true,
+  isOnSale: false,
+  calories: "",
+  protein: "",
+  carbs: "",
+  fats: "",
+  subcategory: "",
 };
 
 export default function VendorDashboard() {
@@ -109,7 +144,15 @@ export default function VendorDashboard() {
       });
       if (!r.ok) throw new Error(String(r.status));
       const updated = await r.json();
-      setVendor((prev) => prev ? { ...prev, storeNameAr: updated.storeNameAr ?? trimmed, storeName: updated.storeName ?? prev.storeName } : prev);
+      setVendor((prev) =>
+        prev
+          ? {
+              ...prev,
+              storeNameAr: updated.storeNameAr ?? trimmed,
+              storeName: updated.storeName ?? prev.storeName,
+            }
+          : prev,
+      );
       setEditingName(false);
       toast.success(tr("تم تحديث اسم المتجر", "Store name updated"));
     } catch {
@@ -169,15 +212,22 @@ export default function VendorDashboard() {
     let cancelled = false;
     const tick = async () => {
       try {
-        const r = await fetch(apiUrl(`/api/vendors/${vendor.id}/orders?status=pending`));
+        const r = await fetch(
+          apiUrl(`/api/vendors/${vendor.id}/orders?status=pending`),
+        );
         if (!r.ok || cancelled) return;
         const data: VendorOrder[] = await r.json();
         if (!cancelled) setOrders(data);
-      } catch { /* ignore transient network errors during polling */ }
+      } catch {
+        /* ignore transient network errors during polling */
+      }
     };
     tick();
     const interval = window.setInterval(tick, 5000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [vendor]);
 
   const pendingCount = orders.filter((o) => o.status === "pending").length;
@@ -197,11 +247,17 @@ export default function VendorDashboard() {
         beepIntervalRef.current = null;
       }
     };
-    if (muted || pendingCount === 0) { cleanup(); return; }
+    if (muted || pendingCount === 0) {
+      cleanup();
+      return;
+    }
 
     const playBeep = () => {
       try {
-        const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AC =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
         if (!AC) return;
         if (!audioCtxRef.current) audioCtxRef.current = new AC();
         const ctx = audioCtxRef.current;
@@ -224,7 +280,9 @@ export default function VendorDashboard() {
           osc.start(now + t);
           osc.stop(now + t + 0.18);
         });
-      } catch { /* audio unavailable — silent fallback */ }
+      } catch {
+        /* audio unavailable — silent fallback */
+      }
     };
 
     playBeep();
@@ -233,15 +291,24 @@ export default function VendorDashboard() {
   }, [pendingCount, muted]);
 
   // Unmount: tear down the AudioContext so leaving the page silences us.
-  useEffect(() => () => {
-    if (beepIntervalRef.current !== null) window.clearInterval(beepIntervalRef.current);
-    audioCtxRef.current?.close().catch(() => {});
-  }, []);
+  useEffect(
+    () => () => {
+      if (beepIntervalRef.current !== null)
+        window.clearInterval(beepIntervalRef.current);
+      audioCtxRef.current?.close().catch(() => {});
+    },
+    [],
+  );
 
   const toggleMuted = () => {
     setMuted((m) => {
       const next = !m;
-      try { window.localStorage.setItem("al_tayebat_vendor_muted", next ? "1" : "0"); } catch {}
+      try {
+        window.localStorage.setItem(
+          "al_tayebat_vendor_muted",
+          next ? "1" : "0",
+        );
+      } catch {}
       return next;
     });
   };
@@ -258,10 +325,19 @@ export default function VendorDashboard() {
       });
       if (!r.ok) throw new Error(String(r.status));
       const updated = await r.json();
-      setVendor((prev) => prev ? { ...prev, isOnline: Boolean(updated.isOnline) } : prev);
-      toast.success(next
-        ? tr("متجرك الآن متصل ويستقبل الطلبات", "Your store is now online and accepting orders")
-        : tr("متجرك الآن غير متصل — لن تظهر منتجاتك للزبائن", "Your store is now offline — your products won't appear to customers")
+      setVendor((prev) =>
+        prev ? { ...prev, isOnline: Boolean(updated.isOnline) } : prev,
+      );
+      toast.success(
+        next
+          ? tr(
+              "متجرك الآن متصل ويستقبل الطلبات",
+              "Your store is now online and accepting orders",
+            )
+          : tr(
+              "متجرك الآن غير متصل — لن تظهر منتجاتك للزبائن",
+              "Your store is now offline — your products won't appear to customers",
+            ),
       );
     } catch {
       toast.error(tr("فشل تحديث حالة المتجر", "Failed to update store status"));
@@ -281,7 +357,12 @@ export default function VendorDashboard() {
       if (!r.ok) throw new Error(String(r.status));
       // Optimistically drop it from the pending list so the beep stops instantly.
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      toast.success(tr(`بدأت تحضير الطلب #${orderId}`, `Started preparing order #${orderId}`));
+      toast.success(
+        tr(
+          `بدأت تحضير الطلب #${orderId}`,
+          `Started preparing order #${orderId}`,
+        ),
+      );
     } catch {
       toast.error(tr("فشل قبول الطلب", "Failed to accept the order"));
     } finally {
@@ -290,7 +371,8 @@ export default function VendorDashboard() {
   };
 
   const rejectOrder = async (orderId: number) => {
-    if (!confirm(tr(`رفض الطلب #${orderId}؟`, `Reject order #${orderId}?`))) return;
+    if (!confirm(tr(`رفض الطلب #${orderId}؟`, `Reject order #${orderId}?`)))
+      return;
     setAcceptingId(orderId);
     try {
       const r = await fetch(apiUrl(`/api/orders/${orderId}/status`), {
@@ -311,12 +393,19 @@ export default function VendorDashboard() {
   const startEdit = (p: VendorProduct) => {
     setEditingId(p.id);
     setForm({
-      nameAr: p.nameAr, name: p.name,
-      descriptionAr: p.descriptionAr || "", description: p.description || "",
-      price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : "",
-      categoryId: String(p.categoryId), imageUrl: p.imageUrl || "",
+      nameAr: p.nameAr,
+      name: p.name,
+      descriptionAr: p.descriptionAr || "",
+      description: p.description || "",
+      price: String(p.price),
+      originalPrice: p.originalPrice ? String(p.originalPrice) : "",
+      categoryId: String(p.categoryId),
+      imageUrl: p.imageUrl || "",
       weightOrVolume: p.weightOrVolume || "",
-      isKeto: p.isKeto, isOrganic: p.isOrganic, inStock: p.inStock, isOnSale: p.isOnSale,
+      isKeto: p.isKeto,
+      isOrganic: p.isOrganic,
+      inStock: p.inStock,
+      isOnSale: p.isOnSale,
       calories: p.calories ? String(p.calories) : "",
       protein: p.protein ? String(p.protein) : "",
       carbs: p.carbs ? String(p.carbs) : "",
@@ -336,7 +425,10 @@ export default function VendorDashboard() {
     e.preventDefault();
     if (!vendor) return;
     if (!form.nameAr || !form.name || !form.price || !form.categoryId) {
-      toast.error(tr("يرجى تعبئة الحقول المطلوبة", "Please fill out the required fields")); return;
+      toast.error(
+        tr("يرجى تعبئة الحقول المطلوبة", "Please fill out the required fields"),
+      );
+      return;
     }
     setSaving(true);
     try {
@@ -363,7 +455,11 @@ export default function VendorDashboard() {
         const e = await res.json().catch(() => ({}));
         throw new Error(e.error || tr("فشل الحفظ", "Failed to save"));
       }
-      toast.success(editingId ? tr("تم تحديث المنتج", "Product updated") : tr("تمت إضافة المنتج", "Product added"));
+      toast.success(
+        editingId
+          ? tr("تم تحديث المنتج", "Product updated")
+          : tr("تمت إضافة المنتج", "Product added"),
+      );
       setForm(emptyForm);
       setEditingId(null);
       setTab("list");
@@ -376,37 +472,65 @@ export default function VendorDashboard() {
 
   const handleDelete = async (id: number, displayName: string) => {
     if (!vendor) return;
-    if (!confirm(tr(`حذف "${displayName}"؟`, `Delete "${displayName}"?`))) return;
-    const res = await fetch(apiUrl(`/api/vendors/${vendor.id}/products/${id}`), { method: "DELETE" });
+    if (!confirm(tr(`حذف "${displayName}"؟`, `Delete "${displayName}"?`)))
+      return;
+    const res = await fetch(
+      apiUrl(`/api/vendors/${vendor.id}/products/${id}`),
+      { method: "DELETE" },
+    );
     if (res.ok) {
       toast.success(tr("تم الحذف", "Deleted"));
-      setProducts(ps => ps.filter(p => p.id !== id));
+      setProducts((ps) => ps.filter((p) => p.id !== id));
     } else toast.error(tr("فشل الحذف", "Delete failed"));
   };
 
   const storeDisplayName = vendor
-    ? (lang === "en" ? (vendor.storeName || vendor.storeNameAr || "") : (vendor.storeNameAr || vendor.storeName || ""))
+    ? lang === "en"
+      ? vendor.storeName || vendor.storeNameAr || ""
+      : vendor.storeNameAr || vendor.storeName || ""
     : "";
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" dir={dir}>
-        <div className="text-muted-foreground">{tr("جاري التحميل...", "Loading...")}</div>
+        <div className="text-muted-foreground">
+          {tr("جاري التحميل...", "Loading...")}
+        </div>
       </div>
     );
   }
 
   if (!vendor) {
     return (
-      <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-6" dir={dir}>
+      <div
+        className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-6"
+        dir={dir}
+      >
         <div className="bg-card rounded-2xl border border-border p-8 w-full max-w-sm shadow-sm text-center">
           <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <Store className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-xl font-bold mb-2">{tr("لا يوجد متجر", "No store yet")}</h1>
-          <p className="text-muted-foreground text-sm mb-5">{tr("سجّل كصاحب مطعم أو مورد لتتمكن من إضافة منتجاتك", "Register as a restaurant owner or supplier to start adding your products")}</p>
-          <Button className="w-full h-12 rounded-xl" onClick={() => setLocation("/register")}>{tr("تسجيل متجر", "Register a store")}</Button>
-          <button onClick={() => setLocation("/account")} className="mt-4 w-full text-sm text-muted-foreground">{tr("عودة", "Back")}</button>
+          <h1 className="text-xl font-bold mb-2">
+            {tr("لا يوجد متجر", "No store yet")}
+          </h1>
+          <p className="text-muted-foreground text-sm mb-5">
+            {tr(
+              "سجّل كصاحب مطعم أو مورد لتتمكن من إضافة منتجاتك",
+              "Register as a restaurant owner or supplier to start adding your products",
+            )}
+          </p>
+          <Button
+            className="w-full h-12 rounded-xl"
+            onClick={() => setLocation("/register")}
+          >
+            {tr("تسجيل متجر", "Register a store")}
+          </Button>
+          <button
+            onClick={() => setLocation("/account")}
+            className="mt-4 w-full text-sm text-muted-foreground"
+          >
+            {tr("عودة", "Back")}
+          </button>
         </div>
       </div>
     );
@@ -414,7 +538,10 @@ export default function VendorDashboard() {
 
   if (vendor.status !== "approved") {
     return (
-      <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-6" dir={dir}>
+      <div
+        className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-6"
+        dir={dir}
+      >
         <div className="bg-card rounded-2xl border border-border p-8 w-full max-w-sm shadow-sm text-center">
           <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <Clock className="w-7 h-7 text-amber-600" />
@@ -422,11 +549,24 @@ export default function VendorDashboard() {
           <h1 className="text-xl font-bold mb-2">{storeDisplayName}</h1>
           <p className="text-muted-foreground text-sm mb-2">
             {vendor.status === "pending"
-              ? tr("متجرك قيد المراجعة من قبل الإدارة", "Your store is under review by the admin team")
+              ? tr(
+                  "متجرك قيد المراجعة من قبل الإدارة",
+                  "Your store is under review by the admin team",
+                )
               : tr("متجرك موقوف حالياً", "Your store is currently suspended")}
           </p>
-          <p className="text-xs text-muted-foreground">{tr("سيتم تفعيل صلاحيات إدارة المنتجات بعد الموافقة.", "Product management will be enabled once approved.")}</p>
-          <button onClick={() => setLocation("/account")} className="mt-6 w-full text-sm text-primary font-bold">{tr("العودة لحسابي", "Back to my account")}</button>
+          <p className="text-xs text-muted-foreground">
+            {tr(
+              "سيتم تفعيل صلاحيات إدارة المنتجات بعد الموافقة.",
+              "Product management will be enabled once approved.",
+            )}
+          </p>
+          <button
+            onClick={() => setLocation("/account")}
+            className="mt-6 w-full text-sm text-primary font-bold"
+          >
+            {tr("العودة لحسابي", "Back to my account")}
+          </button>
         </div>
       </div>
     );
@@ -448,26 +588,44 @@ export default function VendorDashboard() {
                 className="h-8 text-foreground text-sm bg-background/90 border-none rounded-md"
                 autoFocus
               />
-              <button onClick={saveStoreName} disabled={savingName} className="p-1 rounded-md bg-background/20 hover:bg-background/30 disabled:opacity-50">
+              <button
+                onClick={saveStoreName}
+                disabled={savingName}
+                className="p-1 rounded-md bg-background/20 hover:bg-background/30 disabled:opacity-50"
+              >
                 <Check className="w-4 h-4" />
               </button>
-              <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 rounded-md bg-background/20 hover:bg-background/30">
+              <button
+                onClick={() => setEditingName(false)}
+                disabled={savingName}
+                className="p-1 rounded-md bg-background/20 hover:bg-background/30"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <button onClick={openNameEditor} className="flex items-center gap-1.5 text-right group">
+            <button
+              onClick={openNameEditor}
+              className="flex items-center gap-1.5 text-right group"
+            >
               <h1 className="text-lg font-bold">{storeDisplayName}</h1>
               <Pencil className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
             </button>
           )}
           <p className="text-xs text-primary-foreground/80 flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1">
-              <Check className="w-3 h-3" /> {tr("متجر مفعّل", "Store active")} · {tr(`${products.length} منتج`, `${products.length} products`)}
+              <Check className="w-3 h-3" /> {tr("متجر مفعّل", "Store active")} ·{" "}
+              {tr(`${products.length} منتج`, `${products.length} products`)}
             </span>
-            <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${vendor.isOnline ? "bg-emerald-500/30" : "bg-zinc-500/40"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? "bg-emerald-300" : "bg-zinc-300"}`} />
-              {vendor.isOnline ? tr("متصل", "Online") : tr("غير متصل", "Offline")}
+            <span
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${vendor.isOnline ? "bg-emerald-500/30" : "bg-zinc-500/40"}`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? "bg-emerald-300" : "bg-zinc-300"}`}
+              />
+              {vendor.isOnline
+                ? tr("متصل", "Online")
+                : tr("غير متصل", "Offline")}
             </span>
           </p>
         </div>
@@ -477,7 +635,11 @@ export default function VendorDashboard() {
           onClick={toggleOnline}
           disabled={togglingOnline}
           aria-pressed={vendor.isOnline}
-          aria-label={vendor.isOnline ? tr("إيقاف استقبال الطلبات", "Stop accepting orders") : tr("تشغيل استقبال الطلبات", "Start accepting orders")}
+          aria-label={
+            vendor.isOnline
+              ? tr("إيقاف استقبال الطلبات", "Stop accepting orders")
+              : tr("تشغيل استقبال الطلبات", "Start accepting orders")
+          }
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-50 ${vendor.isOnline ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"}`}
         >
           <Power className="w-3.5 h-3.5" />
@@ -489,11 +651,27 @@ export default function VendorDashboard() {
       <div className="flex border-b border-border bg-background sticky top-0 z-10">
         {[
           { id: "orders" as const, icon: Bell, label: tr("الطلبات", "Orders") },
-          { id: "list" as const, icon: Package, label: tr("منتجاتي", "My products") },
-          { id: "add" as const, icon: Plus, label: editingId ? tr("تعديل المنتج", "Edit product") : tr("إضافة منتج", "Add product") },
-        ].map(t => (
-          <button key={t.id} onClick={() => { if (t.id === "list") cancelEdit(); else setTab(t.id); }}
-            className={`relative flex-1 py-3 text-sm font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${tab === t.id ? "border-rose text-rose" : "border-transparent text-muted-foreground"}`}>
+          {
+            id: "list" as const,
+            icon: Package,
+            label: tr("منتجاتي", "My products"),
+          },
+          {
+            id: "add" as const,
+            icon: Plus,
+            label: editingId
+              ? tr("تعديل المنتج", "Edit product")
+              : tr("إضافة منتج", "Add product"),
+          },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              if (t.id === "list") cancelEdit();
+              else setTab(t.id);
+            }}
+            className={`relative flex-1 py-3 text-sm font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${tab === t.id ? "border-rose text-rose" : "border-transparent text-muted-foreground"}`}
+          >
             <t.icon className="w-4 h-4" /> {t.label}
             {t.id === "orders" && pendingCount > 0 && (
               <span className="absolute top-1.5 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-rose text-white text-[10px] font-bold flex items-center justify-center">
@@ -507,17 +685,32 @@ export default function VendorDashboard() {
       {tab === "orders" && pendingCount > 0 && !muted && (
         <div className="bg-amber-100 border-y border-amber-300 px-4 py-2 flex items-center justify-between text-sm">
           <span className="font-bold text-amber-800 flex items-center gap-1.5">
-            <Bell className="w-4 h-4 animate-pulse" /> {tr(`${pendingCount} طلب جديد بانتظار القبول`, `${pendingCount} new order${pendingCount === 1 ? "" : "s"} awaiting acceptance`)}
+            <Bell className="w-4 h-4 animate-pulse" />{" "}
+            {tr(
+              `${pendingCount} طلب جديد بانتظار القبول`,
+              `${pendingCount} new order${pendingCount === 1 ? "" : "s"} awaiting acceptance`,
+            )}
           </span>
-          <button onClick={toggleMuted} className="text-amber-800 flex items-center gap-1 text-xs font-bold hover:underline">
-            <VolumeX className="w-3.5 h-3.5" /> {tr("إيقاف الصوت", "Mute sound")}
+          <button
+            onClick={toggleMuted}
+            className="text-amber-800 flex items-center gap-1 text-xs font-bold hover:underline"
+          >
+            <VolumeX className="w-3.5 h-3.5" />{" "}
+            {tr("إيقاف الصوت", "Mute sound")}
           </button>
         </div>
       )}
       {tab === "orders" && muted && (
         <div className="bg-zinc-100 border-y border-zinc-300 px-4 py-2 flex items-center justify-between text-xs">
-          <span className="text-zinc-700">{tr("الصوت متوقف", "Sound is muted")}</span>
-          <button onClick={toggleMuted} className="text-primary font-bold hover:underline">{tr("تشغيل التنبيه الصوتي", "Enable sound alerts")}</button>
+          <span className="text-zinc-700">
+            {tr("الصوت متوقف", "Sound is muted")}
+          </span>
+          <button
+            onClick={toggleMuted}
+            className="text-primary font-bold hover:underline"
+          >
+            {tr("تشغيل التنبيه الصوتي", "Enable sound alerts")}
+          </button>
         </div>
       )}
 
@@ -527,65 +720,112 @@ export default function VendorDashboard() {
             {orders.length === 0 ? (
               <div className="text-center py-16">
                 <Bell className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">{tr("لا توجد طلبات جديدة حالياً", "No new orders right now")}</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">{tr("سنشغّل تنبيهاً صوتياً عند وصول أي طلب", "We'll play a sound alert as soon as an order arrives")}</p>
-              </div>
-            ) : orders.map((o) => (
-              <div key={o.id} className="bg-card rounded-xl border-2 border-rose/40 p-4 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-sm">{tr(`طلب #${o.id}`, `Order #${o.id}`)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleString(lang === "ar" ? "ar-JO" : "en-JO", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
-                    </p>
-                  </div>
-                  <span className="text-xs bg-rose/10 text-rose px-2 py-1 rounded-full font-bold">{tr("جديد", "New")}</span>
-                </div>
-
-                <div className="text-xs space-y-1 text-muted-foreground">
-                  {o.customerName && <p className="font-bold text-foreground">{o.customerName}</p>}
-                  {o.customerPhone && (
-                    <a href={`tel:${o.customerPhone}`} className="flex items-center gap-1 text-primary hover:underline" dir="ltr">
-                      <Phone className="w-3 h-3" /> {o.customerPhone}
-                    </a>
+                <p className="text-muted-foreground text-sm">
+                  {tr("لا توجد طلبات جديدة حالياً", "No new orders right now")}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  {tr(
+                    "سنشغّل تنبيهاً صوتياً عند وصول أي طلب",
+                    "We'll play a sound alert as soon as an order arrives",
                   )}
-                  <p className="flex items-start gap-1"><MapPin className="w-3 h-3 mt-0.5 shrink-0" /> {o.deliveryAddress}</p>
-                  {o.notes && <p className="italic">"{o.notes}"</p>}
-                </div>
-
-                <div className="border-t border-border pt-2 space-y-1">
-                  {o.items.map((it) => (
-                    <div key={it.id} className="flex justify-between text-xs">
-                      <span>{(lang === "en" ? (it.productName || it.productNameAr) : (it.productNameAr || it.productName))} × {it.quantity}</span>
-                      <span className="text-muted-foreground">{Number(it.totalPrice).toFixed(3)} {tr("د.أ", "JOD")}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <span className="text-xs text-muted-foreground">{o.paymentMethod}</span>
-                  <span className="font-bold text-sm">{Number(o.total).toFixed(3)} {tr("د.أ", "JOD")}</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => acceptOrder(o.id)}
-                    disabled={acceptingId === o.id}
-                    className="flex-1 rounded-xl gap-1.5 bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Check className="w-4 h-4" /> {tr("قبول وبدء التحضير", "Accept & start preparing")}
-                  </Button>
-                  <Button
-                    onClick={() => rejectOrder(o.id)}
-                    disabled={acceptingId === o.id}
-                    variant="outline"
-                    className="rounded-xl gap-1.5 border-destructive text-destructive hover:bg-destructive/10"
-                  >
-                    <X className="w-4 h-4" /> {tr("رفض", "Reject")}
-                  </Button>
-                </div>
+                </p>
               </div>
-            ))}
+            ) : (
+              orders.map((o) => (
+                <div
+                  key={o.id}
+                  className="bg-card rounded-xl border-2 border-rose/40 p-4 space-y-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-sm">
+                        {tr(`طلب #${o.id}`, `Order #${o.id}`)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(o.createdAt).toLocaleString(
+                          lang === "ar" ? "ar-JO" : "en-JO",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            day: "2-digit",
+                            month: "2-digit",
+                          },
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-xs bg-rose/10 text-rose px-2 py-1 rounded-full font-bold">
+                      {tr("جديد", "New")}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-1 text-muted-foreground">
+                    {o.customerName && (
+                      <p className="font-bold text-foreground">
+                        {o.customerName}
+                      </p>
+                    )}
+                    {o.customerPhone && (
+                      <a
+                        href={`tel:${o.customerPhone}`}
+                        className="flex items-center gap-1 text-primary hover:underline"
+                        dir="ltr"
+                      >
+                        <Phone className="w-3 h-3" /> {o.customerPhone}
+                      </a>
+                    )}
+                    <p className="flex items-start gap-1">
+                      <MapPin className="w-3 h-3 mt-0.5 shrink-0" />{" "}
+                      {o.deliveryAddress}
+                    </p>
+                    {o.notes && <p className="italic">"{o.notes}"</p>}
+                  </div>
+
+                  <div className="border-t border-border pt-2 space-y-1">
+                    {o.items.map((it) => (
+                      <div key={it.id} className="flex justify-between text-xs">
+                        <span>
+                          {lang === "en"
+                            ? it.productName || it.productNameAr
+                            : it.productNameAr || it.productName}{" "}
+                          × {it.quantity}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {Number(it.totalPrice).toFixed(3)} {tr("د.أ", "JOD")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border pt-2">
+                    <span className="text-xs text-muted-foreground">
+                      {o.paymentMethod}
+                    </span>
+                    <span className="font-bold text-sm">
+                      {Number(o.total).toFixed(3)} {tr("د.أ", "JOD")}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => acceptOrder(o.id)}
+                      disabled={acceptingId === o.id}
+                      className="flex-1 rounded-xl gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <Check className="w-4 h-4" />{" "}
+                      {tr("قبول وبدء التحضير", "Accept & start preparing")}
+                    </Button>
+                    <Button
+                      onClick={() => rejectOrder(o.id)}
+                      disabled={acceptingId === o.id}
+                      variant="outline"
+                      className="rounded-xl gap-1.5 border-destructive text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="w-4 h-4" /> {tr("رفض", "Reject")}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -594,41 +834,80 @@ export default function VendorDashboard() {
             {products.length === 0 ? (
               <div className="text-center py-16">
                 <Package className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm mb-4">{tr("لا توجد منتجات بعد", "No products yet")}</p>
-                <Button onClick={() => setTab("add")} className="rounded-xl gap-2">
-                  <Plus className="w-4 h-4" /> {tr("أضف منتجك الأول", "Add your first product")}
+                <p className="text-muted-foreground text-sm mb-4">
+                  {tr("لا توجد منتجات بعد", "No products yet")}
+                </p>
+                <Button
+                  onClick={() => setTab("add")}
+                  className="rounded-xl gap-2"
+                >
+                  <Plus className="w-4 h-4" />{" "}
+                  {tr("أضف منتجك الأول", "Add your first product")}
                 </Button>
               </div>
-            ) : products.map(p => {
-              const displayName = lang === "en" ? (p.name || p.nameAr) : p.nameAr;
-              return (
-              <div key={p.id} className="bg-card rounded-xl border border-border p-3 flex items-center gap-3">
-                {p.imageUrl ? (
-                  <img src={p.imageUrl} alt={displayName} className="w-14 h-14 rounded-lg object-cover shrink-0" />
-                ) : (
-                  <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                    <Package className="w-6 h-6 text-muted-foreground" />
+            ) : (
+              products.map((p) => {
+                const displayName =
+                  lang === "en" ? p.name || p.nameAr : p.nameAr;
+                return (
+                  <div
+                    key={p.id}
+                    className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
+                  >
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={displayName}
+                        className="w-14 h-14 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        <Package className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">
+                        {displayName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {Number(p.price).toFixed(3)} {tr("د.أ", "JOD")}
+                      </p>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {p.isKeto && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                            {tr("كيتو", "Keto")}
+                          </span>
+                        )}
+                        {p.isOrganic && (
+                          <span className="text-[10px] bg-rose/10 text-rose px-1.5 py-0.5 rounded-full">
+                            {tr("عضوي", "Organic")}
+                          </span>
+                        )}
+                        {!p.inStock && (
+                          <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
+                            {tr("نفد", "Out of stock")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => startEdit(p)}
+                        className="text-primary p-2 hover:bg-primary/10 rounded-lg"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id, displayName)}
+                        className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{displayName}</p>
-                  <p className="text-xs text-muted-foreground">{Number(p.price).toFixed(3)} {tr("د.أ", "JOD")}</p>
-                  <div className="flex gap-1 mt-1 flex-wrap">
-                    {p.isKeto && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{tr("كيتو", "Keto")}</span>}
-                    {p.isOrganic && <span className="text-[10px] bg-rose/10 text-rose px-1.5 py-0.5 rounded-full">{tr("عضوي", "Organic")}</span>}
-                    {!p.inStock && <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{tr("نفد", "Out of stock")}</span>}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => startEdit(p)} className="text-primary p-2 hover:bg-primary/10 rounded-lg">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDelete(p.id, displayName)} className="text-destructive p-2 hover:bg-destructive/10 rounded-lg">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );})}
+                );
+              })
+            )}
           </div>
         )}
 
@@ -636,81 +915,208 @@ export default function VendorDashboard() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {editingId && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-700">{tr("تعديل منتج موجود", "Editing existing product")}</span>
-                <button type="button" onClick={cancelEdit} className="text-amber-700 p-1"><X className="w-4 h-4" /></button>
+                <span className="text-xs font-bold text-amber-700">
+                  {tr("تعديل منتج موجود", "Editing existing product")}
+                </span>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="text-amber-700 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
 
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("الاسم بالعربي *", "Arabic name *")}</label>
-                  <Input value={form.nameAr} onChange={e => setForm(f => ({ ...f, nameAr: e.target.value }))} className="h-11 bg-muted border-none text-sm" required />
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("الاسم بالعربي *", "Arabic name *")}
+                  </label>
+                  <Input
+                    value={form.nameAr}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, nameAr: e.target.value }))
+                    }
+                    className="h-11 bg-muted border-none text-sm"
+                    required
+                  />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("الاسم بالإنجليزي *", "English name *")}</label>
-                  <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" required />
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("الاسم بالإنجليزي *", "English name *")}
+                  </label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    className="h-11 bg-muted border-none text-sm"
+                    dir="ltr"
+                    required
+                  />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">{tr("وصف بالعربي", "Arabic description")}</label>
-                <Textarea value={form.descriptionAr} onChange={e => setForm(f => ({ ...f, descriptionAr: e.target.value }))} className="bg-muted border-none resize-none text-sm min-h-[60px]" />
+                <label className="text-xs font-medium text-muted-foreground">
+                  {tr("وصف بالعربي", "Arabic description")}
+                </label>
+                <Textarea
+                  value={form.descriptionAr}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, descriptionAr: e.target.value }))
+                  }
+                  className="bg-muted border-none resize-none text-sm min-h-[60px]"
+                />
               </div>
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("السعر (د.أ) *", "Price (JOD) *")}</label>
-                  <Input type="number" step="0.001" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" required />
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("السعر (د.أ) *", "Price (JOD) *")}
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={form.price}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, price: e.target.value }))
+                    }
+                    className="h-11 bg-muted border-none text-sm"
+                    dir="ltr"
+                    required
+                  />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("السعر قبل الخصم", "Price before discount")}</label>
-                  <Input type="number" step="0.001" value={form.originalPrice} onChange={e => setForm(f => ({ ...f, originalPrice: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("السعر قبل الخصم", "Price before discount")}
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={form.originalPrice}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, originalPrice: e.target.value }))
+                    }
+                    className="h-11 bg-muted border-none text-sm"
+                    dir="ltr"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("القسم *", "Category *")}</label>
-                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategory: "" }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none" required>
-                    <option value="">{tr("اختر القسم", "Select a category")}</option>
-                    {categories?.map(c => <option key={c.id} value={c.id}>{lang === "en" ? (c.name || c.nameAr) : c.nameAr}</option>)}
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("القسم *", "Category *")}
+                  </label>
+                  <select
+                    value={form.categoryId}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        categoryId: e.target.value,
+                        subcategory: "",
+                      }))
+                    }
+                    className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none"
+                    required
+                  >
+                    <option value="">
+                      {tr("اختر القسم", "Select a category")}
+                    </option>
+                    {categories?.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {lang === "en" ? c.name || c.nameAr : c.nameAr}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">{tr("الوزن / الحجم", "Weight / volume")}</label>
-                  <Input value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" placeholder="500g" />
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {tr("الوزن / الحجم", "Weight / volume")}
+                  </label>
+                  <Input
+                    value={form.weightOrVolume}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, weightOrVolume: e.target.value }))
+                    }
+                    className="h-11 bg-muted border-none text-sm"
+                    placeholder="500g"
+                  />
                 </div>
               </div>
               {(() => {
-                const selectedCat = categories?.find(c => String(c.id) === form.categoryId);
+                const selectedCat = categories?.find(
+                  (c) => String(c.id) === form.categoryId,
+                );
                 const subOpts = getSubcategoriesForSlug(selectedCat?.slug);
                 if (subOpts.length === 0) return null;
                 return (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">{tr("القسم الفرعي", "Sub-category")}</label>
-                    <select value={form.subcategory} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none">
-                      <option value="">{tr("بدون قسم فرعي", "No sub-category")}</option>
-                      {subOpts.map(o => <option key={o.value} value={o.value}>{lang === "en" ? o.en : o.ar}</option>)}
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {tr("القسم الفرعي", "Sub-category")}
+                    </label>
+                    <select
+                      value={form.subcategory}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, subcategory: e.target.value }))
+                      }
+                      className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none"
+                    >
+                      <option value="">
+                        {tr("بدون قسم فرعي", "No sub-category")}
+                      </option>
+                      {subOpts.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {lang === "en" ? o.en : o.ar}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 );
               })()}
-              <ImageUpload value={form.imageUrl} onChange={url => setForm(f => ({ ...f, imageUrl: url }))} />
+              <ImageUpload
+                value={form.imageUrl}
+                onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+              />
             </div>
 
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-              <h2 className="font-bold text-sm text-muted-foreground">{tr("القيم الغذائية (اختياري)", "Nutritional values (optional)")}</h2>
+              <h2 className="font-bold text-sm text-muted-foreground">
+                {tr(
+                  "القيم الغذائية (اختياري)",
+                  "Nutritional values (optional)",
+                )}
+              </h2>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { k: "calories", label: tr("🔥 السعرات", "🔥 Calories") },
-                  { k: "protein", label: tr("🍗 بروتين (غ)", "🍗 Protein (g)") },
-                  { k: "carbs", label: tr("🌾 كربوهيدرات (غ)", "🌾 Carbs (g)") },
+                  {
+                    k: "protein",
+                    label: tr("🍗 بروتين (غ)", "🍗 Protein (g)"),
+                  },
+                  {
+                    k: "carbs",
+                    label: tr("🌾 كربوهيدرات (غ)", "🌾 Carbs (g)"),
+                  },
                   { k: "fats", label: tr("🥑 دهون (غ)", "🥑 Fats (g)") },
                 ].map(({ k, label }) => (
                   <div key={k} className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">{label}</label>
-                    <Input type="number" step="0.1" value={form[k as keyof typeof form] as string} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="h-11 bg-muted border-none text-sm" dir="ltr" />
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {label}
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={form[k as keyof typeof form] as string}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, [k]: e.target.value }))
+                      }
+                      className="h-11 bg-muted border-none text-sm"
+                      dir="ltr"
+                    />
                   </div>
                 ))}
               </div>
@@ -724,16 +1130,42 @@ export default function VendorDashboard() {
                   { key: "inStock", label: tr("متوفر", "In stock") },
                   { key: "isOnSale", label: tr("عرض / تخفيض", "On sale") },
                 ].map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 p-3 rounded-xl bg-muted cursor-pointer">
-                    <input type="checkbox" checked={form[key as keyof typeof form] as boolean} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} className="w-4 h-4 accent-rose" />
+                  <label
+                    key={key}
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form[key as keyof typeof form] as boolean}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, [key]: e.target.checked }))
+                      }
+                      className="w-4 h-4 accent-rose"
+                    />
                     <span className="text-sm font-medium">{label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <Button type="submit" disabled={saving} className="w-full h-13 rounded-xl text-base font-bold gap-2 bg-rose hover:bg-rose/90">
-              {saving ? tr("جاري الحفظ...", "Saving...") : editingId ? <><Check className="w-5 h-5" /> {tr("حفظ التعديلات", "Save changes")}</> : <><Plus className="w-5 h-5" /> {tr("إضافة المنتج", "Add product")}</>}
+            <Button
+              type="submit"
+              disabled={saving}
+              className="w-full h-13 rounded-xl text-base font-bold gap-2 bg-rose hover:bg-rose/90"
+            >
+              {saving ? (
+                tr("جاري الحفظ...", "Saving...")
+              ) : editingId ? (
+                <>
+                  <Check className="w-5 h-5" />{" "}
+                  {tr("حفظ التعديلات", "Save changes")}
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />{" "}
+                  {tr("إضافة المنتج", "Add product")}
+                </>
+              )}
             </Button>
           </form>
         )}

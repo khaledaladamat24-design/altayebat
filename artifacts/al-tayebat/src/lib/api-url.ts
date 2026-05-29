@@ -1,4 +1,7 @@
-const RAW = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "");
+const RAW = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
+  /\/+$/,
+  "",
+);
 
 export function apiUrl(path: string): string {
   if (!RAW) return path;

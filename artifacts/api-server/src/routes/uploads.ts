@@ -13,12 +13,15 @@ router.post("/uploads/cloudinary-signature", (req, res) => {
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
   if (!cloudName || !apiKey || !apiSecret) {
-    return res.status(500).json({ error: "Cloudinary is not configured on the server." });
+    return res
+      .status(500)
+      .json({ error: "Cloudinary is not configured on the server." });
   }
 
-  const folder = typeof req.body?.folder === "string" && req.body.folder
-    ? String(req.body.folder)
-    : "altayebat_menu_images";
+  const folder =
+    typeof req.body?.folder === "string" && req.body.folder
+      ? String(req.body.folder)
+      : "altayebat_menu_images";
   // Cloudinary uses seconds, not ms.
   const timestamp = Math.floor(Date.now() / 1000);
 
@@ -26,7 +29,9 @@ router.post("/uploads/cloudinary-signature", (req, res) => {
   // We sign only `folder` and `timestamp`; everything else (file, api_key) is sent
   // separately by the browser and not part of the signed payload.
   const toSign = `folder=${folder}&timestamp=${timestamp}`;
-  const signature = createHash("sha1").update(toSign + apiSecret).digest("hex");
+  const signature = createHash("sha1")
+    .update(toSign + apiSecret)
+    .digest("hex");
 
   return res.json({
     cloudName,

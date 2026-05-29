@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { ordersTable, orderItemsTable, cartItemsTable, productsTable } from "@workspace/db";
+import {
+  ordersTable,
+  orderItemsTable,
+  cartItemsTable,
+  productsTable,
+} from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireOrderVendorOwner } from "../lib/vendor-auth";
 
@@ -10,7 +15,11 @@ const DELIVERY_FEE = 1.5;
 const FREE_DELIVERY_THRESHOLD = 20;
 
 async function getOrderWithItems(orderId: number) {
-  const order = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+  const order = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, orderId))
+    .limit(1);
   if (!order.length) return null;
 
   const items = await db
@@ -67,7 +76,13 @@ router.get("/orders", async (req, res) => {
 
 router.post("/orders", async (req, res) => {
   try {
-    const { sessionId = "guest", deliveryAddress, customerName, customerPhone, notes } = req.body;
+    const {
+      sessionId = "guest",
+      deliveryAddress,
+      customerName,
+      customerPhone,
+      notes,
+    } = req.body;
 
     const cartItems = await db
       .select({ ci: cartItemsTable, p: productsTable })
@@ -75,9 +90,13 @@ router.post("/orders", async (req, res) => {
       .leftJoin(productsTable, eq(cartItemsTable.productId, productsTable.id))
       .where(eq(cartItemsTable.sessionId, sessionId));
 
-    if (!cartItems.length) return res.status(400).json({ error: "Cart is empty" });
+    if (!cartItems.length)
+      return res.status(400).json({ error: "Cart is empty" });
 
-    const subtotal = cartItems.reduce((sum, r) => sum + Number(r.ci.unitPrice) * r.ci.quantity, 0);
+    const subtotal = cartItems.reduce(
+      (sum, r) => sum + Number(r.ci.unitPrice) * r.ci.quantity,
+      0,
+    );
     const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
     const total = subtotal + deliveryFee;
 
@@ -89,7 +108,8 @@ router.post("/orders", async (req, res) => {
 
     // Single-vendor cart assumption (per replit.md): take the vendorId from
     // the first cart item's product so vendors can list "their" orders.
-    const cartVendorId = cartItems.find((r) => r.p?.vendorId)?.p?.vendorId ?? null;
+    const cartVendorId =
+      cartItems.find((r) => r.p?.vendorId)?.p?.vendorId ?? null;
 
     const [newOrder] = await db
       .insert(ordersTable)
@@ -98,7 +118,12 @@ router.post("/orders", async (req, res) => {
         vendorId: cartVendorId,
         status: "pending",
         paymentMethod,
-        paymentStatus: paymentMethod === "balance" ? "paid" : paymentScreenshotUrl ? "pending" : "cod",
+        paymentStatus:
+          paymentMethod === "balance"
+            ? "paid"
+            : paymentScreenshotUrl
+              ? "pending"
+              : "cod",
         paymentScreenshotUrl,
         subtotal: subtotal.toFixed(3),
         deliveryFee: deliveryFee.toFixed(3),
@@ -118,10 +143,12 @@ router.post("/orders", async (req, res) => {
         quantity: r.ci.quantity,
         unitPrice: r.ci.unitPrice,
         totalPrice: (Number(r.ci.unitPrice) * r.ci.quantity).toFixed(3),
-      }))
+      })),
     );
 
-    await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+    await db
+      .delete(cartItemsTable)
+      .where(eq(cartItemsTable.sessionId, sessionId));
 
     const result = await getOrderWithItems(newOrder.id);
     return res.status(201).json(result);
@@ -159,28 +186,37 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   cancelled: ["pending", "preparing"],
 };
 
-router.patch("/orders/:id/status", requireOrderVendorOwner("id"), async (req, res) => {
-  try {
-    const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-    const status = String(req.body?.status ?? "");
-    const fromStates = STATUS_TRANSITIONS[status];
-    if (!fromStates) {
-      return res.status(400).json({ error: "Invalid status" });
+router.patch(
+  "/orders/:id/status",
+  requireOrderVendorOwner("id"),
+  async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+      const status = String(req.body?.status ?? "");
+      const fromStates = STATUS_TRANSITIONS[status];
+      if (!fromStates) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const [updated] = await db
+        .update(ordersTable)
+        .set({ status })
+        .where(
+          and(eq(ordersTable.id, id), inArray(ordersTable.status, fromStates)),
+        )
+        .returning();
+      if (!updated) {
+        // Either the order disappeared or it's in a state we won't transition from.
+        return res.status(409).json({
+          error: "Order is not in a state that allows this transition",
+        });
+      }
+      return res.json({ id: updated.id, status: updated.status });
+    } catch (err) {
+      req.log.error({ err }, "Failed to update order status");
+      return res.status(500).json({ error: "Internal server error" });
     }
-    const [updated] = await db.update(ordersTable)
-      .set({ status })
-      .where(and(eq(ordersTable.id, id), inArray(ordersTable.status, fromStates)))
-      .returning();
-    if (!updated) {
-      // Either the order disappeared or it's in a state we won't transition from.
-      return res.status(409).json({ error: "Order is not in a state that allows this transition" });
-    }
-    return res.json({ id: updated.id, status: updated.status });
-  } catch (err) {
-    req.log.error({ err }, "Failed to update order status");
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+  },
+);
 
 export default router;

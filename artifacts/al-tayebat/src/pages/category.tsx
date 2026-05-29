@@ -1,4 +1,9 @@
-import { useGetCategory, useListProducts, getGetCategoryQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetCategory,
+  useListProducts,
+  getGetCategoryQueryKey,
+  getListProductsQueryKey,
+} from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,14 +17,25 @@ export default function Category() {
   const { lang, dir, tr } = useLanguage();
   const params = useParams();
   const categoryId = params.id ? parseInt(params.id, 10) : undefined;
-  
-  const { data: category, isLoading: loadingCat } = useGetCategory(categoryId!, {
-    query: { enabled: !!categoryId, queryKey: getGetCategoryQueryKey(categoryId!) }
-  });
-  
+
+  const { data: category, isLoading: loadingCat } = useGetCategory(
+    categoryId!,
+    {
+      query: {
+        enabled: !!categoryId,
+        queryKey: getGetCategoryQueryKey(categoryId!),
+      },
+    },
+  );
+
   const { data: products, isLoading: loadingProducts } = useListProducts(
     { categoryId },
-    { query: { enabled: !!categoryId, queryKey: getListProductsQueryKey({ categoryId }) } }
+    {
+      query: {
+        enabled: !!categoryId,
+        queryKey: getListProductsQueryKey({ categoryId }),
+      },
+    },
   );
 
   const isRegular = category?.foodType === "regular";
@@ -53,7 +69,11 @@ export default function Category() {
             <Skeleton className="h-7 w-32 bg-primary-foreground/20" />
           ) : (
             <h1 className="text-xl font-bold">
-              {category ? (lang === "en" ? (category.name || category.nameAr) : category.nameAr) : ""}
+              {category
+                ? lang === "en"
+                  ? category.name || category.nameAr
+                  : category.nameAr
+                : ""}
             </h1>
           )}
         </div>
@@ -84,7 +104,12 @@ export default function Category() {
             ))
           ) : (
             <div className="col-span-2 py-12 text-center text-muted-foreground">
-              <p>{tr("لا توجد منتجات تطابق الفلتر المحدد", "No products match the selected filter")}</p>
+              <p>
+                {tr(
+                  "لا توجد منتجات تطابق الفلتر المحدد",
+                  "No products match the selected filter",
+                )}
+              </p>
             </div>
           )}
         </div>

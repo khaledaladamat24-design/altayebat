@@ -29,10 +29,23 @@ export interface DeliveryAdapter {
   /** True when the configured credentials/settings look sufficient to make a real API call. */
   isConfigured(provider: DeliveryProvider): boolean;
   /** Required credential keys + human-readable labels (Arabic) for the admin UI. */
-  requiredCredentials(): Array<{ key: string; label: string; placeholder?: string }>;
-  createShipment(provider: DeliveryProvider, input: ShipmentInput): Promise<ShipmentResult>;
-  trackShipment(provider: DeliveryProvider, trackingNumber: string): Promise<TrackResult>;
-  cancelShipment?(provider: DeliveryProvider, trackingNumber: string): Promise<void>;
+  requiredCredentials(): Array<{
+    key: string;
+    label: string;
+    placeholder?: string;
+  }>;
+  createShipment(
+    provider: DeliveryProvider,
+    input: ShipmentInput,
+  ): Promise<ShipmentResult>;
+  trackShipment(
+    provider: DeliveryProvider,
+    trackingNumber: string,
+  ): Promise<TrackResult>;
+  cancelShipment?(
+    provider: DeliveryProvider,
+    trackingNumber: string,
+  ): Promise<void>;
 }
 
 export class DeliveryNotConfiguredError extends Error {

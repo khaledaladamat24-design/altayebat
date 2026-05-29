@@ -1,4 +1,11 @@
-import { pgTable, serial, integer, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  integer,
+  text,
+  timestamp,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -22,6 +29,8 @@ export const vendorProfilesTable = pgTable("vendor_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertVendorProfileSchema = createInsertSchema(vendorProfilesTable).omit({ id: true, createdAt: true });
+export const insertVendorProfileSchema = createInsertSchema(
+  vendorProfilesTable,
+).omit({ id: true, createdAt: true });
 export type InsertVendorProfile = z.infer<typeof insertVendorProfileSchema>;
 export type VendorProfile = typeof vendorProfilesTable.$inferSelect;

@@ -6,7 +6,10 @@ const router = Router();
 
 router.get("/banners", async (req, res) => {
   try {
-    const rows = await db.select().from(bannersTable).orderBy(bannersTable.sortOrder);
+    const rows = await db
+      .select()
+      .from(bannersTable)
+      .orderBy(bannersTable.sortOrder);
     res.json(
       rows.map((b) => ({
         id: b.id,
@@ -19,7 +22,7 @@ router.get("/banners", async (req, res) => {
         linkId: b.linkId ?? null,
         badgeText: b.badgeText ?? null,
         badgeTextAr: b.badgeTextAr ?? null,
-      }))
+      })),
     );
   } catch (err) {
     req.log.error({ err }, "Failed to list banners");

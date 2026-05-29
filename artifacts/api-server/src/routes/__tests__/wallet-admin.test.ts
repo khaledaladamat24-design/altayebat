@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import request from "supertest";
-import { db, usersTable, walletsTable, walletTransactionsTable } from "@workspace/db";
+import {
+  db,
+  usersTable,
+  walletsTable,
+  walletTransactionsTable,
+} from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import walletRouter from "../wallet";
 
@@ -14,7 +23,11 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as unknown as { log: unknown }).log = { error() {}, info() {}, warn() {} };
+    (req as unknown as { log: unknown }).log = {
+      error() {},
+      info() {},
+      warn() {},
+    };
     next();
   });
   app.use("/api", walletRouter);
@@ -28,7 +41,10 @@ let userId: number;
 const userIds: number[] = [];
 
 beforeAll(async () => {
-  const [u] = await db.insert(usersTable).values({ clerkId: `wallet-admin-${tag}` }).returning();
+  const [u] = await db
+    .insert(usersTable)
+    .values({ clerkId: `wallet-admin-${tag}` })
+    .returning();
   userId = u.id;
   userIds.push(u.id);
   await db.insert(walletsTable).values({ userId, balance: "0.000" });
@@ -37,11 +53,16 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     if (userIds.length) {
-      await db.delete(walletTransactionsTable).where(inArray(walletTransactionsTable.userId, userIds));
-      await db.delete(walletsTable).where(inArray(walletsTable.userId, userIds));
+      await db
+        .delete(walletTransactionsTable)
+        .where(inArray(walletTransactionsTable.userId, userIds));
+      await db
+        .delete(walletsTable)
+        .where(inArray(walletsTable.userId, userIds));
     }
   } finally {
-    if (userIds.length) await db.delete(usersTable).where(inArray(usersTable.id, userIds));
+    if (userIds.length)
+      await db.delete(usersTable).where(inArray(usersTable.id, userIds));
   }
 });
 
@@ -129,7 +150,10 @@ describe("PATCH /api/admin/wallet/transactions/:id — admin authz", () => {
 
 describe("PATCH /api/admin/wallet/transactions/:id — approve/reject state machine", () => {
   beforeEach(async () => {
-    await db.update(walletsTable).set({ balance: "0.000" }).where(eq(walletsTable.userId, userId));
+    await db
+      .update(walletsTable)
+      .set({ balance: "0.000" })
+      .where(eq(walletsTable.userId, userId));
   });
 
   it("approves a pending top-up and credits the wallet balance", async () => {

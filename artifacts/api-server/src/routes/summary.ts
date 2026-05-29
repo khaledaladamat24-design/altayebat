@@ -10,9 +10,16 @@ router.get("/summary", async (req, res) => {
     const [totals] = await db
       .select({
         totalProducts: sql<number>`COUNT(*)`.mapWith(Number),
-        featuredCount: sql<number>`SUM(CASE WHEN is_featured THEN 1 ELSE 0 END)`.mapWith(Number),
-        bestsellersCount: sql<number>`SUM(CASE WHEN is_bestseller THEN 1 ELSE 0 END)`.mapWith(Number),
-        ketoCount: sql<number>`SUM(CASE WHEN is_keto THEN 1 ELSE 0 END)`.mapWith(Number),
+        featuredCount:
+          sql<number>`SUM(CASE WHEN is_featured THEN 1 ELSE 0 END)`.mapWith(
+            Number,
+          ),
+        bestsellersCount:
+          sql<number>`SUM(CASE WHEN is_bestseller THEN 1 ELSE 0 END)`.mapWith(
+            Number,
+          ),
+        ketoCount:
+          sql<number>`SUM(CASE WHEN is_keto THEN 1 ELSE 0 END)`.mapWith(Number),
       })
       .from(productsTable);
 
@@ -29,7 +36,11 @@ router.get("/summary", async (req, res) => {
       })
       .from(categoriesTable)
       .leftJoin(productsTable, eq(productsTable.categoryId, categoriesTable.id))
-      .groupBy(categoriesTable.id, categoriesTable.name, categoriesTable.nameAr);
+      .groupBy(
+        categoriesTable.id,
+        categoriesTable.name,
+        categoriesTable.nameAr,
+      );
 
     res.json({
       totalProducts: totals.totalProducts,

@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { productsTable, categoriesTable, vendorProfilesTable } from "@workspace/db";
+import {
+  productsTable,
+  categoriesTable,
+  vendorProfilesTable,
+} from "@workspace/db";
 import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
 
 // Products without a vendor (admin-uploaded) stay visible. Products linked to
@@ -13,9 +17,16 @@ const vendorOnlineCondition = or(
 
 const router = Router();
 
-type VendorLite = Pick<typeof vendorProfilesTable.$inferSelect, "id" | "storeName" | "storeNameAr"> | null;
+type VendorLite = Pick<
+  typeof vendorProfilesTable.$inferSelect,
+  "id" | "storeName" | "storeNameAr"
+> | null;
 
-function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categoriesTable.$inferSelect | null, v: VendorLite = null) {
+function buildProductRow(
+  p: typeof productsTable.$inferSelect,
+  c: typeof categoriesTable.$inferSelect | null,
+  v: VendorLite = null,
+) {
   return {
     id: p.id,
     name: p.name,
@@ -62,9 +73,17 @@ router.get("/products/featured", async (req, res) => {
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(and(eq(productsTable.isFeatured, true), vendorOnlineCondition, ft));
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
+      )
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
+      .where(
+        and(eq(productsTable.isFeatured, true), vendorOnlineCondition, ft),
+      );
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list featured products");
@@ -78,9 +97,17 @@ router.get("/products/bestsellers", async (req, res) => {
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(and(eq(productsTable.isBestseller, true), vendorOnlineCondition, ft));
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
+      )
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
+      .where(
+        and(eq(productsTable.isBestseller, true), vendorOnlineCondition, ft),
+      );
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
@@ -90,14 +117,16 @@ router.get("/products/bestsellers", async (req, res) => {
 
 router.get("/products", async (req, res) => {
   try {
-    const { categoryId, search, featured, foodType, onSale, subcategory } = req.query;
+    const { categoryId, search, featured, foodType, onSale, subcategory } =
+      req.query;
     const conditions = [];
 
     if (categoryId) {
       const catId = parseInt(categoryId as string);
       if (!isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
     }
-    if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
+    if (featured === "true")
+      conditions.push(eq(productsTable.isFeatured, true));
     if (onSale === "true") conditions.push(eq(productsTable.isOnSale, true));
     if (typeof subcategory === "string" && subcategory.length > 0) {
       conditions.push(eq(productsTable.subcategory, subcategory));
@@ -122,8 +151,14 @@ router.get("/products", async (req, res) => {
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
+      )
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
       .where(conditions.length ? and(...conditions) : undefined);
 
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
@@ -141,8 +176,14 @@ router.get("/products/:id", async (req, res) => {
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-      .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
+      )
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
       .where(eq(productsTable.id, id));
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });

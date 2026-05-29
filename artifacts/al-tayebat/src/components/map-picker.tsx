@@ -24,11 +24,15 @@ interface NominatimResult {
   };
 }
 
-async function reverseGeocode(lat: number, lng: number, lang: "ar" | "en"): Promise<string> {
+async function reverseGeocode(
+  lat: number,
+  lng: number,
+  lang: "ar" | "en",
+): Promise<string> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${lang}`,
-      { headers: { "User-Agent": "AlTayebat-App/1.0" } }
+      { headers: { "User-Agent": "AlTayebat-App/1.0" } },
     );
     const data: NominatimResult = await res.json();
     const a = data.address;
@@ -51,18 +55,24 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState("");
-  const [pickedCoords, setPickedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [pickedCoords, setPickedCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const markerRef = useRef<import("leaflet").Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    setLoading(true);
-    setPickedCoords({ lat, lng });
-    const address = await reverseGeocode(lat, lng, lang);
-    setResolvedAddress(address);
-    setLoading(false);
-  }, [lang]);
+  const handleMapClick = useCallback(
+    async (lat: number, lng: number) => {
+      setLoading(true);
+      setPickedCoords({ lat, lng });
+      const address = await reverseGeocode(lat, lng, lang);
+      setResolvedAddress(address);
+      setLoading(false);
+    },
+    [lang],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -77,9 +87,11 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconRetinaUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        shadowUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
 
       if (!mapContainerRef.current || mapRef.current || !mounted) return;
@@ -90,15 +102,17 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
 
       const map = L.map(mapContainerRef.current, { zoomControl: true }).setView(
         [defaultLat, defaultLng],
-        13
+        13,
       );
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© OpenStreetMap contributors',
+        attribution: "© OpenStreetMap contributors",
         maxZoom: 19,
       }).addTo(map);
 
-      const marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+      const marker = L.marker([defaultLat, defaultLng], {
+        draggable: true,
+      }).addTo(map);
       markerRef.current = marker;
       mapRef.current = map;
 
@@ -137,7 +151,7 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
         setLocating(false);
       },
       () => setLocating(false),
-      { timeout: 8000 }
+      { timeout: 8000 },
     );
   };
 
@@ -161,11 +175,16 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl gap-0" dir={dir}>
+        <DialogContent
+          className="max-w-md p-0 overflow-hidden rounded-2xl gap-0"
+          dir={dir}
+        >
           <div className="p-4 border-b border-border flex items-center justify-between bg-primary text-primary-foreground">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-rose-soft" />
-              <h2 className="font-bold text-lg">{tr("تحديد موقع التوصيل", "Choose delivery location")}</h2>
+              <h2 className="font-bold text-lg">
+                {tr("تحديد موقع التوصيل", "Choose delivery location")}
+              </h2>
             </div>
             <Button
               type="button"
@@ -180,7 +199,9 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
               ) : (
                 <Navigation className="w-4 h-4" />
               )}
-              <span className="text-xs">{tr("موقعي الحالي", "My current location")}</span>
+              <span className="text-xs">
+                {tr("موقعي الحالي", "My current location")}
+              </span>
             </Button>
           </div>
 
@@ -195,11 +216,16 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
               <MapPin className="w-4 h-4 text-rose mt-0.5 shrink-0" />
               {loading ? (
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> {tr("جاري تحديد العنوان...", "Looking up address...")}
+                  <Loader2 className="w-3 h-3 animate-spin" />{" "}
+                  {tr("جاري تحديد العنوان...", "Looking up address...")}
                 </span>
               ) : (
                 <span className="text-sm font-medium leading-relaxed">
-                  {resolvedAddress || tr("انقر على الخريطة لتحديد موقعك", "Tap the map to pick your location")}
+                  {resolvedAddress ||
+                    tr(
+                      "انقر على الخريطة لتحديد موقعك",
+                      "Tap the map to pick your location",
+                    )}
                 </span>
               )}
             </div>

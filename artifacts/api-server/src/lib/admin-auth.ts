@@ -19,7 +19,7 @@ export function getAdminPassword(): string {
   // eslint-disable-next-line no-console
   console.warn(
     "[admin] ⚠️  ADMIN_PASSWORD env secret is not set — falling back to the legacy default. " +
-    "Set ADMIN_PASSWORD as a Replit Secret to secure the admin panel."
+      "Set ADMIN_PASSWORD as a Replit Secret to secure the admin panel.",
   );
   return FALLBACK_ADMIN_PASSWORD;
 }
@@ -36,7 +36,14 @@ export function isAdminReq(req: Request): boolean {
 }
 
 /** Express guard that rejects non-admin requests with 403. */
-export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  if (!isAdminReq(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!isAdminReq(req)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   next();
 }

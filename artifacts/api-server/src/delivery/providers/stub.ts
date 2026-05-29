@@ -2,11 +2,14 @@ import type { DeliveryAdapter } from "../types";
 import { DeliveryNotConfiguredError } from "../types";
 
 /** Build a stub adapter for a named provider until credentials are wired. */
-export function makeStubAdapter(type: string, requiredKeys: Array<{ key: string; label: string; placeholder?: string }>): DeliveryAdapter {
+export function makeStubAdapter(
+  type: string,
+  requiredKeys: Array<{ key: string; label: string; placeholder?: string }>,
+): DeliveryAdapter {
   return {
     type,
     isConfigured(provider) {
-      return requiredKeys.every(k => Boolean(provider.credentials?.[k.key]));
+      return requiredKeys.every((k) => Boolean(provider.credentials?.[k.key]));
     },
     requiredCredentials: () => requiredKeys,
     async createShipment(provider) {
@@ -22,7 +25,11 @@ export function makeStubAdapter(type: string, requiredKeys: Array<{ key: string;
 // `createShipment` / `trackShipment` methods once the merchant signs a contract
 // and obtains the credentials listed in `requiredCredentials`.
 export const aramexAdapter = makeStubAdapter("aramex", [
-  { key: "accountNumber", label: "رقم الحساب (Account Number)", placeholder: "20016" },
+  {
+    key: "accountNumber",
+    label: "رقم الحساب (Account Number)",
+    placeholder: "20016",
+  },
   { key: "accountPin", label: "رقم PIN", placeholder: "331421" },
   { key: "username", label: "اسم المستخدم (Email)" },
   { key: "password", label: "كلمة السر" },
@@ -61,5 +68,8 @@ export const dhlAdapter = makeStubAdapter("dhl", [
 export const customAdapter = makeStubAdapter("custom", [
   { key: "apiKey", label: "مفتاح API / Token" },
   { key: "createUrl", label: "Endpoint إنشاء شحنة (POST)" },
-  { key: "trackUrl", label: "Endpoint تتبع (GET, use {tn} for tracking number)" },
+  {
+    key: "trackUrl",
+    label: "Endpoint تتبع (GET, use {tn} for tracking number)",
+  },
 ]);

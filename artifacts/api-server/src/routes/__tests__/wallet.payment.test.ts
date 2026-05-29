@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import request from "supertest";
 import { db, walletsTable, walletTransactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -14,7 +18,11 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as unknown as { log: unknown }).log = { error() {}, info() {}, warn() {} };
+    (req as unknown as { log: unknown }).log = {
+      error() {},
+      info() {},
+      warn() {},
+    };
     next();
   });
   app.use("/api", walletRouter);
@@ -43,12 +51,16 @@ async function balanceOf(): Promise<number> {
 
 beforeEach(async () => {
   // Reset to a known balance and clear any payment txns from a prior test.
-  await db.delete(walletTransactionsTable).where(eq(walletTransactionsTable.userId, userId));
+  await db
+    .delete(walletTransactionsTable)
+    .where(eq(walletTransactionsTable.userId, userId));
   await setBalance("50.000");
 });
 
 afterAll(async () => {
-  await db.delete(walletTransactionsTable).where(eq(walletTransactionsTable.userId, userId));
+  await db
+    .delete(walletTransactionsTable)
+    .where(eq(walletTransactionsTable.userId, userId));
   await db.delete(walletsTable).where(eq(walletsTable.userId, userId));
 });
 
@@ -108,8 +120,14 @@ describe("POST /api/wallet/:userId/pay — idempotency", () => {
     const orderId = Math.floor(Math.random() * 1_000_000_000);
 
     const [a, b] = await Promise.all([
-      request(app).post(`/api/wallet/${userId}/pay`).set(ADMIN_HEADER).send({ amount: 11.5, orderId }),
-      request(app).post(`/api/wallet/${userId}/pay`).set(ADMIN_HEADER).send({ amount: 11.5, orderId }),
+      request(app)
+        .post(`/api/wallet/${userId}/pay`)
+        .set(ADMIN_HEADER)
+        .send({ amount: 11.5, orderId }),
+      request(app)
+        .post(`/api/wallet/${userId}/pay`)
+        .set(ADMIN_HEADER)
+        .send({ amount: 11.5, orderId }),
     ]);
 
     expect(a.status).toBe(200);

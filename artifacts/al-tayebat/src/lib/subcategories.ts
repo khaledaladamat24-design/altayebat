@@ -42,12 +42,17 @@ export const ALL_SUBCATEGORIES: SubcategoryOption[] = Object.values(
   SUBCATEGORIES_BY_SLUG,
 ).flat();
 
-export function getSubcategoriesForSlug(slug: string | null | undefined): SubcategoryOption[] {
+export function getSubcategoriesForSlug(
+  slug: string | null | undefined,
+): SubcategoryOption[] {
   if (!slug) return [];
   return SUBCATEGORIES_BY_SLUG[slug] ?? [];
 }
 
-export function getSubcategoryLabel(value: string | null | undefined, lang: "ar" | "en"): string {
+export function getSubcategoryLabel(
+  value: string | null | undefined,
+  lang: "ar" | "en",
+): string {
   if (!value) return "";
   const opt = ALL_SUBCATEGORIES.find((o) => o.value === value);
   if (!opt) return value;

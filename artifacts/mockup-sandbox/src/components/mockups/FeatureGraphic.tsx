@@ -1,4 +1,12 @@
-import { AR_FONT, brandBg, CREAM, Decor, GREEN, Phone, ROSE } from "./_store-kit";
+import {
+  AR_FONT,
+  brandBg,
+  CREAM,
+  Decor,
+  GREEN,
+  Phone,
+  ROSE,
+} from "./_store-kit";
 import icon from "../../assets/shots/icon.png";
 import home from "../../assets/shots/home.jpg";
 
@@ -49,7 +57,11 @@ export default function FeatureGraphic() {
               flexShrink: 0,
             }}
           >
-            <img src={icon} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img
+              src={icon}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </div>
           <span
             style={{

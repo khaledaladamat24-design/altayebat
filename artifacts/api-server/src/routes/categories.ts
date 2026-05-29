@@ -18,7 +18,10 @@ router.get("/categories", async (req, res) => {
         imageUrl: categoriesTable.imageUrl,
         foodType: categoriesTable.foodType,
         sortOrder: categoriesTable.sortOrder,
-        productCount: sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(Number),
+        productCount:
+          sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(
+            Number,
+          ),
       })
       .from(categoriesTable)
       .orderBy(categoriesTable.sortOrder);
@@ -49,7 +52,10 @@ router.get("/categories/:id", async (req, res) => {
         imageUrl: categoriesTable.imageUrl,
         foodType: categoriesTable.foodType,
         sortOrder: categoriesTable.sortOrder,
-        productCount: sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(Number),
+        productCount:
+          sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(
+            Number,
+          ),
       })
       .from(categoriesTable)
       .where(eq(categoriesTable.id, id));

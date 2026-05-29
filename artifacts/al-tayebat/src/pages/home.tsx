@@ -1,6 +1,18 @@
-import { useListBanners, useListCategories, useListFeaturedProducts, useListBestsellers } from "@workspace/api-client-react";
+import {
+  useListBanners,
+  useListCategories,
+  useListFeaturedProducts,
+  useListBestsellers,
+} from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Search, MapPin, ChevronLeft, Leaf, UtensilsCrossed, BadgePercent } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  ChevronLeft,
+  Leaf,
+  UtensilsCrossed,
+  BadgePercent,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,9 +41,13 @@ export default function Home() {
   };
 
   const { data: banners, isLoading: loadingBanners } = useListBanners();
-  const { data: categories, isLoading: loadingCategories } = useListCategories({ foodType: zone });
-  const { data: featuredProducts, isLoading: loadingFeatured } = useListFeaturedProducts({ foodType: zone });
-  const { data: bestsellers, isLoading: loadingBestsellers } = useListBestsellers({ foodType: zone });
+  const { data: categories, isLoading: loadingCategories } = useListCategories({
+    foodType: zone,
+  });
+  const { data: featuredProducts, isLoading: loadingFeatured } =
+    useListFeaturedProducts({ foodType: zone });
+  const { data: bestsellers, isLoading: loadingBestsellers } =
+    useListBestsellers({ foodType: zone });
 
   const [address, setAddress] = useState<string>("");
   useEffect(() => {
@@ -59,7 +75,9 @@ export default function Home() {
             </div>
             <Link href="/settings">
               <div className="cursor-pointer min-w-0">
-                <p className="text-xs text-primary-foreground/70">{tr("التوصيل إلى", "Delivery to")}</p>
+                <p className="text-xs text-primary-foreground/70">
+                  {tr("التوصيل إلى", "Delivery to")}
+                </p>
                 <p className="font-bold text-sm truncate">
                   {address || tr("أضف عنوانك ←", "Add your address →")}
                 </p>
@@ -76,7 +94,10 @@ export default function Home() {
             </div>
             <Input
               type="text"
-              placeholder={tr("عن ماذا تبحث؟ (مثال: خبز كيتو)", "What are you looking for? (e.g. keto bread)")}
+              placeholder={tr(
+                "عن ماذا تبحث؟ (مثال: خبز كيتو)",
+                "What are you looking for? (e.g. keto bread)",
+              )}
               className="bg-background text-foreground pl-4 pr-10 rounded-xl border-none shadow-sm pointer-events-none"
               readOnly
             />
@@ -127,18 +148,36 @@ export default function Home() {
               <div className="w-full h-44 rounded-2xl overflow-hidden relative shadow-sm">
                 <img
                   src={banners[0].imageUrl}
-                  alt={lang === "en" ? (banners[0].title || banners[0].titleAr) : banners[0].titleAr}
+                  alt={
+                    lang === "en"
+                      ? banners[0].title || banners[0].titleAr
+                      : banners[0].titleAr
+                  }
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-l from-black/65 to-transparent flex flex-col justify-end p-5 text-white">
-                  {(lang === "en" ? (banners[0].badgeText || banners[0].badgeTextAr) : banners[0].badgeTextAr) && (
+                  {(lang === "en"
+                    ? banners[0].badgeText || banners[0].badgeTextAr
+                    : banners[0].badgeTextAr) && (
                     <span className="bg-rose text-white text-xs font-bold px-2.5 py-1 rounded-full w-max mb-2 shadow-sm">
-                      {lang === "en" ? (banners[0].badgeText || banners[0].badgeTextAr) : banners[0].badgeTextAr}
+                      {lang === "en"
+                        ? banners[0].badgeText || banners[0].badgeTextAr
+                        : banners[0].badgeTextAr}
                     </span>
                   )}
-                  <h2 className="text-xl font-bold leading-tight">{lang === "en" ? (banners[0].title || banners[0].titleAr) : banners[0].titleAr}</h2>
-                  {(lang === "en" ? (banners[0].subtitle || banners[0].subtitleAr) : banners[0].subtitleAr) && (
-                    <p className="text-sm mt-1 opacity-85">{lang === "en" ? (banners[0].subtitle || banners[0].subtitleAr) : banners[0].subtitleAr}</p>
+                  <h2 className="text-xl font-bold leading-tight">
+                    {lang === "en"
+                      ? banners[0].title || banners[0].titleAr
+                      : banners[0].titleAr}
+                  </h2>
+                  {(lang === "en"
+                    ? banners[0].subtitle || banners[0].subtitleAr
+                    : banners[0].subtitleAr) && (
+                    <p className="text-sm mt-1 opacity-85">
+                      {lang === "en"
+                        ? banners[0].subtitle || banners[0].subtitleAr
+                        : banners[0].subtitleAr}
+                    </p>
                   )}
                 </div>
               </div>
@@ -147,15 +186,28 @@ export default function Home() {
               {banners.length > 1 && (
                 <div className="grid grid-cols-2 gap-3">
                   {banners.slice(1, 3).map((b) => (
-                    <div key={b.id} className="h-24 rounded-xl overflow-hidden relative shadow-sm">
-                      <img src={b.imageUrl} alt={lang === "en" ? (b.title || b.titleAr) : b.titleAr} className="w-full h-full object-cover" />
+                    <div
+                      key={b.id}
+                      className="h-24 rounded-xl overflow-hidden relative shadow-sm"
+                    >
+                      <img
+                        src={b.imageUrl}
+                        alt={lang === "en" ? b.title || b.titleAr : b.titleAr}
+                        className="w-full h-full object-cover"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-3 text-white">
-                        {(lang === "en" ? (b.badgeText || b.badgeTextAr) : b.badgeTextAr) && (
+                        {(lang === "en"
+                          ? b.badgeText || b.badgeTextAr
+                          : b.badgeTextAr) && (
                           <span className="bg-rose/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full w-max mb-1">
-                            {lang === "en" ? (b.badgeText || b.badgeTextAr) : b.badgeTextAr}
+                            {lang === "en"
+                              ? b.badgeText || b.badgeTextAr
+                              : b.badgeTextAr}
                           </span>
                         )}
-                        <p className="text-xs font-bold leading-tight">{lang === "en" ? (b.title || b.titleAr) : b.titleAr}</p>
+                        <p className="text-xs font-bold leading-tight">
+                          {lang === "en" ? b.title || b.titleAr : b.titleAr}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -176,11 +228,20 @@ export default function Home() {
             </div>
             <h3 className="font-bold text-base">
               {zone === "healthy"
-                ? tr("لا توجد منتجات في القسم الصحي بعد", "No products in the Healthy Zone yet")
-                : tr("لا توجد منتجات في القسم العادي بعد", "No products in the Regular Zone yet")}
+                ? tr(
+                    "لا توجد منتجات في القسم الصحي بعد",
+                    "No products in the Healthy Zone yet",
+                  )
+                : tr(
+                    "لا توجد منتجات في القسم العادي بعد",
+                    "No products in the Regular Zone yet",
+                  )}
             </h3>
             <p className="text-sm text-muted-foreground max-w-[260px]">
-              {tr("جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.", "Try switching to the other zone above, or check back later.")}
+              {tr(
+                "جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.",
+                "Try switching to the other zone above, or check back later.",
+              )}
             </p>
             <Link href={`/offers/${zone}`}>
               <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-rose cursor-pointer">
@@ -192,101 +253,129 @@ export default function Home() {
             </Link>
           </section>
         ) : (
-        <>
-        {/* Categories */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-5 bg-rose rounded-full" />
-              <h2 className="font-bold text-lg">{tr("الأقسام", "Categories")}</h2>
-            </div>
-            <Link href="/categories">
-              <span className="text-xs text-rose font-semibold cursor-pointer flex items-center gap-0.5">
-                {tr("عرض الكل", "View all")} <ChevronLeft className="w-3 h-3" />
-              </span>
-            </Link>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-3 snap-x hide-scrollbar -mx-4 px-4">
-            {/* Offers shortcut — always first in the rail, per zone */}
-            <Link href={`/offers/${zone}`}>
-              <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-rose to-rose/70 border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
-                  <BadgePercent className="w-7 h-7 text-white" />
+          <>
+            {/* Categories */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 bg-rose rounded-full" />
+                  <h2 className="font-bold text-lg">
+                    {tr("الأقسام", "Categories")}
+                  </h2>
                 </div>
-                <span className="text-[11px] font-bold text-rose text-center leading-tight">
-                  {zone === "healthy"
-                    ? tr("عروض صحية", "Healthy Offers")
-                    : tr("عروض وتخفيضات", "Offers & Discounts")}
-                </span>
+                <Link href="/categories">
+                  <span className="text-xs text-rose font-semibold cursor-pointer flex items-center gap-0.5">
+                    {tr("عرض الكل", "View all")}{" "}
+                    <ChevronLeft className="w-3 h-3" />
+                  </span>
+                </Link>
               </div>
-            </Link>
-            {loadingCategories
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex flex-col items-center gap-2 min-w-[68px]">
-                    <Skeleton className="w-14 h-14 rounded-full" />
-                    <Skeleton className="w-12 h-3" />
-                  </div>
-                ))
-              : categories?.map((cat) => (
-                  <Link key={cat.id} href={`/category/${cat.id}`}>
-                    <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
-                      <div className="w-14 h-14 rounded-full bg-rose-soft border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
-                        {cat.imageUrl ? (
-                          <img src={cat.imageUrl} alt={lang === "en" ? (cat.name || cat.nameAr) : cat.nameAr} className="w-full h-full object-contain" />
-                        ) : (
-                          <span className="text-2xl">{cat.icon}</span>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-medium text-center leading-tight">{lang === "en" ? (cat.name || cat.nameAr) : cat.nameAr}</span>
+
+              <div className="flex gap-3 overflow-x-auto pb-3 snap-x hide-scrollbar -mx-4 px-4">
+                {/* Offers shortcut — always first in the rail, per zone */}
+                <Link href={`/offers/${zone}`}>
+                  <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-rose to-rose/70 border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
+                      <BadgePercent className="w-7 h-7 text-white" />
                     </div>
-                  </Link>
-                ))}
-          </div>
-        </section>
-
-        {/* Featured Products */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1 h-5 bg-primary rounded-full" />
-            <h2 className="font-bold text-lg">{tr("وصل حديثاً", "New Arrivals")}</h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {loadingFeatured
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="w-full aspect-[3/4] rounded-xl" />
-                ))
-              : featuredProducts?.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-          </div>
-        </section>
-
-        {/* Bestsellers */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-5 bg-rose rounded-full" />
-              <h2 className="font-bold text-lg">{tr("الأكثر مبيعاً", "Best Sellers")}</h2>
-            </div>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-3 snap-x hide-scrollbar -mx-4 px-4">
-            {loadingBestsellers
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="min-w-[155px] snap-start">
-                    <Skeleton className="w-full aspect-[3/4] rounded-xl" />
+                    <span className="text-[11px] font-bold text-rose text-center leading-tight">
+                      {zone === "healthy"
+                        ? tr("عروض صحية", "Healthy Offers")
+                        : tr("عروض وتخفيضات", "Offers & Discounts")}
+                    </span>
                   </div>
-                ))
-              : bestsellers?.map((product) => (
-                  <div key={product.id} className="min-w-[155px] snap-start">
-                    <ProductCard product={product} />
-                  </div>
-                ))}
-          </div>
-        </section>
-        </>
+                </Link>
+                {loadingCategories
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex flex-col items-center gap-2 min-w-[68px]"
+                      >
+                        <Skeleton className="w-14 h-14 rounded-full" />
+                        <Skeleton className="w-12 h-3" />
+                      </div>
+                    ))
+                  : categories?.map((cat) => (
+                      <Link key={cat.id} href={`/category/${cat.id}`}>
+                        <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
+                          <div className="w-14 h-14 rounded-full bg-rose-soft border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
+                            {cat.imageUrl ? (
+                              <img
+                                src={cat.imageUrl}
+                                alt={
+                                  lang === "en"
+                                    ? cat.name || cat.nameAr
+                                    : cat.nameAr
+                                }
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-2xl">{cat.icon}</span>
+                            )}
+                          </div>
+                          <span className="text-[11px] font-medium text-center leading-tight">
+                            {lang === "en"
+                              ? cat.name || cat.nameAr
+                              : cat.nameAr}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+              </div>
+            </section>
+
+            {/* Featured Products */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-5 bg-primary rounded-full" />
+                <h2 className="font-bold text-lg">
+                  {tr("وصل حديثاً", "New Arrivals")}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {loadingFeatured
+                  ? Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton
+                        key={i}
+                        className="w-full aspect-[3/4] rounded-xl"
+                      />
+                    ))
+                  : featuredProducts?.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+              </div>
+            </section>
+
+            {/* Bestsellers */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 bg-rose rounded-full" />
+                  <h2 className="font-bold text-lg">
+                    {tr("الأكثر مبيعاً", "Best Sellers")}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex gap-3 overflow-x-auto pb-3 snap-x hide-scrollbar -mx-4 px-4">
+                {loadingBestsellers
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="min-w-[155px] snap-start">
+                        <Skeleton className="w-full aspect-[3/4] rounded-xl" />
+                      </div>
+                    ))
+                  : bestsellers?.map((product) => (
+                      <div
+                        key={product.id}
+                        className="min-w-[155px] snap-start"
+                      >
+                        <ProductCard product={product} />
+                      </div>
+                    ))}
+              </div>
+            </section>
+          </>
         )}
       </div>
     </div>

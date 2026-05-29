@@ -22,8 +22,9 @@ if (rawApiBase) {
 // Detect Capacitor native shell — affects router base and Clerk proxy config.
 const isNative =
   typeof window !== "undefined" &&
-  !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-    .Capacitor?.isNativePlatform?.();
+  !!(
+    window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }
+  ).Capacitor?.isNativePlatform?.();
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout";
 import Home from "@/pages/home";
@@ -55,14 +56,22 @@ const queryClient = new QueryClient({
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
-const SPLASH_EXCLUDED = ["/splash", "/auth", "/admin", "/settings", "/register", "/privacy-policy", "/vendor-dashboard"];
+const SPLASH_EXCLUDED = [
+  "/splash",
+  "/auth",
+  "/admin",
+  "/settings",
+  "/register",
+  "/privacy-policy",
+  "/vendor-dashboard",
+];
 const ONBOARD_KEY = "al_tayebat_onboarded_v2";
 const AUTH_SKIPPED_KEY = "al_tayebat_auth_skipped_v2";
 
 function SplashGate({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   useEffect(() => {
-    const excluded = SPLASH_EXCLUDED.some(p => location.startsWith(p));
+    const excluded = SPLASH_EXCLUDED.some((p) => location.startsWith(p));
     if (excluded) return;
 
     // Guard: never navigate to the location we're already on. Without this,
@@ -72,10 +81,15 @@ function SplashGate({ children }: { children: React.ReactNode }) {
       if (location !== "/splash") setLocation("/splash");
       return;
     }
-    const signedIn = !!localStorage.getItem("al_tayebat_firebase_uid")
-      || !!localStorage.getItem("__clerk_db_jwt")
-      || !!localStorage.getItem("al_tayebat_user_id");
-    if (!signedIn && !localStorage.getItem(AUTH_SKIPPED_KEY) && location !== "/auth") {
+    const signedIn =
+      !!localStorage.getItem("al_tayebat_firebase_uid") ||
+      !!localStorage.getItem("__clerk_db_jwt") ||
+      !!localStorage.getItem("al_tayebat_user_id");
+    if (
+      !signedIn &&
+      !localStorage.getItem(AUTH_SKIPPED_KEY) &&
+      location !== "/auth"
+    ) {
       setLocation("/auth");
     }
     // setLocation intentionally omitted — wouter v3 may return a new reference
@@ -126,25 +140,74 @@ function Router() {
 // in the GitHub Actions build secrets.
 function FatalScreen({ title, detail }: { title: string; detail: string }) {
   return (
-    <div dir="rtl" style={{
-      minHeight: "100vh", padding: "24px",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      background: "#fafaf7", color: "#1f2937", fontFamily: "Cairo, system-ui, sans-serif", textAlign: "center",
-    }}>
+    <div
+      dir="rtl"
+      style={{
+        minHeight: "100vh",
+        padding: "24px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#fafaf7",
+        color: "#1f2937",
+        fontFamily: "Cairo, system-ui, sans-serif",
+        textAlign: "center",
+      }}
+    >
       <div style={{ fontSize: "48px", marginBottom: "12px" }}>⚠️</div>
-      <h1 style={{ fontSize: "20px", fontWeight: 900, color: "#1f5135", marginBottom: "12px" }}>{title}</h1>
-      <pre style={{ fontSize: "11px", color: "#6b7280", maxWidth: "340px", lineHeight: 1.5, whiteSpace: "pre-wrap", textAlign: "right", fontFamily: "monospace", maxHeight: "50vh", overflow: "auto" }}>{detail}</pre>
-      <button onClick={() => window.location.reload()} style={{
-        marginTop: "20px", padding: "12px 24px", borderRadius: "12px",
-        background: "#1f5135", color: "white", border: "none", fontWeight: 700, fontSize: "14px",
-      }}>إعادة المحاولة</button>
+      <h1
+        style={{
+          fontSize: "20px",
+          fontWeight: 900,
+          color: "#1f5135",
+          marginBottom: "12px",
+        }}
+      >
+        {title}
+      </h1>
+      <pre
+        style={{
+          fontSize: "11px",
+          color: "#6b7280",
+          maxWidth: "340px",
+          lineHeight: 1.5,
+          whiteSpace: "pre-wrap",
+          textAlign: "right",
+          fontFamily: "monospace",
+          maxHeight: "50vh",
+          overflow: "auto",
+        }}
+      >
+        {detail}
+      </pre>
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          marginTop: "20px",
+          padding: "12px 24px",
+          borderRadius: "12px",
+          background: "#1f5135",
+          color: "white",
+          border: "none",
+          fontWeight: 700,
+          fontSize: "14px",
+        }}
+      >
+        إعادة المحاولة
+      </button>
     </div>
   );
 }
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; stack: string }> {
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null; stack: string }
+> {
   state = { error: null as Error | null, stack: "" };
-  static getDerivedStateFromError(error: Error) { return { error, stack: "" }; }
+  static getDerivedStateFromError(error: Error) {
+    return { error, stack: "" };
+  }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info);
     this.setState({ error, stack: info.componentStack || "" });
@@ -176,27 +239,33 @@ function App() {
   return (
     <ErrorBoundary>
       <LanguageProvider>
-      <ClerkProvider
-        publishableKey={clerkPubKey}
-        {...(import.meta.env.PROD && !isNative ? { proxyUrl: "/api/__clerk" } : {})}
-        appearance={{
-          variables: {
-            colorPrimary: "hsl(152 41% 30%)",
-            colorDanger: "hsl(349 68% 62%)",
-            borderRadius: "0.75rem",
-            fontFamily: "Cairo, sans-serif",
-          },
-        }}
-      >
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <WouterRouter base={isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <AppToaster />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ClerkProvider>
+        <ClerkProvider
+          publishableKey={clerkPubKey}
+          {...(import.meta.env.PROD && !isNative
+            ? { proxyUrl: "/api/__clerk" }
+            : {})}
+          appearance={{
+            variables: {
+              colorPrimary: "hsl(152 41% 30%)",
+              colorDanger: "hsl(349 68% 62%)",
+              borderRadius: "0.75rem",
+              fontFamily: "Cairo, sans-serif",
+            },
+          }}
+        >
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <WouterRouter
+                base={
+                  isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")
+                }
+              >
+                <Router />
+              </WouterRouter>
+              <AppToaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </ClerkProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

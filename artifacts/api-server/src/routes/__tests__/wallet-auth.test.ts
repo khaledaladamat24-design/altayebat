@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import request from "supertest";
 
 // Simulate Clerk: getAuth() reads the signed-in user id from a test header so
@@ -10,7 +14,8 @@ vi.mock("@clerk/express", () => ({
   }),
 }));
 
-const { db, usersTable, walletsTable, walletTransactionsTable } = await import("@workspace/db");
+const { db, usersTable, walletsTable, walletTransactionsTable } =
+  await import("@workspace/db");
 const { eq, inArray } = await import("drizzle-orm");
 // Import the real router AFTER the mock so its requireWalletOwner uses the stub.
 const walletRouter = (await import("../wallet")).default;
@@ -21,7 +26,11 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as unknown as { log: unknown }).log = { error() {}, info() {}, warn() {} };
+    (req as unknown as { log: unknown }).log = {
+      error() {},
+      info() {},
+      warn() {},
+    };
     next();
   });
   app.use("/api", walletRouter);
@@ -41,8 +50,14 @@ beforeAll(async () => {
   userAClerk = `wallet-clerk-A-${tag}`;
   userBClerk = `wallet-clerk-B-${tag}`;
 
-  const [userA] = await db.insert(usersTable).values({ clerkId: userAClerk }).returning();
-  const [userB] = await db.insert(usersTable).values({ clerkId: userBClerk }).returning();
+  const [userA] = await db
+    .insert(usersTable)
+    .values({ clerkId: userAClerk })
+    .returning();
+  const [userB] = await db
+    .insert(usersTable)
+    .values({ clerkId: userBClerk })
+    .returning();
   userAId = userA.id;
   userBId = userB.id;
   userIds.push(userA.id, userB.id);
@@ -51,24 +66,33 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     if (userIds.length) {
-      await db.delete(walletTransactionsTable).where(inArray(walletTransactionsTable.userId, userIds));
-      await db.delete(walletsTable).where(inArray(walletsTable.userId, userIds));
+      await db
+        .delete(walletTransactionsTable)
+        .where(inArray(walletTransactionsTable.userId, userIds));
+      await db
+        .delete(walletsTable)
+        .where(inArray(walletsTable.userId, userIds));
     }
   } finally {
-    if (userIds.length) await db.delete(usersTable).where(inArray(usersTable.id, userIds));
+    if (userIds.length)
+      await db.delete(usersTable).where(inArray(usersTable.id, userIds));
   }
 });
 
 describe("requireWalletOwner — GET /api/wallet/:userId (balance + history)", () => {
   it("allows the owner to read their own wallet", async () => {
-    const res = await request(app).get(`/api/wallet/${userAId}`).set("x-test-clerk-id", userAClerk);
+    const res = await request(app)
+      .get(`/api/wallet/${userAId}`)
+      .set("x-test-clerk-id", userAClerk);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("balance");
     expect(res.body).toHaveProperty("transactions");
   });
 
   it("forbids a different signed-in user (403)", async () => {
-    const res = await request(app).get(`/api/wallet/${userAId}`).set("x-test-clerk-id", userBClerk);
+    const res = await request(app)
+      .get(`/api/wallet/${userAId}`)
+      .set("x-test-clerk-id", userBClerk);
     expect(res.status).toBe(403);
   });
 
@@ -78,7 +102,9 @@ describe("requireWalletOwner — GET /api/wallet/:userId (balance + history)", (
   });
 
   it("lets the super-admin email bypass ownership", async () => {
-    const res = await request(app).get(`/api/wallet/${userAId}`).set("x-admin-email", ADMIN_EMAIL);
+    const res = await request(app)
+      .get(`/api/wallet/${userAId}`)
+      .set("x-admin-email", ADMIN_EMAIL);
     expect(res.status).toBe(200);
   });
 
@@ -90,7 +116,9 @@ describe("requireWalletOwner — GET /api/wallet/:userId (balance + history)", (
   });
 
   it("returns 400 for a non-numeric user id", async () => {
-    const res = await request(app).get(`/api/wallet/not-a-number`).set("x-test-clerk-id", userAClerk);
+    const res = await request(app)
+      .get(`/api/wallet/not-a-number`)
+      .set("x-test-clerk-id", userAClerk);
     expect(res.status).toBe(400);
   });
 });
@@ -115,7 +143,9 @@ describe("requireWalletOwner — POST /api/wallet/:userId/topup", () => {
   });
 
   it("rejects a signed-out caller (401)", async () => {
-    const res = await request(app).post(`/api/wallet/${userAId}/topup`).send(body);
+    const res = await request(app)
+      .post(`/api/wallet/${userAId}/topup`)
+      .send(body);
     expect(res.status).toBe(401);
   });
 

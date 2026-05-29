@@ -15,6 +15,10 @@ export const manualAdapter: DeliveryAdapter = {
     return { trackingNumber: tn, status: "pending" };
   },
   async trackShipment(_provider, trackingNumber) {
-    return { status: "manual", statusAr: "تسليم يدوي", history: [{ at: new Date().toISOString(), label: trackingNumber }] };
+    return {
+      status: "manual",
+      statusAr: "تسليم يدوي",
+      history: [{ at: new Date().toISOString(), label: trackingNumber }],
+    };
   },
 };

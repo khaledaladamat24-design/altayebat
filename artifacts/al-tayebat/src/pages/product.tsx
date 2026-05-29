@@ -1,4 +1,11 @@
-import { useGetProduct, useAddToCart, getGetCartQueryKey, useListProducts, getGetProductQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
+import {
+  useGetProduct,
+  useAddToCart,
+  getGetCartQueryKey,
+  useListProducts,
+  getGetProductQueryKey,
+  getListProductsQueryKey,
+} from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ChevronRight, Plus, Minus, ShoppingBag, Store } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,14 +22,22 @@ export default function Product() {
   const { lang, dir, tr } = useLanguage();
   const params = useParams();
   const productId = params.id ? parseInt(params.id, 10) : undefined;
-  
+
   const { data: product, isLoading } = useGetProduct(productId!, {
-    query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId!) }
+    query: {
+      enabled: !!productId,
+      queryKey: getGetProductQueryKey(productId!),
+    },
   });
 
   const { data: relatedProducts } = useListProducts(
     { categoryId: product?.categoryId },
-    { query: { enabled: !!product?.categoryId, queryKey: getListProductsQueryKey({ categoryId: product?.categoryId }) } }
+    {
+      query: {
+        enabled: !!product?.categoryId,
+        queryKey: getListProductsQueryKey({ categoryId: product?.categoryId }),
+      },
+    },
   );
 
   const sessionId = useSession();
@@ -31,32 +46,39 @@ export default function Product() {
   const [quantity, setQuantity] = useState(1);
 
   const productName = product
-    ? (lang === "en" ? (product.name || product.nameAr) : product.nameAr)
+    ? lang === "en"
+      ? product.name || product.nameAr
+      : product.nameAr
     : "";
   const productDescription = product
-    ? (lang === "en"
-        ? (product.description || product.descriptionAr || "")
-        : (product.descriptionAr || ""))
+    ? lang === "en"
+      ? product.description || product.descriptionAr || ""
+      : product.descriptionAr || ""
     : "";
   const vendorDisplay = product
-    ? (lang === "en"
-        ? (product.vendorName || product.vendorNameAr || "")
-        : (product.vendorNameAr || product.vendorName || ""))
+    ? lang === "en"
+      ? product.vendorName || product.vendorNameAr || ""
+      : product.vendorNameAr || product.vendorName || ""
     : "";
 
   const handleAddToCart = () => {
     if (!sessionId || !product) return;
-    
+
     addToCart.mutate(
       { data: { productId: product.id, quantity, sessionId } },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
+          queryClient.invalidateQueries({
+            queryKey: getGetCartQueryKey({ sessionId }),
+          });
           toast.success(
-            tr(`تمت إضافة ${productName} إلى السلة`, `${productName} added to cart`)
+            tr(
+              `تمت إضافة ${productName} إلى السلة`,
+              `${productName} added to cart`,
+            ),
           );
         },
-      }
+      },
     );
   };
 
@@ -75,9 +97,16 @@ export default function Product() {
 
   if (!product) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4" dir={dir}>
-        <h2 className="text-xl font-bold mb-2">{tr("المنتج غير موجود", "Product not found")}</h2>
-        <Link href="/"><Button>{tr("العودة للرئيسية", "Back to home")}</Button></Link>
+      <div
+        className="flex flex-col items-center justify-center min-h-[50vh] px-4"
+        dir={dir}
+      >
+        <h2 className="text-xl font-bold mb-2">
+          {tr("المنتج غير موجود", "Product not found")}
+        </h2>
+        <Link href="/">
+          <Button>{tr("العودة للرئيسية", "Back to home")}</Button>
+        </Link>
       </div>
     );
   }
@@ -85,15 +114,25 @@ export default function Product() {
   return (
     <div className="pb-24" dir={dir}>
       <div className="relative">
-        <Link href="~" onClick={(e) => { e.preventDefault(); window.history.back(); }}>
+        <Link
+          href="~"
+          onClick={(e) => {
+            e.preventDefault();
+            window.history.back();
+          }}
+        >
           <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur p-2 rounded-full cursor-pointer shadow-sm">
             <ChevronRight className="w-6 h-6" />
           </div>
         </Link>
-        
+
         <div className="aspect-square bg-white relative">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={productName} className="w-full h-full object-cover" />
+            <img
+              src={product.imageUrl}
+              alt={productName}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">
               {tr("صورة المنتج", "Product image")}
@@ -123,7 +162,9 @@ export default function Product() {
 
         <h1 className="text-2xl font-bold mb-1">{productName}</h1>
         {product.weightOrVolume && (
-          <p className="text-sm text-muted-foreground mb-2">{product.weightOrVolume}</p>
+          <p className="text-sm text-muted-foreground mb-2">
+            {product.weightOrVolume}
+          </p>
         )}
         {vendorDisplay ? (
           <Link href={`/search?q=${encodeURIComponent(vendorDisplay)}`}>
@@ -136,27 +177,31 @@ export default function Product() {
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex flex-col">
-            <span className="text-2xl font-bold text-primary">{formatPrice(product.price)}</span>
+            <span className="text-2xl font-bold text-primary">
+              {formatPrice(product.price)}
+            </span>
             {product.originalPrice && (
-              <span className="text-sm text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+              <span className="text-sm text-muted-foreground line-through">
+                {formatPrice(product.originalPrice)}
+              </span>
             )}
           </div>
-          
+
           <div className="flex items-center bg-muted rounded-full p-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 rounded-full" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={quantity <= 1}
             >
               <Minus className="h-4 w-4" />
             </Button>
             <span className="w-8 text-center font-bold">{quantity}</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 rounded-full" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
               onClick={() => setQuantity(quantity + 1)}
             >
               <Plus className="h-4 w-4" />
@@ -165,21 +210,32 @@ export default function Product() {
         </div>
 
         <div className="mb-8">
-          <h3 className="font-bold text-lg mb-2">{tr("الوصف", "Description")}</h3>
+          <h3 className="font-bold text-lg mb-2">
+            {tr("الوصف", "Description")}
+          </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {productDescription || tr("لا يوجد وصف متاح لهذا المنتج.", "No description available for this product.")}
+            {productDescription ||
+              tr(
+                "لا يوجد وصف متاح لهذا المنتج.",
+                "No description available for this product.",
+              )}
           </p>
         </div>
 
         {relatedProducts && relatedProducts.length > 1 && (
           <div className="mb-8">
-            <h3 className="font-bold text-lg mb-4">{tr("منتجات مشابهة", "Similar products")}</h3>
+            <h3 className="font-bold text-lg mb-4">
+              {tr("منتجات مشابهة", "Similar products")}
+            </h3>
             <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-4 px-4">
               {relatedProducts
-                .filter(p => p.id !== product.id)
+                .filter((p) => p.id !== product.id)
                 .slice(0, 5)
                 .map((relatedProd) => (
-                  <div key={relatedProd.id} className="min-w-[160px] snap-start">
+                  <div
+                    key={relatedProd.id}
+                    className="min-w-[160px] snap-start"
+                  >
                     <ProductCard product={relatedProd} />
                   </div>
                 ))}
@@ -189,13 +245,15 @@ export default function Product() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-50 max-w-md mx-auto">
-        <Button 
-          className="w-full h-14 rounded-full text-lg shadow-lg flex items-center justify-center gap-2" 
+        <Button
+          className="w-full h-14 rounded-full text-lg shadow-lg flex items-center justify-center gap-2"
           onClick={handleAddToCart}
           disabled={!product.inStock || addToCart.isPending}
         >
           <ShoppingBag className="w-5 h-5" />
-          {product.inStock ? tr("أضف للسلة", "Add to cart") : tr("غير متوفر", "Out of stock")}
+          {product.inStock
+            ? tr("أضف للسلة", "Add to cart")
+            : tr("غير متوفر", "Out of stock")}
           {product.inStock && (
             <span className="bg-primary-foreground/20 px-2 py-0.5 rounded text-sm mr-2">
               {formatPrice(product.price * quantity)}

@@ -1,8 +1,13 @@
 import type { DeliveryAdapter } from "./types";
 import { manualAdapter } from "./providers/manual";
 import {
-  aramexAdapter, logixAdapter, joeysAdapter, jedsAdapter,
-  talabatAdapter, dhlAdapter, customAdapter,
+  aramexAdapter,
+  logixAdapter,
+  joeysAdapter,
+  jedsAdapter,
+  talabatAdapter,
+  dhlAdapter,
+  customAdapter,
 } from "./providers/stub";
 
 const adapters: Record<string, DeliveryAdapter> = {
@@ -21,7 +26,7 @@ export function getAdapter(type: string): DeliveryAdapter | null {
 }
 
 export function listAdapterTypes() {
-  return Object.values(adapters).map(a => ({
+  return Object.values(adapters).map((a) => ({
     type: a.type,
     requiredCredentials: a.requiredCredentials(),
   }));

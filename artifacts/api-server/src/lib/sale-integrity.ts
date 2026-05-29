@@ -21,7 +21,9 @@ export function checkSaleIntegrity(input: {
   if (!Boolean(input.isOnSale)) return { ok: true };
   const { originalPrice } = input;
   const orig =
-    originalPrice === undefined || originalPrice === null || originalPrice === ""
+    originalPrice === undefined ||
+    originalPrice === null ||
+    originalPrice === ""
       ? null
       : Number(originalPrice);
   const price = Number(input.price);

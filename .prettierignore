@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+out-tsc
+*.tsbuildinfo
+coverage
+
+# Generated API codegen (Orval)
+lib/api-client-react/src/generated
+lib/api-zod/src/generated
+
+# Lockfiles
+pnpm-lock.yaml
+
+# Android native shell
+artifacts/al-tayebat/android
+
+# Replit
+.local
+.cache
+.config
+attached_assets

@@ -15,7 +15,10 @@ export default function Offers() {
   const params = useParams();
   const zone: Zone = params.zone === "regular" ? "regular" : "healthy";
 
-  const { data: products, isLoading } = useListProducts({ foodType: zone, onSale: true });
+  const { data: products, isLoading } = useListProducts({
+    foodType: zone,
+    onSale: true,
+  });
 
   const [filter, setFilter] = useState<string>("all");
 
@@ -52,9 +55,10 @@ export default function Offers() {
     return true;
   });
 
-  const title = zone === "healthy"
-    ? tr("عروض صحية", "Healthy Offers")
-    : tr("عروض وتخفيضات", "Offers & Discounts");
+  const title =
+    zone === "healthy"
+      ? tr("عروض صحية", "Healthy Offers")
+      : tr("عروض وتخفيضات", "Offers & Discounts");
 
   return (
     <div className="pb-8" dir={dir}>
@@ -93,22 +97,26 @@ export default function Offers() {
               <Skeleton key={i} className="w-full aspect-[3/4] rounded-xl" />
             ))
           ) : filteredProducts && filteredProducts.length > 0 ? (
-            filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)
+            filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
           ) : (
             <div className="col-span-2 flex flex-col items-center justify-center text-center py-16 gap-3">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <BadgePercent className="w-8 h-8 text-rose" />
               </div>
-              <h3 className="font-bold text-base">{tr("لا توجد عروض حالياً", "No offers right now")}</h3>
+              <h3 className="font-bold text-base">
+                {tr("لا توجد عروض حالياً", "No offers right now")}
+              </h3>
               <p className="text-sm text-muted-foreground max-w-[260px]">
                 {zone === "healthy"
                   ? tr(
                       "تابعنا — سنضيف عروضاً وتخفيضات على المنتجات الصحية قريباً.",
-                      "Stay tuned — we'll add deals and discounts on healthy products soon."
+                      "Stay tuned — we'll add deals and discounts on healthy products soon.",
                     )
                   : tr(
                       "تابعنا — سنضيف عروضاً وتخفيضات على المنتجات قريباً.",
-                      "Stay tuned — we'll add deals and discounts on our products soon."
+                      "Stay tuned — we'll add deals and discounts on our products soon.",
                     )}
               </p>
             </div>

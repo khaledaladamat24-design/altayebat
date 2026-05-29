@@ -27,7 +27,12 @@ async function buildCart(sessionId: string) {
   }));
 
   const subtotal = cartItems.reduce((sum, i) => sum + i.totalPrice, 0);
-  const deliveryFee = subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : subtotal === 0 ? 0 : 0;
+  const deliveryFee =
+    subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD
+      ? DELIVERY_FEE
+      : subtotal === 0
+        ? 0
+        : 0;
   const total = subtotal + deliveryFee;
 
   return {
@@ -54,19 +59,32 @@ router.post("/cart", async (req, res) => {
   try {
     const { sessionId = "guest", productId, quantity } = req.body;
 
-    const product = await db.select().from(productsTable).where(eq(productsTable.id, productId)).limit(1);
-    if (!product.length) return res.status(404).json({ error: "Product not found" });
+    const product = await db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.id, productId))
+      .limit(1);
+    if (!product.length)
+      return res.status(404).json({ error: "Product not found" });
 
     const existing = await db
       .select()
       .from(cartItemsTable)
-      .where(and(eq(cartItemsTable.sessionId, sessionId), eq(cartItemsTable.productId, productId)))
+      .where(
+        and(
+          eq(cartItemsTable.sessionId, sessionId),
+          eq(cartItemsTable.productId, productId),
+        ),
+      )
       .limit(1);
 
     if (existing.length) {
       await db
         .update(cartItemsTable)
-        .set({ quantity: existing[0].quantity + quantity, updatedAt: new Date() })
+        .set({
+          quantity: existing[0].quantity + quantity,
+          updatedAt: new Date(),
+        })
         .where(eq(cartItemsTable.id, existing[0].id));
     } else {
       await db.insert(cartItemsTable).values({
@@ -89,13 +107,21 @@ router.patch("/cart/:itemId", async (req, res) => {
     const itemId = parseInt(req.params.itemId);
     const { quantity } = req.body;
 
-    const item = await db.select().from(cartItemsTable).where(eq(cartItemsTable.id, itemId)).limit(1);
-    if (!item.length) return res.status(404).json({ error: "Cart item not found" });
+    const item = await db
+      .select()
+      .from(cartItemsTable)
+      .where(eq(cartItemsTable.id, itemId))
+      .limit(1);
+    if (!item.length)
+      return res.status(404).json({ error: "Cart item not found" });
 
     if (quantity <= 0) {
       await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
     } else {
-      await db.update(cartItemsTable).set({ quantity, updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
+      await db
+        .update(cartItemsTable)
+        .set({ quantity, updatedAt: new Date() })
+        .where(eq(cartItemsTable.id, itemId));
     }
 
     return res.json(await buildCart(item[0].sessionId));
@@ -108,8 +134,13 @@ router.patch("/cart/:itemId", async (req, res) => {
 router.delete("/cart/:itemId", async (req, res) => {
   try {
     const itemId = parseInt(req.params.itemId);
-    const item = await db.select().from(cartItemsTable).where(eq(cartItemsTable.id, itemId)).limit(1);
-    if (!item.length) return res.status(404).json({ error: "Cart item not found" });
+    const item = await db
+      .select()
+      .from(cartItemsTable)
+      .where(eq(cartItemsTable.id, itemId))
+      .limit(1);
+    if (!item.length)
+      return res.status(404).json({ error: "Cart item not found" });
 
     await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
     return res.json(await buildCart(item[0].sessionId));
@@ -122,7 +153,9 @@ router.delete("/cart/:itemId", async (req, res) => {
 router.delete("/cart", async (req, res) => {
   try {
     const sessionId = (req.query.sessionId as string) || "guest";
-    await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+    await db
+      .delete(cartItemsTable)
+      .where(eq(cartItemsTable.sessionId, sessionId));
     res.json(await buildCart(sessionId));
   } catch (err) {
     req.log.error({ err }, "Failed to clear cart");

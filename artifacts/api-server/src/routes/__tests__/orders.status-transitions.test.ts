@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import express, { type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import request from "supertest";
 import { db, ordersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
@@ -14,7 +18,11 @@ function makeApp() {
   const app = express();
   app.use(express.json());
   app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as unknown as { log: unknown }).log = { error() {}, info() {}, warn() {} };
+    (req as unknown as { log: unknown }).log = {
+      error() {},
+      info() {},
+      warn() {},
+    };
     next();
   });
   app.use("/api", ordersRouter);
@@ -51,7 +59,9 @@ async function statusOf(id: number): Promise<string> {
 
 afterAll(async () => {
   if (createdOrderIds.length)
-    await db.delete(ordersTable).where(inArray(ordersTable.id, createdOrderIds));
+    await db
+      .delete(ordersTable)
+      .where(inArray(ordersTable.id, createdOrderIds));
 });
 
 describe("PATCH /api/orders/:id/status — valid transitions", () => {

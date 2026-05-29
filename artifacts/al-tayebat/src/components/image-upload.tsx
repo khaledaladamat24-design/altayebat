@@ -46,7 +46,8 @@ export function ImageUpload({
   const optimize = (secureUrl: string): string => {
     // Cloudinary URLs look like: https://res.cloudinary.com/<cloud>/image/upload/v123/folder/file.jpg
     // We inject /<transform>/ right after /upload/.
-    if (!transform || secureUrl.includes(`/upload/${transform}/`)) return secureUrl;
+    if (!transform || secureUrl.includes(`/upload/${transform}/`))
+      return secureUrl;
     return secureUrl.replace("/image/upload/", `/image/upload/${transform}/`);
   };
 
@@ -56,7 +57,9 @@ export function ImageUpload({
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error(tr("الحد الأقصى للصورة 10 ميغابايت", "Maximum image size is 10 MB"));
+      toast.error(
+        tr("الحد الأقصى للصورة 10 ميغابايت", "Maximum image size is 10 MB"),
+      );
       return;
     }
     setUploading(true);
@@ -82,15 +85,26 @@ export function ImageUpload({
         const xhr = new XMLHttpRequest();
         xhr.open("POST", sig.uploadUrl);
         xhr.upload.onprogress = (ev) => {
-          if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
+          if (ev.lengthComputable)
+            setProgress(Math.round((ev.loaded / ev.total) * 100));
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
-              const json = JSON.parse(xhr.responseText) as { secure_url?: string; error?: { message: string } };
+              const json = JSON.parse(xhr.responseText) as {
+                secure_url?: string;
+                error?: { message: string };
+              };
               if (json.secure_url) resolve(json.secure_url);
-              else reject(new Error(json.error?.message || "Cloudinary returned no URL"));
-            } catch (e) { reject(e as Error); }
+              else
+                reject(
+                  new Error(
+                    json.error?.message || "Cloudinary returned no URL",
+                  ),
+                );
+            } catch (e) {
+              reject(e as Error);
+            }
           } else {
             reject(new Error(`Cloudinary upload failed (${xhr.status})`));
           }
@@ -102,7 +116,11 @@ export function ImageUpload({
       onChange(optimize(secureUrl));
       toast.success(tr("تم رفع الصورة", "Image uploaded"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : tr("فشل رفع الصورة", "Image upload failed"));
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : tr("فشل رفع الصورة", "Image upload failed"),
+      );
     } finally {
       setUploading(false);
       setProgress(0);
@@ -112,7 +130,9 @@ export function ImageUpload({
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-muted-foreground">{resolvedLabel}</label>
+      <label className="text-xs font-medium text-muted-foreground">
+        {resolvedLabel}
+      </label>
       <input
         ref={inputRef}
         type="file"
@@ -126,7 +146,11 @@ export function ImageUpload({
 
       {value && !uploading ? (
         <div className="relative group rounded-xl overflow-hidden border-2 border-border bg-muted">
-          <img src={value} alt={tr("معاينة", "Preview")} className="w-full h-44 object-cover" />
+          <img
+            src={value}
+            alt={tr("معاينة", "Preview")}
+            className="w-full h-44 object-cover"
+          />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
             <button
               type="button"
@@ -162,7 +186,9 @@ export function ImageUpload({
             {uploading ? (
               <>
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-sm font-bold text-primary">{tr("جاري رفع الصورة...", "Uploading image...")}</p>
+                <p className="text-sm font-bold text-primary">
+                  {tr("جاري رفع الصورة...", "Uploading image...")}
+                </p>
                 <p className="text-xs text-muted-foreground">{progress}%</p>
               </>
             ) : (
@@ -170,8 +196,15 @@ export function ImageUpload({
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm font-bold">📸 {tr("رفع صورة الطعام", "Upload food photo")}</p>
-                <p className="text-[11px] text-muted-foreground">{tr("PNG · JPG · WEBP — حتى 10MB", "PNG · JPG · WEBP — up to 10MB")}</p>
+                <p className="text-sm font-bold">
+                  📸 {tr("رفع صورة الطعام", "Upload food photo")}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {tr(
+                    "PNG · JPG · WEBP — حتى 10MB",
+                    "PNG · JPG · WEBP — up to 10MB",
+                  )}
+                </p>
               </>
             )}
           </div>

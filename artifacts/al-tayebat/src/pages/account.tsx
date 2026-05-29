@@ -1,12 +1,24 @@
 import { Link, useLocation } from "wouter";
 import {
-  ChevronLeft, Heart, Package, Settings,
-  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X,
+  ChevronLeft,
+  Heart,
+  Package,
+  Settings,
+  CreditCard,
+  Zap,
+  Gift,
+  UserCircle,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { LogOut, Store } from "lucide-react";
 import { toast } from "sonner";
-import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
+import {
+  useListOrders,
+  getListOrdersQueryKey,
+} from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-url";
@@ -20,15 +32,22 @@ export default function Account() {
   const { signOut } = useClerk();
   const { user } = useUser();
   const sessionId = useSession();
-  const [vendorId, setVendorId] = useState<string | null>(() => localStorage.getItem("al_tayebat_vendor_id"));
+  const [vendorId, setVendorId] = useState<string | null>(() =>
+    localStorage.getItem("al_tayebat_vendor_id"),
+  );
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const [firebaseSignedIn, setFirebaseSignedIn] = useState(
-    () => !!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id")
+    () =>
+      !!localStorage.getItem("al_tayebat_firebase_uid") ||
+      !!localStorage.getItem("al_tayebat_user_id"),
   );
   useEffect(() => {
     const check = () => {
-      setFirebaseSignedIn(!!localStorage.getItem("al_tayebat_firebase_uid") || !!localStorage.getItem("al_tayebat_user_id"));
+      setFirebaseSignedIn(
+        !!localStorage.getItem("al_tayebat_firebase_uid") ||
+          !!localStorage.getItem("al_tayebat_user_id"),
+      );
       setVendorId(localStorage.getItem("al_tayebat_vendor_id"));
     };
     window.addEventListener("storage", check);
@@ -45,49 +64,79 @@ export default function Account() {
     if (!isSignedIn || vendorId) return;
     const userId = localStorage.getItem("al_tayebat_user_id");
     if (!userId) return;
-    fetch(apiUrl(`/api/vendors/by-user/${userId}`)).then(async r => {
-      if (r.ok) {
-        const v = await r.json();
-        localStorage.setItem("al_tayebat_vendor_id", String(v.id));
-        setVendorId(String(v.id));
-      }
-    }).catch(() => {});
+    fetch(apiUrl(`/api/vendors/by-user/${userId}`))
+      .then(async (r) => {
+        if (r.ok) {
+          const v = await r.json();
+          localStorage.setItem("al_tayebat_vendor_id", String(v.id));
+          setVendorId(String(v.id));
+        }
+      })
+      .catch(() => {});
   }, [isSignedIn, vendorId]);
 
   // Load wallet balance for signed-in users
   useEffect(() => {
-    if (!isSignedIn) { setWalletBalance(null); return; }
+    if (!isSignedIn) {
+      setWalletBalance(null);
+      return;
+    }
     const userId = localStorage.getItem("al_tayebat_user_id");
     if (!userId) return;
-    fetch(apiUrl(`/api/wallet/${userId}`)).then(async r => {
-      if (r.ok) {
-        const d = await r.json();
-        setWalletBalance(Number(d.balance));
-      }
-    }).catch(() => {});
+    fetch(apiUrl(`/api/wallet/${userId}`))
+      .then(async (r) => {
+        if (r.ok) {
+          const d = await r.json();
+          setWalletBalance(Number(d.balance));
+        }
+      })
+      .catch(() => {});
   }, [isSignedIn]);
 
   const handleSignOut = async () => {
-    ["al_tayebat_firebase_uid","al_tayebat_user_id","al_tayebat_vendor_id","al_tayebat_email","al_tayebat_phone","al_tayebat_name","al_tayebat_role"].forEach(k => localStorage.removeItem(k));
+    [
+      "al_tayebat_firebase_uid",
+      "al_tayebat_user_id",
+      "al_tayebat_vendor_id",
+      "al_tayebat_email",
+      "al_tayebat_phone",
+      "al_tayebat_name",
+      "al_tayebat_role",
+    ].forEach((k) => localStorage.removeItem(k));
     setFirebaseSignedIn(false);
     setVendorId(null);
-    try { await signOut(); } catch {}
+    try {
+      await signOut();
+    } catch {}
     setLocation("/auth");
   };
 
   const { data: orders } = useListOrders(
     { sessionId },
-    { query: { enabled: !!sessionId, queryKey: getListOrdersQueryKey({ sessionId }) } }
+    {
+      query: {
+        enabled: !!sessionId,
+        queryKey: getListOrdersQueryKey({ sessionId }),
+      },
+    },
   );
 
   const guestLabel = tr("ضيف", "Guest");
 
   // Show the best available identity for the signed-in user. Falls back through
   // Clerk profile → cached name → cached phone/email → guest.
-  const cachedPhone = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_phone") : null;
-  const cachedEmail = typeof window !== "undefined" ? localStorage.getItem("al_tayebat_email") : null;
+  const cachedPhone =
+    typeof window !== "undefined"
+      ? localStorage.getItem("al_tayebat_phone")
+      : null;
+  const cachedEmail =
+    typeof window !== "undefined"
+      ? localStorage.getItem("al_tayebat_email")
+      : null;
   const [cachedName, setCachedName] = useState<string | null>(
-    typeof window !== "undefined" ? localStorage.getItem("al_tayebat_name") : null
+    typeof window !== "undefined"
+      ? localStorage.getItem("al_tayebat_name")
+      : null,
   );
   const displayName =
     cachedName ||
@@ -102,16 +151,30 @@ export default function Account() {
   const [savingName, setSavingName] = useState(false);
 
   const openNameEditor = () => {
-    if (!isSignedIn) { setLocation("/auth"); return; }
-    setNameDraft(cachedName || (typeof displayName === "string" && displayName !== guestLabel ? displayName : ""));
+    if (!isSignedIn) {
+      setLocation("/auth");
+      return;
+    }
+    setNameDraft(
+      cachedName ||
+        (typeof displayName === "string" && displayName !== guestLabel
+          ? displayName
+          : ""),
+    );
     setEditingName(true);
   };
 
   const saveName = async () => {
     const trimmed = nameDraft.trim();
-    if (!trimmed) { toast.error(tr("الرجاء إدخال اسم", "Please enter a name")); return; }
+    if (!trimmed) {
+      toast.error(tr("الرجاء إدخال اسم", "Please enter a name"));
+      return;
+    }
     const userId = localStorage.getItem("al_tayebat_user_id");
-    if (!userId) { toast.error(tr("الحساب غير معروف", "Account not recognized")); return; }
+    if (!userId) {
+      toast.error(tr("الحساب غير معروف", "Account not recognized"));
+      return;
+    }
     setSavingName(true);
     try {
       const r = await fetch(apiUrl(`/api/users/${userId}`), {
@@ -134,10 +197,31 @@ export default function Account() {
   const ordersCount = orders?.length ?? 0;
 
   const menuRows = [
-    { icon: CreditCard, label: tr("طرق الدفع", "Payment methods"), iconColor: "text-blue-500", href: vendorId ? "/payment-methods" : "/wallet" },
-    { icon: Heart, label: tr("المفضلة", "Favorites"), iconColor: "text-pink-500", href: null },
-    { icon: Zap, label: tr("ضمان التوصيل في الوقت المحدد", "On-time delivery guarantee"), iconColor: "text-green-500", href: null },
-    { icon: Settings, label: tr("الإعدادات", "Settings"), iconColor: "text-slate-400", suffix: tr("اللغة، العنوان، المساعدة", "Language, address, help"), href: "/settings" },
+    {
+      icon: CreditCard,
+      label: tr("طرق الدفع", "Payment methods"),
+      iconColor: "text-blue-500",
+      href: vendorId ? "/payment-methods" : "/wallet",
+    },
+    {
+      icon: Heart,
+      label: tr("المفضلة", "Favorites"),
+      iconColor: "text-pink-500",
+      href: null,
+    },
+    {
+      icon: Zap,
+      label: tr("ضمان التوصيل في الوقت المحدد", "On-time delivery guarantee"),
+      iconColor: "text-green-500",
+      href: null,
+    },
+    {
+      icon: Settings,
+      label: tr("الإعدادات", "Settings"),
+      iconColor: "text-slate-400",
+      suffix: tr("اللغة، العنوان، المساعدة", "Language, address, help"),
+      href: "/settings",
+    },
   ];
 
   return (
@@ -148,14 +232,20 @@ export default function Account() {
           {/* Name & avatar */}
           <div className="flex items-center gap-3 flex-1">
             {user?.imageUrl ? (
-              <img src={user.imageUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover" />
+              <img
+                src={user.imageUrl}
+                alt={displayName}
+                className="w-10 h-10 rounded-full object-cover"
+              />
             ) : (
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <UserCircle className="w-6 h-6 text-primary" />
               </div>
             )}
             <div>
-              <p className="text-xs text-muted-foreground">{tr("مرحباً", "Welcome")}</p>
+              <p className="text-xs text-muted-foreground">
+                {tr("مرحباً", "Welcome")}
+              </p>
               {editingName ? (
                 <div className="flex items-center gap-1.5">
                   <input
@@ -164,16 +254,26 @@ export default function Account() {
                     className="h-7 px-2 text-sm font-bold rounded border border-border bg-background w-32"
                     autoFocus
                   />
-                  <button onClick={saveName} disabled={savingName} className="p-1 text-primary disabled:opacity-50">
+                  <button
+                    onClick={saveName}
+                    disabled={savingName}
+                    className="p-1 text-primary disabled:opacity-50"
+                  >
                     <Check className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setEditingName(false)} disabled={savingName} className="p-1 text-muted-foreground">
+                  <button
+                    onClick={() => setEditingName(false)}
+                    disabled={savingName}
+                    className="p-1 text-muted-foreground"
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={isSignedIn ? openNameEditor : () => setLocation("/auth")}
+                  onClick={
+                    isSignedIn ? openNameEditor : () => setLocation("/auth")
+                  }
                   className="flex items-center gap-1 font-black text-base group"
                 >
                   {displayName}
@@ -215,8 +315,15 @@ export default function Account() {
             className="w-full bg-primary text-primary-foreground rounded-2xl p-4 flex items-center justify-between shadow-sm hover:bg-primary/90 active:scale-[0.98] transition-all"
           >
             <div className="text-right">
-              <p className="font-black text-base">{tr("تسجيل الدخول / إنشاء حساب", "Sign in / Create account")}</p>
-              <p className="text-primary-foreground/70 text-xs mt-0.5">{tr("بالبريد الإلكتروني أو رقم الهاتف (OTP)", "With email or phone number (OTP)")}</p>
+              <p className="font-black text-base">
+                {tr("تسجيل الدخول / إنشاء حساب", "Sign in / Create account")}
+              </p>
+              <p className="text-primary-foreground/70 text-xs mt-0.5">
+                {tr(
+                  "بالبريد الإلكتروني أو رقم الهاتف (OTP)",
+                  "With email or phone number (OTP)",
+                )}
+              </p>
             </div>
             <ChevronLeft className="w-5 h-5 opacity-70 shrink-0" />
           </button>
@@ -231,7 +338,9 @@ export default function Account() {
                 <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
                   <Package className="w-5 h-5 text-amber-500" />
                 </div>
-                <span className="text-xs font-bold text-muted-foreground">{tr("الطلبات", "Orders")}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {tr("الطلبات", "Orders")}
+                </span>
                 <span className="text-lg font-black">{ordersCount}</span>
               </div>
             </Link>
@@ -241,8 +350,12 @@ export default function Account() {
                 <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
                   <CreditCard className="w-5 h-5 text-green-500" />
                 </div>
-                <span className="text-xs font-bold text-muted-foreground">{tr("المحفظة", "Wallet")}</span>
-                <span className="text-lg font-black">{walletBalance !== null ? walletBalance.toFixed(2) : "—"}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {tr("المحفظة", "Wallet")}
+                </span>
+                <span className="text-lg font-black">
+                  {walletBalance !== null ? walletBalance.toFixed(2) : "—"}
+                </span>
               </div>
             </Link>
             {/* Coupons */}
@@ -250,8 +363,12 @@ export default function Account() {
               <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center">
                 <span className="text-rose text-lg">🎟️</span>
               </div>
-              <span className="text-xs font-bold text-muted-foreground">{tr("قسائم", "Coupons")}</span>
-              <span className="text-xs font-black text-rose">{tr("قريباً", "Coming soon")}</span>
+              <span className="text-xs font-bold text-muted-foreground">
+                {tr("قسائم", "Coupons")}
+              </span>
+              <span className="text-xs font-black text-rose">
+                {tr("قريباً", "Coming soon")}
+              </span>
             </div>
           </div>
         </div>
@@ -260,8 +377,15 @@ export default function Account() {
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center gap-3">
           <div className="text-3xl">🎁</div>
           <div className="flex-1">
-            <p className="font-black text-sm">{tr("شارك واربح خصومات", "Share and earn discounts")}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{tr("مكافآت لك وللأصدقاء أيضاً!", "Rewards for you and your friends too!")}</p>
+            <p className="font-black text-sm">
+              {tr("شارك واربح خصومات", "Share and earn discounts")}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {tr(
+                "مكافآت لك وللأصدقاء أيضاً!",
+                "Rewards for you and your friends too!",
+              )}
+            </p>
           </div>
           <button className="bg-primary text-primary-foreground text-xs font-black px-3 py-1.5 rounded-xl">
             {tr("شارك", "Share")}
@@ -280,7 +404,9 @@ export default function Account() {
                 </div>
                 <span className="flex-1 font-bold text-sm">{row.label}</span>
                 {row.suffix && (
-                  <span className="text-xs text-muted-foreground font-medium">{row.suffix}</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {row.suffix}
+                  </span>
                 )}
                 <ChevronLeft className="w-4 h-4 text-muted-foreground" />
               </div>
@@ -290,7 +416,13 @@ export default function Account() {
                 {inner}
               </Link>
             ) : (
-              <div key={row.label} onClick={(row as { onPress?: () => void }).onPress} className="cursor-pointer">{inner}</div>
+              <div
+                key={row.label}
+                onClick={(row as { onPress?: () => void }).onPress}
+                className="cursor-pointer"
+              >
+                {inner}
+              </div>
             );
           })}
         </div>
@@ -303,8 +435,15 @@ export default function Account() {
                 <Store className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1">
-                <span className="font-bold text-sm block">{tr("إدارة متجري", "Manage my store")}</span>
-                <span className="text-[11px] text-muted-foreground">{tr("أضف وعدّل واحذف منتجاتك", "Add, edit, and remove your products")}</span>
+                <span className="font-bold text-sm block">
+                  {tr("إدارة متجري", "Manage my store")}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {tr(
+                    "أضف وعدّل واحذف منتجاتك",
+                    "Add, edit, and remove your products",
+                  )}
+                </span>
               </div>
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </div>
@@ -317,7 +456,9 @@ export default function Account() {
             <div className="w-9 h-9 rounded-xl bg-rose/10 flex items-center justify-center shrink-0">
               <Settings className="w-5 h-5 text-rose" />
             </div>
-            <span className="flex-1 font-bold text-sm">{tr("لوحة إدارة المنتجات", "Product admin dashboard")}</span>
+            <span className="flex-1 font-bold text-sm">
+              {tr("لوحة إدارة المنتجات", "Product admin dashboard")}
+            </span>
             <ChevronLeft className="w-4 h-4 text-muted-foreground" />
           </div>
         </Link>
@@ -325,7 +466,7 @@ export default function Account() {
         <p className="text-center text-xs text-muted-foreground pb-4">
           {tr(
             "الطيبات — الإصدار 1.1.0 · صنع بكل حب في الأردن 🇯🇴",
-            "Al-Tayebat — Version 1.1.0 · Made with love in Jordan 🇯🇴"
+            "Al-Tayebat — Version 1.1.0 · Made with love in Jordan 🇯🇴",
           )}
         </p>
       </div>

@@ -33,13 +33,27 @@ type Rule = {
  */
 const RULES_BY_SLUG: Record<string, Rule[]> = {
   feasts: [
-    { value: "individual-meals", match: ["فردي", "للفرد", "individual", "single"] },
+    {
+      value: "individual-meals",
+      match: ["فردي", "للفرد", "individual", "single"],
+    },
     { value: "family-feasts", match: [] },
   ],
   fastfood: [
     {
       value: "sandwiches",
-      match: ["ساندوي", "سندوي", "شطيرة", "شاورما", "برجر", "برغر", "sandwich", "burger", "shawarma", "wrap"],
+      match: [
+        "ساندوي",
+        "سندوي",
+        "شطيرة",
+        "شاورما",
+        "برجر",
+        "برغر",
+        "sandwich",
+        "burger",
+        "shawarma",
+        "wrap",
+      ],
     },
     { value: "meals-combos", match: [] },
   ],
@@ -47,33 +61,73 @@ const RULES_BY_SLUG: Record<string, Rule[]> = {
     { value: "pizza", match: ["بيتزا", "pizza"] },
     {
       value: "by-dozen",
-      match: ["درزن", "دزن", "كيلو", "علبة", "صينية", "كمية", "dozen", "box", "tray", "bulk", "kilo"],
+      match: [
+        "درزن",
+        "دزن",
+        "كيلو",
+        "علبة",
+        "صينية",
+        "كمية",
+        "dozen",
+        "box",
+        "tray",
+        "bulk",
+        "kilo",
+      ],
     },
     { value: "single-pieces", match: [] },
   ],
   "sweets-cakes": [
     {
       value: "whole-cakes",
-      match: ["قالب", "تورتة", "كيكة", "كاتو", "تشيز", "cake", "cheesecake", "gateau", "tart", "تورته"],
+      match: [
+        "قالب",
+        "تورتة",
+        "كيكة",
+        "كاتو",
+        "تشيز",
+        "cake",
+        "cheesecake",
+        "gateau",
+        "tart",
+        "تورته",
+      ],
     },
     { value: "slices-sweets", match: [] },
   ],
   appetizers: [
     {
       value: "cook-prep",
-      match: ["مفرز", "تجهيز", "للطهي", "للقلي", "نيء", "نية", "مجمد", "cook", "prep", "frozen", "raw"],
+      match: [
+        "مفرز",
+        "تجهيز",
+        "للطهي",
+        "للقلي",
+        "نيء",
+        "نية",
+        "مجمد",
+        "cook",
+        "prep",
+        "frozen",
+        "raw",
+      ],
     },
     { value: "ready-to-eat", match: [] },
   ],
 };
 
-function pickSubcategory(slug: string, nameAr: string, name: string): string | null {
+function pickSubcategory(
+  slug: string,
+  nameAr: string,
+  name: string,
+): string | null {
   const rules = RULES_BY_SLUG[slug];
   if (!rules || rules.length === 0) return null;
   const haystack = `${nameAr ?? ""} ${name ?? ""}`.toLowerCase();
   for (const rule of rules) {
     if (rule.match.length === 0) return rule.value; // default
-    if (rule.match.some((kw) => haystack.includes(kw.toLowerCase()))) return rule.value;
+    if (rule.match.some((kw) => haystack.includes(kw.toLowerCase())))
+      return rule.value;
   }
   return rules[rules.length - 1]?.value ?? null;
 }
@@ -93,11 +147,17 @@ async function main() {
       slug: categoriesTable.slug,
     })
     .from(productsTable)
-    .innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .innerJoin(
+      categoriesTable,
+      eq(productsTable.categoryId, categoriesTable.id),
+    )
     .where(
       and(
         inArray(categoriesTable.slug, regularSlugs),
-        or(isNull(productsTable.subcategory), eq(productsTable.subcategory, "")),
+        or(
+          isNull(productsTable.subcategory),
+          eq(productsTable.subcategory, ""),
+        ),
       ),
     );
 
@@ -116,7 +176,10 @@ async function main() {
   for (const r of rows) {
     const sub = pickSubcategory(r.slug, r.nameAr, r.name);
     if (!sub) continue;
-    await db.update(productsTable).set({ subcategory: sub }).where(eq(productsTable.id, r.id));
+    await db
+      .update(productsTable)
+      .set({ subcategory: sub })
+      .where(eq(productsTable.id, r.id));
     updated += 1;
     perValue.set(sub, (perValue.get(sub) ?? 0) + 1);
   }
@@ -129,15 +192,23 @@ async function main() {
   const [{ remaining }] = await db
     .select({ remaining: sql<number>`count(*)::int` })
     .from(productsTable)
-    .innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .innerJoin(
+      categoriesTable,
+      eq(productsTable.categoryId, categoriesTable.id),
+    )
     .where(
       and(
         inArray(categoriesTable.slug, regularSlugs),
-        or(isNull(productsTable.subcategory), eq(productsTable.subcategory, "")),
+        or(
+          isNull(productsTable.subcategory),
+          eq(productsTable.subcategory, ""),
+        ),
       ),
     );
 
-  console.log(`Backfilled ${updated} Regular-zone product(s) with a subcategory:`);
+  console.log(
+    `Backfilled ${updated} Regular-zone product(s) with a subcategory:`,
+  );
   console.log(breakdown);
   console.log(`Remaining untagged Regular-zone products: ${remaining}.`);
 

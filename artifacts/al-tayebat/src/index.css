@@ -21,13 +21,13 @@
 
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
 
@@ -39,7 +39,7 @@
   --color-destructive-foreground: hsl(var(--destructive-foreground));
 
   --font-sans: "Cairo", sans-serif;
-  
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -49,7 +49,7 @@
 :root {
   --background: 65 33% 98%;
   --foreground: 152 41% 10%;
-  
+
   --border: 65 20% 85%;
   --input: 65 20% 85%;
   --ring: 152 41% 30%;
@@ -87,7 +87,7 @@
 .dark {
   --background: 152 41% 10%;
   --foreground: 65 33% 98%;
-  
+
   --border: 152 30% 20%;
   --input: 152 30% 20%;
   --ring: 152 41% 30%;

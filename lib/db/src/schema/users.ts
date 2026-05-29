@@ -15,6 +15,10 @@ export const usersTable = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertUserSchema = createInsertSchema(usersTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof usersTable.$inferSelect;
