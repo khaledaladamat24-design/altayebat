@@ -1,4 +1,4 @@
-import { useGetProduct, useAddToCart, getGetCartQueryKey, useListProducts } from "@workspace/api-client-react";
+import { useGetProduct, useAddToCart, getGetCartQueryKey, useListProducts, getGetProductQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ChevronRight, Plus, Minus, ShoppingBag, Store } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,12 +17,12 @@ export default function Product() {
   const productId = params.id ? parseInt(params.id, 10) : undefined;
   
   const { data: product, isLoading } = useGetProduct(productId!, {
-    query: { enabled: !!productId }
+    query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId!) }
   });
 
   const { data: relatedProducts } = useListProducts(
     { categoryId: product?.categoryId },
-    { query: { enabled: !!product?.categoryId } }
+    { query: { enabled: !!product?.categoryId, queryKey: getListProductsQueryKey({ categoryId: product?.categoryId }) } }
   );
 
   const sessionId = useSession();

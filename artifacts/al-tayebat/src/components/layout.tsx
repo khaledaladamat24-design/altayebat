@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Home, Grid, ShoppingCart, ListOrdered, User } from "lucide-react";
-import { useGetCart } from "@workspace/api-client-react";
+import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useMemo } from "react";
 import { useLanguage } from "@/contexts/language";
@@ -13,7 +13,7 @@ export function BottomNav() {
   // which on Android WebView could cascade into React error #185.
   const cartParams = useMemo(() => ({ sessionId }), [sessionId]);
   const cartOptions = useMemo(
-    () => ({ query: { enabled: !!sessionId } }),
+    () => ({ query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }),
     [sessionId],
   );
   const { data: cart } = useGetCart(cartParams, cartOptions);

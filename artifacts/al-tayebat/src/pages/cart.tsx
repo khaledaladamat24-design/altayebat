@@ -16,7 +16,7 @@ export default function Cart() {
   
   const { data: cart, isLoading } = useGetCart(
     { sessionId }, 
-    { query: { enabled: !!sessionId } }
+    { query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }
   );
 
   const updateCartItem = useUpdateCartItem();

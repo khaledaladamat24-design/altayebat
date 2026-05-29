@@ -1,4 +1,4 @@
-import { useGetCategory, useListProducts } from "@workspace/api-client-react";
+import { useGetCategory, useListProducts, getGetCategoryQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,12 +14,12 @@ export default function Category() {
   const categoryId = params.id ? parseInt(params.id, 10) : undefined;
   
   const { data: category, isLoading: loadingCat } = useGetCategory(categoryId!, {
-    query: { enabled: !!categoryId }
+    query: { enabled: !!categoryId, queryKey: getGetCategoryQueryKey(categoryId!) }
   });
   
   const { data: products, isLoading: loadingProducts } = useListProducts(
     { categoryId },
-    { query: { enabled: !!categoryId } }
+    { query: { enabled: !!categoryId, queryKey: getListProductsQueryKey({ categoryId }) } }
   );
 
   const isRegular = category?.foodType === "regular";

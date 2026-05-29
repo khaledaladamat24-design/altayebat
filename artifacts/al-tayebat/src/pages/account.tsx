@@ -6,7 +6,7 @@ import {
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { LogOut, Store } from "lucide-react";
 import { toast } from "sonner";
-import { useListOrders } from "@workspace/api-client-react";
+import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-url";
@@ -77,7 +77,7 @@ export default function Account() {
 
   const { data: orders } = useListOrders(
     { sessionId },
-    { query: { enabled: !!sessionId } }
+    { query: { enabled: !!sessionId, queryKey: getListOrdersQueryKey({ sessionId }) } }
   );
 
   const guestLabel = tr("ضيف", "Guest");

@@ -1,4 +1,4 @@
-import { useListOrders } from "@workspace/api-client-react";
+import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { ChevronRight, Package, Clock, CheckCircle2, Truck, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ export default function Orders() {
   const sessionId = useSession();
   const { data: orders, isLoading } = useListOrders(
     { sessionId },
-    { query: { enabled: !!sessionId } }
+    { query: { enabled: !!sessionId, queryKey: getListOrdersQueryKey({ sessionId }) } }
   );
 
   const statusConfig = {

@@ -1,4 +1,4 @@
-import { useGetOrder } from "@workspace/api-client-react";
+import { useGetOrder, getGetOrderQueryKey } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import { ChevronRight, Package, Truck, CheckCircle2, Clock, Phone, ExternalLink, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,7 +37,7 @@ export default function OrderDetail() {
   };
   
   const { data: order, isLoading } = useGetOrder(orderId!, {
-    query: { enabled: !!orderId }
+    query: { enabled: !!orderId, queryKey: getGetOrderQueryKey(orderId!) }
   });
 
   // Tracking lives outside the OpenAPI Order schema for now (server side has

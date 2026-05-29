@@ -1,4 +1,4 @@
-import { useListProducts } from "@workspace/api-client-react";
+import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Search as SearchIcon, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export default function Search() {
 
   const { data: products, isLoading } = useListProducts(
     { search: debouncedQuery || undefined },
-    { query: { enabled: true } }
+    { query: { enabled: true, queryKey: getListProductsQueryKey({ search: debouncedQuery || undefined }) } }
   );
 
   return (

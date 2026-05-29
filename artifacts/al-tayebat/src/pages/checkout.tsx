@@ -57,7 +57,7 @@ export default function Checkout() {
 
   const { data: cart, isLoading } = useGetCart(
     { sessionId },
-    { query: { enabled: !!sessionId } }
+    { query: { enabled: !!sessionId, queryKey: getGetCartQueryKey({ sessionId }) } }
   );
 
   const createOrder = useCreateOrder();
