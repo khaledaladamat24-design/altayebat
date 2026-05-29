@@ -74,6 +74,8 @@ export interface Product {
   vendorNameAr?: string | null;
   foodType?: ProductFoodType;
   isOnSale?: boolean;
+  /** @nullable */
+  subcategory?: string | null;
 }
 
 export interface CartItem {
@@ -213,6 +215,7 @@ search?: string;
 featured?: boolean;
 foodType?: ListProductsFoodType;
 onSale?: boolean;
+subcategory?: string;
 };
 
 export type ListProductsFoodType = typeof ListProductsFoodType[keyof typeof ListProductsFoodType];

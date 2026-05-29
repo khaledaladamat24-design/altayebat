@@ -43,4 +43,6 @@ export interface Product {
   vendorNameAr?: string | null;
   foodType?: ProductFoodType;
   isOnSale?: boolean;
+  /** @nullable */
+  subcategory?: string | null;
 }

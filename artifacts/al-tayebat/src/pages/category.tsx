@@ -3,9 +3,10 @@ import { Link, useParams } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/product-card";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/language";
+import { getSubcategoriesForSlug } from "@/lib/subcategories";
 
 export default function Category() {
   const { lang, dir, tr } = useLanguage();
@@ -21,12 +22,34 @@ export default function Category() {
     { query: { enabled: !!categoryId } }
   );
 
+  const isRegular = category?.foodType === "regular";
+  const subOptions = useMemo(
+    () => (isRegular ? getSubcategoriesForSlug(category?.slug) : []),
+    [isRegular, category?.slug],
+  );
+
+  // Chips depend on the zone: Regular shows the mapped sub-types, Healthy keeps
+  // the Keto/Organic chips driven by the isKeto/isOrganic booleans.
+  const chips: { value: string; label: string }[] = isRegular
+    ? [
+        { value: "all", label: tr("الكل", "All") },
+        ...subOptions.map((o) => ({ value: `sub:${o.value}`, label: lang === "en" ? o.en : o.ar })),
+        { value: "instock", label: tr("متوفر فقط", "In stock only") },
+      ]
+    : [
+        { value: "all", label: tr("الكل", "All") },
+        { value: "keto", label: tr("كيتو", "Keto") },
+        { value: "organic", label: tr("عضوي", "Organic") },
+        { value: "instock", label: tr("متوفر فقط", "In stock only") },
+      ];
+
   const [filter, setFilter] = useState<string>("all");
 
   const filteredProducts = products?.filter((p) => {
     if (filter === "keto") return p.isKeto;
     if (filter === "organic") return p.isOrganic;
     if (filter === "instock") return p.inStock;
+    if (filter.startsWith("sub:")) return p.subcategory === filter.slice(4);
     return true;
   });
 
@@ -51,34 +74,16 @@ export default function Category() {
 
       <div className="px-4 mt-6">
         <div className="flex gap-2 overflow-x-auto pb-4 snap-x hide-scrollbar mb-2">
-          <Button 
-            variant={filter === "all" ? "default" : "outline"} 
-            className="rounded-full snap-start whitespace-nowrap"
-            onClick={() => setFilter("all")}
-          >
-            {tr("الكل", "All")}
-          </Button>
-          <Button 
-            variant={filter === "keto" ? "default" : "outline"} 
-            className="rounded-full snap-start whitespace-nowrap"
-            onClick={() => setFilter("keto")}
-          >
-            {tr("كيتو", "Keto")}
-          </Button>
-          <Button 
-            variant={filter === "organic" ? "default" : "outline"} 
-            className="rounded-full snap-start whitespace-nowrap"
-            onClick={() => setFilter("organic")}
-          >
-            {tr("عضوي", "Organic")}
-          </Button>
-          <Button 
-            variant={filter === "instock" ? "default" : "outline"} 
-            className="rounded-full snap-start whitespace-nowrap"
-            onClick={() => setFilter("instock")}
-          >
-            {tr("متوفر فقط", "In stock only")}
-          </Button>
+          {chips.map((chip) => (
+            <Button
+              key={chip.value}
+              variant={filter === chip.value ? "default" : "outline"}
+              className="rounded-full snap-start whitespace-nowrap"
+              onClick={() => setFilter(chip.value)}
+            >
+              {chip.label}
+            </Button>
+          ))}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

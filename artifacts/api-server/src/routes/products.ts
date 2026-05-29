@@ -45,6 +45,7 @@ function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categor
     vendorNameAr: v?.storeNameAr ?? null,
     foodType: p.foodType,
     isOnSale: p.isOnSale,
+    subcategory: p.subcategory ?? null,
   };
 }
 
@@ -89,7 +90,7 @@ router.get("/products/bestsellers", async (req, res) => {
 
 router.get("/products", async (req, res) => {
   try {
-    const { categoryId, search, featured, foodType, onSale } = req.query;
+    const { categoryId, search, featured, foodType, onSale, subcategory } = req.query;
     const conditions = [];
 
     if (categoryId) {
@@ -98,6 +99,9 @@ router.get("/products", async (req, res) => {
     }
     if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
     if (onSale === "true") conditions.push(eq(productsTable.isOnSale, true));
+    if (typeof subcategory === "string" && subcategory.length > 0) {
+      conditions.push(eq(productsTable.subcategory, subcategory));
+    }
     const ft = foodTypeCondition(foodType);
     if (ft) conditions.push(ft);
     if (vendorOnlineCondition) conditions.push(vendorOnlineCondition);

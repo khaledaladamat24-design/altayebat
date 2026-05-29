@@ -32,7 +32,7 @@ router.post("/admin/products", async (req, res) => {
       price, originalPrice, categoryId,
       imageUrl, isKeto, isOrganic, isFeatured, isBestseller, isOnSale,
       weightOrVolume, inStock,
-      calories, protein, carbs, fats, vendorId, foodType,
+      calories, protein, carbs, fats, vendorId, foodType, subcategory,
     } = req.body;
 
     if (!nameAr || !name || !price || !categoryId) {
@@ -69,6 +69,7 @@ router.post("/admin/products", async (req, res) => {
       fats: num(fats) !== null ? String(fats) : null,
       vendorId: vendorId ? Number(vendorId) : null,
       foodType: foodType === "regular" ? "regular" : "healthy",
+      subcategory: subcategory ? String(subcategory) : null,
     }).returning();
 
     res.status(201).json({ ...product, price: Number(product.price) });
@@ -86,7 +87,7 @@ router.put("/admin/products/:id", async (req, res) => {
     const { nameAr, name, price, originalPrice, categoryId, imageUrl,
       isKeto, isOrganic, isFeatured, isBestseller, isOnSale, weightOrVolume,
       inStock, descriptionAr, description,
-      calories, protein, carbs, fats, foodType } = req.body;
+      calories, protein, carbs, fats, foodType, subcategory } = req.body;
 
     if (isOnSale !== undefined || originalPrice !== undefined || price !== undefined) {
       const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id));
@@ -121,6 +122,7 @@ router.put("/admin/products/:id", async (req, res) => {
       ...(carbs !== undefined && { carbs: carbs === "" || carbs === null ? null : String(carbs) }),
       ...(fats !== undefined && { fats: fats === "" || fats === null ? null : String(fats) }),
       ...(foodType !== undefined && { foodType: foodType === "regular" ? "regular" : "healthy" }),
+      ...(subcategory !== undefined && { subcategory: subcategory ? String(subcategory) : null }),
     }).where(eq(productsTable.id, id)).returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });

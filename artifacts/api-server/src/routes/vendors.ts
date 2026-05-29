@@ -56,9 +56,15 @@ router.post("/vendors/:id/products", async (req, res) => {
     if (!vendor) return res.status(404).json({ error: "المتجر غير موجود" });
     const { nameAr, name, descriptionAr, description, price, originalPrice,
       categoryId, imageUrl, isKeto, isOrganic, weightOrVolume, inStock,
-      calories, protein, carbs, fats } = req.body;
+      calories, protein, carbs, fats, isOnSale, subcategory, foodType } = req.body;
     if (!nameAr || !name || !price || !categoryId) {
       return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
+    }
+    if (Boolean(isOnSale)) {
+      const orig = originalPrice === undefined || originalPrice === null || originalPrice === "" ? null : Number(originalPrice);
+      if (orig === null || !(orig > Number(price))) {
+        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
+      }
     }
     const [product] = await db.insert(productsTable).values({
       vendorId, nameAr, name,
@@ -69,12 +75,15 @@ router.post("/vendors/:id/products", async (req, res) => {
       imageUrl: imageUrl || null,
       isKeto: Boolean(isKeto), isOrganic: Boolean(isOrganic),
       isFeatured: false, isBestseller: false,
+      isOnSale: Boolean(isOnSale),
       weightOrVolume: weightOrVolume || null,
       inStock: inStock !== false,
       calories: calories ? Number(calories) : null,
       protein: protein ? String(protein) : null,
       carbs: carbs ? String(carbs) : null,
       fats: fats ? String(fats) : null,
+      foodType: foodType === "regular" ? "regular" : "healthy",
+      subcategory: subcategory ? String(subcategory) : null,
     }).returning();
     res.status(201).json({ ...product, price: Number(product.price) });
   } catch (err) {
@@ -96,7 +105,18 @@ router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
     }
     const { nameAr, name, descriptionAr, description, price, originalPrice,
       categoryId, imageUrl, isKeto, isOrganic, weightOrVolume, inStock,
-      calories, protein, carbs, fats } = req.body;
+      calories, protein, carbs, fats, isOnSale, subcategory, foodType } = req.body;
+
+    if (isOnSale !== undefined || originalPrice !== undefined || price !== undefined) {
+      const effOnSale = isOnSale !== undefined ? Boolean(isOnSale) : existing.isOnSale;
+      const effPrice = price !== undefined ? Number(price) : Number(existing.price);
+      const effOrigRaw = originalPrice !== undefined ? originalPrice : existing.originalPrice;
+      const effOrig = effOrigRaw === undefined || effOrigRaw === null || effOrigRaw === "" ? null : Number(effOrigRaw);
+      if (effOnSale && (effOrig === null || !(effOrig > effPrice))) {
+        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
+      }
+    }
+
     const [updated] = await db.update(productsTable).set({
       ...(nameAr && { nameAr }),
       ...(name && { name }),
@@ -108,12 +128,15 @@ router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
       ...(imageUrl !== undefined && { imageUrl }),
       ...(isKeto !== undefined && { isKeto: Boolean(isKeto) }),
       ...(isOrganic !== undefined && { isOrganic: Boolean(isOrganic) }),
+      ...(isOnSale !== undefined && { isOnSale: Boolean(isOnSale) }),
       ...(weightOrVolume !== undefined && { weightOrVolume }),
       ...(inStock !== undefined && { inStock: Boolean(inStock) }),
       ...(calories !== undefined && { calories: calories === "" || calories === null ? null : Number(calories) }),
       ...(protein !== undefined && { protein: protein === "" || protein === null ? null : String(protein) }),
       ...(carbs !== undefined && { carbs: carbs === "" || carbs === null ? null : String(carbs) }),
       ...(fats !== undefined && { fats: fats === "" || fats === null ? null : String(fats) }),
+      ...(foodType !== undefined && { foodType: foodType === "regular" ? "regular" : "healthy" }),
+      ...(subcategory !== undefined && { subcategory: subcategory ? String(subcategory) : null }),
     }).where(eq(productsTable.id, productId)).returning();
     res.json({ ...updated, price: Number(updated.price) });
   } catch (err) {

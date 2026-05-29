@@ -111,6 +111,11 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: subcategory
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: List of products
@@ -455,6 +460,8 @@ components:
           enum: [healthy, regular]
         isOnSale:
           type: boolean
+        subcategory:
+          type: ["string", "null"]
 
     CartItem:
       type: object

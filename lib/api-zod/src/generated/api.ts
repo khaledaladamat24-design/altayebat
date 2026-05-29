@@ -65,7 +65,8 @@ export const ListProductsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "featured": zod.coerce.boolean().optional(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
-  "onSale": zod.coerce.boolean().optional()
+  "onSale": zod.coerce.boolean().optional(),
+  "subcategory": zod.coerce.string().optional()
 })
 
 export const ListProductsResponseItem = zod.object({
@@ -92,7 +93,8 @@ export const ListProductsResponseItem = zod.object({
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
-  "isOnSale": zod.boolean().optional()
+  "isOnSale": zod.boolean().optional(),
+  "subcategory": zod.string().nullish()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -128,7 +130,8 @@ export const GetProductResponse = zod.object({
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
-  "isOnSale": zod.boolean().optional()
+  "isOnSale": zod.boolean().optional(),
+  "subcategory": zod.string().nullish()
 })
 
 
@@ -163,7 +166,8 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
-  "isOnSale": zod.boolean().optional()
+  "isOnSale": zod.boolean().optional(),
+  "subcategory": zod.string().nullish()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
 
@@ -199,7 +203,8 @@ export const ListBestsellersResponseItem = zod.object({
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
-  "isOnSale": zod.boolean().optional()
+  "isOnSale": zod.boolean().optional(),
+  "subcategory": zod.string().nullish()
 })
 export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 

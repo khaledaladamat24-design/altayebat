@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useListCategories } from "@workspace/api-client-react";
+import { getSubcategoriesForSlug } from "@/lib/subcategories";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
 import { ImageUpload } from "@/components/image-upload";
@@ -51,13 +52,16 @@ interface VendorProduct {
   protein: number | null;
   carbs: number | null;
   fats: number | null;
+  isOnSale: boolean;
+  subcategory: string | null;
+  foodType: string;
 }
 
 const emptyForm = {
   nameAr: "", name: "", descriptionAr: "", description: "",
   price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
-  isKeto: false, isOrganic: false, inStock: true,
-  calories: "", protein: "", carbs: "", fats: "",
+  isKeto: false, isOrganic: false, inStock: true, isOnSale: false,
+  calories: "", protein: "", carbs: "", fats: "", subcategory: "",
 };
 
 export default function VendorDashboard() {
@@ -312,11 +316,12 @@ export default function VendorDashboard() {
       price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : "",
       categoryId: String(p.categoryId), imageUrl: p.imageUrl || "",
       weightOrVolume: p.weightOrVolume || "",
-      isKeto: p.isKeto, isOrganic: p.isOrganic, inStock: p.inStock,
+      isKeto: p.isKeto, isOrganic: p.isOrganic, inStock: p.inStock, isOnSale: p.isOnSale,
       calories: p.calories ? String(p.calories) : "",
       protein: p.protein ? String(p.protein) : "",
       carbs: p.carbs ? String(p.carbs) : "",
       fats: p.fats ? String(p.fats) : "",
+      subcategory: p.subcategory ?? "",
     });
     setTab("add");
   };
@@ -667,7 +672,7 @@ export default function VendorDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">{tr("القسم *", "Category *")}</label>
-                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none" required>
+                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategory: "" }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none" required>
                     <option value="">{tr("اختر القسم", "Select a category")}</option>
                     {categories?.map(c => <option key={c.id} value={c.id}>{lang === "en" ? (c.name || c.nameAr) : c.nameAr}</option>)}
                   </select>
@@ -677,6 +682,20 @@ export default function VendorDashboard() {
                   <Input value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" placeholder="500g" />
                 </div>
               </div>
+              {(() => {
+                const selectedCat = categories?.find(c => String(c.id) === form.categoryId);
+                const subOpts = getSubcategoriesForSlug(selectedCat?.slug);
+                if (subOpts.length === 0) return null;
+                return (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">{tr("القسم الفرعي", "Sub-category")}</label>
+                    <select value={form.subcategory} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none">
+                      <option value="">{tr("بدون قسم فرعي", "No sub-category")}</option>
+                      {subOpts.map(o => <option key={o.value} value={o.value}>{lang === "en" ? o.en : o.ar}</option>)}
+                    </select>
+                  </div>
+                );
+              })()}
               <ImageUpload value={form.imageUrl} onChange={url => setForm(f => ({ ...f, imageUrl: url }))} />
             </div>
 
@@ -703,6 +722,7 @@ export default function VendorDashboard() {
                   { key: "isKeto", label: tr("كيتو", "Keto") },
                   { key: "isOrganic", label: tr("عضوي", "Organic") },
                   { key: "inStock", label: tr("متوفر", "In stock") },
+                  { key: "isOnSale", label: tr("عرض / تخفيض", "On sale") },
                 ].map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 p-3 rounded-xl bg-muted cursor-pointer">
                     <input type="checkbox" checked={form[key as keyof typeof form] as boolean} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} className="w-4 h-4 accent-rose" />

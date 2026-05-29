@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAuth, useUser } from "@clerk/react";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
+import { getSubcategoriesForSlug } from "@/lib/subcategories";
 
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
 const ADMIN_PW_KEY = "al_tayebat_admin_pw";
@@ -74,7 +75,7 @@ export default function Admin() {
     nameAr: "", name: "", descriptionAr: "", description: "",
     price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
     isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, isOnSale: false, inStock: true,
-    calories: "", protein: "", carbs: "", fats: "", foodType: "healthy",
+    calories: "", protein: "", carbs: "", fats: "", foodType: "healthy", subcategory: "",
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -102,6 +103,7 @@ export default function Admin() {
       carbs: p.carbs != null ? String(p.carbs) : "",
       fats: p.fats != null ? String(p.fats) : "",
       foodType: p.foodType === "regular" ? "regular" : "healthy",
+      subcategory: p.subcategory ?? "",
     });
     setTab("products-add");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -448,7 +450,7 @@ export default function Admin() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">{tr("القسم *", "Category *")}</label>
-                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none" required>
+                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, subcategory: "" }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none" required>
                     <option value="">{tr("اختر القسم", "Choose category")}</option>
                     {categories?.map(c => <option key={c.id} value={c.id}>{lang === "en" ? (c.name || c.nameAr) : c.nameAr}</option>)}
                   </select>
@@ -461,6 +463,20 @@ export default function Admin() {
                   </select>
                 </div>
               </div>
+              {(() => {
+                const selectedCat = categories?.find(c => String(c.id) === form.categoryId);
+                const subOpts = getSubcategoriesForSlug(selectedCat?.slug);
+                if (subOpts.length === 0) return null;
+                return (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">{tr("القسم الفرعي", "Sub-category")}</label>
+                    <select value={form.subcategory} onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none">
+                      <option value="">{tr("بدون قسم فرعي", "No sub-category")}</option>
+                      {subOpts.map(o => <option key={o.value} value={o.value}>{lang === "en" ? o.en : o.ar}</option>)}
+                    </select>
+                  </div>
+                );
+              })()}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">{tr("الوزن / الحجم", "Weight / Volume")}</label>
                 <Input placeholder={tr("مثال: 500g", "e.g. 500g")} value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" />
