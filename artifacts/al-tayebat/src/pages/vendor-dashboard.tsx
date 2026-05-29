@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Plus, Check, Package, Trash2, Pencil, Store, Clock, X, Bell, Phone, MapPin, Power, VolumeX, Languages } from "lucide-react";
+import { ChevronRight, Plus, Check, Package, Trash2, Pencil, Store, Clock, X, Bell, Phone, MapPin, Power, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,7 +62,7 @@ const emptyForm = {
 
 export default function VendorDashboard() {
   const [, setLocation] = useLocation();
-  const { lang, dir, tr, toggle } = useLanguage();
+  const { lang, dir, tr } = useLanguage();
   const { data: categories } = useListCategories();
 
   const [loading, setLoading] = useState(true);
@@ -433,14 +433,6 @@ export default function VendorDashboard() {
       <div className="bg-primary text-primary-foreground pt-10 pb-4 px-4 flex items-center gap-3 rounded-b-2xl">
         <button onClick={() => setLocation("/account")} className="p-1.5 -mr-1">
           <ChevronRight className="w-5 h-5" />
-        </button>
-        <button
-          onClick={toggle}
-          aria-label={tr("التبديل إلى الإنجليزية", "Switch to Arabic")}
-          className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/15 hover:bg-background/25 text-xs font-bold transition-colors"
-        >
-          <Languages className="w-3.5 h-3.5" />
-          {lang === "ar" ? "EN" : "ع"}
         </button>
         <div className="flex-1">
           {editingName ? (
