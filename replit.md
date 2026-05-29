@@ -91,6 +91,15 @@
 - **Sale-integrity validation** (server-side, `admin.ts`): both POST and PUT reject (`400`, Arabic message) when `isOnSale` is true but there is no `original_price` strictly greater than `price`. PUT computes effective values from the existing row when fields are omitted from the partial payload.
 - **Empty-state discoverability**: home's zone-empty state still links to `/offers/:zone` (BadgePercent), so offers stay reachable even when a zone has no categories/featured/bestsellers.
 
+## Bilingual UI (AR/EN) + category seed
+
+- Language is handled by `artifacts/al-tayebat/src/contexts/language.tsx` (`useLanguage()` → `{ lang, dir, setLang, toggle, tr(ar, en) }`), persisted to `localStorage` key `al_tayebat_lang` (default `ar`). `dir`/`lang` are applied to `<html>`.
+- **Language Toggle button**: `artifacts/al-tayebat/src/components/language-toggle.tsx` — compact pill on the deep-green header (`primary-foreground/15` surface). Shows the language you can switch TO (`EN` when Arabic, `ع` when English). Placed in the Home header top row and the Categories page header.
+- Categories carry both `name` (EN) and `nameAr` (AR). All UI renders `lang === "en" ? (cat.name || cat.nameAr) : cat.nameAr`.
+- **Both zones' categories (canonical bilingual list)**: Healthy → keto, vegetables, pantry, drinks, dairy, nuts, sweets, meat. Regular → feasts (عزائم ووجبات), fastfood (وجبات سريعة), pastries (معجنات), sweets-cakes (حلويات وكيك), appetizers (مقبلات وتجهيز مسبق). The Home Regular Zone rail renders these 5 dynamically from `GET /api/categories?foodType=regular`.
+- **Startup seed (production-safe)**: `artifacts/api-server/src/lib/seed-categories.ts` is invoked from `index.ts` after `app.listen`. It does an idempotent insert-if-missing (`onConflictDoNothing` keyed on `slug`) of the canonical category list. **Why**: Replit's publish copies schema but NOT row data, and production previously had only the 8 healthy categories — the 5 regular ones were missing, so the Regular Zone rail was empty in production. The startup seed guarantees both dev and prod have all categories without clobbering operator-customized rows. Seed failures are logged and never block startup.
+- **Manual seed script**: `pnpm --filter @workspace/scripts run seed:categories` (`scripts/src/seed-categories.ts`) does an upsert (force-corrects names/icons/sort order) against whatever `DATABASE_URL` points to — use it to repair drifted category metadata.
+
 ## Gotchas
 
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`

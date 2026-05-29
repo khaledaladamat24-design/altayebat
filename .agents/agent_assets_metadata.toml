@@ -47,3 +47,45 @@ id = "6N9_NEe3SJytXGpcw4Bhm"
 uri = "file://.local/android-signing/al-tayebat-android-signing-backup.tar.gz"
 type = "unspecified"
 title = "Android signing backup — keystore + passwords (STORE OFFLINE)"
+
+[[outputs]]
+id = "YTjbUbpR1Jm5UbR0-0mLt"
+uri = "file://artifacts/al-tayebat/resources/store-assets/feature-graphic.jpg"
+type = "image"
+title = "Feature graphic (1024×500)"
+
+[[outputs]]
+id = "9vmEBihfIPvyq2aS4F5d0"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-1-home.jpg"
+type = "image"
+title = "Screenshot 1 — Home"
+
+[[outputs]]
+id = "hgaZs8MWR6HohH_3cW-jT"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-2-categories.jpg"
+type = "image"
+title = "Screenshot 2 — Categories"
+
+[[outputs]]
+id = "QUyzLVU808qISgvviIkbD"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-3-product.jpg"
+type = "image"
+title = "Screenshot 3 — Product"
+
+[[outputs]]
+id = "B_Cd2S1uZZ6NBsOvVkoMU"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-4-cart.jpg"
+type = "image"
+title = "Screenshot 4 — Cart"
+
+[[outputs]]
+id = "aNlghiyNcDTdW03TIJB-8"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-5-offers.jpg"
+type = "image"
+title = "Screenshot 5 — Offers"
+
+[[outputs]]
+id = "42HQZvHPE5TndEJY-f_8n"
+uri = "file://artifacts/al-tayebat/resources/store-assets/shot-6-checkout.jpg"
+type = "image"
+title = "Screenshot 6 — Checkout"

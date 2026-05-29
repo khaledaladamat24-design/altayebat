@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight } from "lucide-react";
 import { useLanguage } from "@/contexts/language";
+import { LanguageToggle } from "@/components/language-toggle";
 
 export default function Categories() {
   const { lang, dir, tr } = useLanguage();
@@ -16,7 +17,8 @@ export default function Categories() {
             <ChevronRight className="w-5 h-5" />
           </div>
         </Link>
-        <h1 className="text-xl font-bold">{tr("جميع الأقسام", "All Categories")}</h1>
+        <h1 className="text-xl font-bold flex-1">{tr("جميع الأقسام", "All Categories")}</h1>
+        <LanguageToggle />
       </div>
 
       <div className="px-4 mt-6">

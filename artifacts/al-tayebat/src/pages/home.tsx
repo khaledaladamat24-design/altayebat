@@ -6,6 +6,7 @@ import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/language";
+import { LanguageToggle } from "@/components/language-toggle";
 
 type Zone = "healthy" | "regular";
 const ZONE_STORAGE_KEY = "al_tayebat_zone";
@@ -51,18 +52,21 @@ export default function Home() {
     <div className="pb-8">
       {/* Header */}
       <div className="bg-primary text-primary-foreground pt-12 pb-6 px-4 rounded-b-3xl shadow-sm relative z-10">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="bg-rose/20 rounded-full p-1">
-            <MapPin className="w-4 h-4 text-rose-soft" />
-          </div>
-          <Link href="/settings">
-            <div className="cursor-pointer">
-              <p className="text-xs text-primary-foreground/70">{tr("التوصيل إلى", "Delivery to")}</p>
-              <p className="font-bold text-sm">
-                {address || tr("أضف عنوانك ←", "Add your address →")}
-              </p>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="bg-rose/20 rounded-full p-1 shrink-0">
+              <MapPin className="w-4 h-4 text-rose-soft" />
             </div>
-          </Link>
+            <Link href="/settings">
+              <div className="cursor-pointer min-w-0">
+                <p className="text-xs text-primary-foreground/70">{tr("التوصيل إلى", "Delivery to")}</p>
+                <p className="font-bold text-sm truncate">
+                  {address || tr("أضف عنوانك ←", "Add your address →")}
+                </p>
+              </div>
+            </Link>
+          </div>
+          <LanguageToggle className="shrink-0" />
         </div>
 
         <Link href="/search">
