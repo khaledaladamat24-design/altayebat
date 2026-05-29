@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
-  ChevronLeft, MapPin, Heart, Package, Globe, Settings,
-  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X, Headphones,
+  ChevronLeft, Heart, Package, Settings,
+  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X,
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { LogOut, Store } from "lucide-react";
@@ -135,12 +135,9 @@ export default function Account() {
 
   const menuRows = [
     { icon: CreditCard, label: tr("طرق الدفع", "Payment methods"), iconColor: "text-blue-500", href: vendorId ? "/payment-methods" : "/wallet" },
-    { icon: MapPin, label: tr("العنوان", "Address"), iconColor: "text-rose", href: null },
     { icon: Heart, label: tr("المفضلة", "Favorites"), iconColor: "text-pink-500", href: null },
     { icon: Zap, label: tr("ضمان التوصيل في الوقت المحدد", "On-time delivery guarantee"), iconColor: "text-green-500", href: null },
-    { icon: Headphones, label: tr("تواصل معنا للمساعدة", "Contact us for help"), iconColor: "text-emerald-500", href: null, onPress: openSupport },
-    { icon: Globe, label: tr("اللغة", "Language"), iconColor: "text-slate-500", suffix: tr("العربية", "English"), href: "/settings" },
-    { icon: Settings, label: tr("الإعدادات", "Settings"), iconColor: "text-slate-400", href: "/settings" },
+    { icon: Settings, label: tr("الإعدادات", "Settings"), iconColor: "text-slate-400", suffix: tr("اللغة، العنوان، المساعدة", "Language, address, help"), href: "/settings" },
   ];
 
   return (
