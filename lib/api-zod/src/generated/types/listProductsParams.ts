@@ -12,4 +12,5 @@ categoryId?: number;
 search?: string;
 featured?: boolean;
 foodType?: ListProductsFoodType;
+onSale?: boolean;
 };

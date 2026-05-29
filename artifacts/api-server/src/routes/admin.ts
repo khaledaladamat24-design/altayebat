@@ -30,13 +30,20 @@ router.post("/admin/products", async (req, res) => {
     const {
       nameAr, name, descriptionAr, description,
       price, originalPrice, categoryId,
-      imageUrl, isKeto, isOrganic, isFeatured, isBestseller,
+      imageUrl, isKeto, isOrganic, isFeatured, isBestseller, isOnSale,
       weightOrVolume, inStock,
       calories, protein, carbs, fats, vendorId, foodType,
     } = req.body;
 
     if (!nameAr || !name || !price || !categoryId) {
       return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
+    }
+
+    if (Boolean(isOnSale)) {
+      const orig = originalPrice === undefined || originalPrice === null || originalPrice === "" ? null : Number(originalPrice);
+      if (orig === null || !(orig > Number(price))) {
+        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
+      }
     }
 
     const num = (v: unknown) => (v === undefined || v === null || v === "" ? null : v);
@@ -53,6 +60,7 @@ router.post("/admin/products", async (req, res) => {
       isOrganic: Boolean(isOrganic),
       isFeatured: Boolean(isFeatured),
       isBestseller: Boolean(isBestseller),
+      isOnSale: Boolean(isOnSale),
       weightOrVolume: weightOrVolume || null,
       inStock: inStock !== false,
       calories: num(calories) !== null ? Number(calories) : null,
@@ -76,9 +84,21 @@ router.put("/admin/products/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
     const { nameAr, name, price, originalPrice, categoryId, imageUrl,
-      isKeto, isOrganic, isFeatured, isBestseller, weightOrVolume,
+      isKeto, isOrganic, isFeatured, isBestseller, isOnSale, weightOrVolume,
       inStock, descriptionAr, description,
       calories, protein, carbs, fats, foodType } = req.body;
+
+    if (isOnSale !== undefined || originalPrice !== undefined || price !== undefined) {
+      const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      const effOnSale = isOnSale !== undefined ? Boolean(isOnSale) : existing.isOnSale;
+      const effPrice = price !== undefined ? Number(price) : Number(existing.price);
+      const effOrigRaw = originalPrice !== undefined ? originalPrice : existing.originalPrice;
+      const effOrig = effOrigRaw === undefined || effOrigRaw === null || effOrigRaw === "" ? null : Number(effOrigRaw);
+      if (effOnSale && (effOrig === null || !(effOrig > effPrice))) {
+        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
+      }
+    }
 
     const [updated] = await db.update(productsTable).set({
       ...(nameAr && { nameAr }),
@@ -93,6 +113,7 @@ router.put("/admin/products/:id", async (req, res) => {
       ...(isOrganic !== undefined && { isOrganic: Boolean(isOrganic) }),
       ...(isFeatured !== undefined && { isFeatured: Boolean(isFeatured) }),
       ...(isBestseller !== undefined && { isBestseller: Boolean(isBestseller) }),
+      ...(isOnSale !== undefined && { isOnSale: Boolean(isOnSale) }),
       ...(weightOrVolume !== undefined && { weightOrVolume }),
       ...(inStock !== undefined && { inStock: Boolean(inStock) }),
       ...(calories !== undefined && { calories: calories === "" || calories === null ? null : Number(calories) }),

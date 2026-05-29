@@ -64,7 +64,8 @@ export const ListProductsQueryParams = zod.object({
   "categoryId": zod.coerce.number().optional(),
   "search": zod.coerce.string().optional(),
   "featured": zod.coerce.boolean().optional(),
-  "foodType": zod.enum(['healthy', 'regular']).optional()
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
+  "onSale": zod.coerce.boolean().optional()
 })
 
 export const ListProductsResponseItem = zod.object({
@@ -90,7 +91,8 @@ export const ListProductsResponseItem = zod.object({
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
-  "foodType": zod.enum(['healthy', 'regular']).optional()
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
+  "isOnSale": zod.boolean().optional()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -125,7 +127,8 @@ export const GetProductResponse = zod.object({
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
-  "foodType": zod.enum(['healthy', 'regular']).optional()
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
+  "isOnSale": zod.boolean().optional()
 })
 
 
@@ -159,7 +162,8 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
-  "foodType": zod.enum(['healthy', 'regular']).optional()
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
+  "isOnSale": zod.boolean().optional()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
 
@@ -194,7 +198,8 @@ export const ListBestsellersResponseItem = zod.object({
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
   "vendorNameAr": zod.string().nullish(),
-  "foodType": zod.enum(['healthy', 'regular']).optional()
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
+  "isOnSale": zod.boolean().optional()
 })
 export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 

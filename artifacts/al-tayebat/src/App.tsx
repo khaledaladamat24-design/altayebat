@@ -28,6 +28,7 @@ import { AppLayout } from "@/components/layout";
 import Home from "@/pages/home";
 import Categories from "@/pages/categories";
 import Category from "@/pages/category";
+import Offers from "@/pages/offers";
 import Product from "@/pages/product";
 import Search from "@/pages/search";
 import Cart from "@/pages/cart";
@@ -102,6 +103,7 @@ function Router() {
               <Route path="/" component={Home} />
               <Route path="/categories" component={Categories} />
               <Route path="/category/:id" component={Category} />
+              <Route path="/offers/:zone" component={Offers} />
               <Route path="/product/:id" component={Product} />
               <Route path="/search" component={Search} />
               <Route path="/cart" component={Cart} />

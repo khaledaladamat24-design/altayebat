@@ -71,7 +71,7 @@ export default function Admin() {
   const emptyForm = {
     nameAr: "", name: "", descriptionAr: "", description: "",
     price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
-    isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true,
+    isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, isOnSale: false, inStock: true,
     calories: "", protein: "", carbs: "", fats: "", foodType: "healthy",
   };
   const [form, setForm] = useState(emptyForm);
@@ -93,6 +93,7 @@ export default function Admin() {
       isOrganic: !!p.isOrganic,
       isFeatured: !!p.isFeatured,
       isBestseller: !!p.isBestseller,
+      isOnSale: !!p.isOnSale,
       inStock: p.inStock !== false,
       calories: p.calories != null ? String(p.calories) : "",
       protein: p.protein != null ? String(p.protein) : "",
@@ -482,7 +483,7 @@ export default function Admin() {
             <div className="bg-card rounded-2xl border border-border p-4">
               <h2 className="font-bold text-sm text-muted-foreground mb-3">خصائص المنتج</h2>
               <div className="grid grid-cols-2 gap-2">
-                {[{ key: "isKeto", label: "كيتو" }, { key: "isOrganic", label: "عضوي" }, { key: "isFeatured", label: "مميز" }, { key: "isBestseller", label: "الأكثر مبيعاً" }].map(({ key, label }) => (
+                {[{ key: "isKeto", label: "كيتو" }, { key: "isOrganic", label: "عضوي" }, { key: "isFeatured", label: "مميز" }, { key: "isBestseller", label: "الأكثر مبيعاً" }, { key: "isOnSale", label: "عرض / تخفيض" }].map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 p-3 rounded-xl bg-muted cursor-pointer hover:bg-muted/80">
                     <input type="checkbox" checked={form[key as keyof typeof form] as boolean} onChange={e => setForm(f => ({ ...f, [key]: e.target.checked }))} className="w-4 h-4 accent-rose" />
                     <span className="text-sm font-medium">{label}</span>

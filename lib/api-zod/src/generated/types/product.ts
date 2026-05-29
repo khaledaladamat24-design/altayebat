@@ -42,4 +42,5 @@ export interface Product {
   /** @nullable */
   vendorNameAr?: string | null;
   foodType?: ProductFoodType;
+  isOnSale?: boolean;
 }

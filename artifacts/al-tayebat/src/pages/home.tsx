@@ -1,6 +1,6 @@
 import { useListBanners, useListCategories, useListFeaturedProducts, useListBestsellers } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Search, MapPin, ChevronLeft, Leaf, UtensilsCrossed } from "lucide-react";
+import { Search, MapPin, ChevronLeft, Leaf, UtensilsCrossed, BadgePercent } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -174,6 +174,12 @@ export default function Home() {
             <p className="text-sm text-muted-foreground max-w-[260px]">
               جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.
             </p>
+            <Link href={`/offers/${zone}`}>
+              <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-rose cursor-pointer">
+                <BadgePercent className="w-4 h-4" />
+                {zone === "healthy" ? "تصفّح العروض الصحية" : "تصفّح العروض والتخفيضات"}
+              </span>
+            </Link>
           </section>
         ) : (
         <>
@@ -192,6 +198,17 @@ export default function Home() {
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-3 snap-x hide-scrollbar -mx-4 px-4">
+            {/* Offers shortcut — always first in the rail, per zone */}
+            <Link href={`/offers/${zone}`}>
+              <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-rose to-rose/70 border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
+                  <BadgePercent className="w-7 h-7 text-white" />
+                </div>
+                <span className="text-[11px] font-bold text-rose text-center leading-tight">
+                  {zone === "healthy" ? "عروض صحية" : "عروض وتخفيضات"}
+                </span>
+              </div>
+            </Link>
             {loadingCategories
               ? Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex flex-col items-center gap-2 min-w-[68px]">

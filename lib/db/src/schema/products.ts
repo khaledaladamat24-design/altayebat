@@ -26,9 +26,11 @@ export const productsTable = pgTable("products", {
   fats: numeric("fats", { precision: 6, scale: 2 }),
   vendorId: integer("vendor_id"),
   foodType: text("food_type").notNull().default("healthy"),
+  isOnSale: boolean("is_on_sale").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("products_food_type_idx").on(table.foodType),
+  index("products_on_sale_idx").on(table.isOnSale),
 ]);
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });

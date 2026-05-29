@@ -80,6 +80,17 @@
 - **Drift is allowed by design**: a product's `food_type` is independent of its category's `food_type` (a single vendor/category may legitimately span both zones), so there is intentionally no DB constraint forcing them to match. Product filtering always uses the product's own `food_type`. `/categories` `productCount` is NOT zone-aware (counts all products in the category).
 - Always run codegen after spec changes here too: `pnpm --filter @workspace/api-spec run codegen`.
 
+## Offers / Deals (العروضات)
+
+- Products carry an `is_on_sale` boolean (default `false`, NOT NULL) — `lib/db/src/schema/products.ts` (indexed via `products_on_sale_idx`). The existing `original_price` column drives the strikethrough display (current `price` is the discounted price, `originalPrice` is the higher pre-discount price).
+- `GET /api/products` accepts `?onSale=true` (combinable with `?foodType=`). Implemented in `products.ts` via `eq(productsTable.isOnSale, true)` pushed into the `conditions[]` array. `isOnSale` is included in every product row (`buildProductRow`) and in the OpenAPI `Product` schema.
+- Home (`pages/home.tsx`) prepends a virtual **Offers** pill (BadgePercent icon, rose gradient) to the categories rail — it is NOT a DB category. Label is zone-aware: "عروض صحية" (healthy) / "عروض وتخفيضات" (regular). It links to `/offers/:zone`.
+- `pages/offers.tsx` (route `/offers/:zone` in `App.tsx`, inside the `SplashGate`/`AppLayout` group) calls `useListProducts({ foodType: zone, onSale: true })` and renders a `ProductCard` grid with an empty-state when no offers exist.
+- Product card (`components/product-card.tsx`) computes `hasDiscount = originalPrice != null && originalPrice > price`. The "عرض" badge shows when `isOnSale || hasDiscount`; the strike-through original price renders only when `hasDiscount` (never when `originalPrice <= price`, avoiding a misleading strike-through).
+- Admin product form (`pages/admin.tsx`) has an "عرض / تخفيض" checkbox (`isOnSale`) alongside كيتو/عضوي/مميز/الأكثر مبيعاً; admin POST/PUT routes persist `isOnSale`. To show a strikethrough, set both `isOnSale` and a higher `original_price`.
+- **Sale-integrity validation** (server-side, `admin.ts`): both POST and PUT reject (`400`, Arabic message) when `isOnSale` is true but there is no `original_price` strictly greater than `price`. PUT computes effective values from the existing row when fields are omitted from the partial payload.
+- **Empty-state discoverability**: home's zone-empty state still links to `/offers/:zone` (BadgePercent), so offers stay reachable even when a zone has no categories/featured/bestsellers.
+
 ## Gotchas
 
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`

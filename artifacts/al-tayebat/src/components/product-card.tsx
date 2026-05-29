@@ -18,6 +18,10 @@ type ProductWithMacros = Product & {
 export function ProductCard({ product: rawProduct }: { product: Product }) {
   const product = rawProduct as ProductWithMacros;
   const hasMacros = product.calories != null || product.protein != null || product.carbs != null || product.fats != null;
+  // Only treat it as a real discount when the original price is genuinely higher
+  // than the current price — avoids a misleading strike-through.
+  const hasDiscount =
+    product.originalPrice != null && Number(product.originalPrice) > Number(product.price);
   const sessionId = useSession();
   const queryClient = useQueryClient();
   const addToCart = useAddToCart();
@@ -62,10 +66,10 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
             )}
           </div>
 
-          {product.originalPrice && (
+          {(product.isOnSale || hasDiscount) && (
             <div className="absolute top-2 left-2">
               <span className="bg-rose text-rose-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                خصم
+                عرض
               </span>
             </div>
           )}
@@ -112,8 +116,8 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
           <div className="mt-auto flex items-center justify-between pt-2">
             <div className="flex flex-col">
               <span className="font-bold text-primary text-sm">{formatPrice(product.price)}</span>
-              {product.originalPrice && (
-                <span className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+              {hasDiscount && (
+                <span className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice!)}</span>
               )}
             </div>
 
