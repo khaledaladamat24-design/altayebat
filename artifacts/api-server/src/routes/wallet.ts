@@ -4,17 +4,9 @@ import { walletsTable, walletTransactionsTable, usersTable } from "@workspace/db
 import { and, eq, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
+import { isAdminReq } from "../lib/admin-auth";
 
 const router = Router();
-
-const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
-
-function isAdminReq(req: Request): boolean {
-  const adminEmail = req.headers["x-admin-email"] as string | undefined;
-  const adminKey = req.headers["x-admin-key"] as string | undefined;
-  const envPw = process.env.ADMIN_PASSWORD || "tayebat2024";
-  return adminKey === envPw || adminEmail === SUPER_ADMIN_EMAIL;
-}
 
 /**
  * Auth guard for /wallet/:userId/* — caller must be signed-in via Clerk and

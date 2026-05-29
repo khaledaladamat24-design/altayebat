@@ -2,10 +2,9 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
 
 const router = Router();
-
-const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
 
 router.get("/users/profile", async (req, res) => {
   try {

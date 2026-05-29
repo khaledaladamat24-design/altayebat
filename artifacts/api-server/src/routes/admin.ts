@@ -3,28 +3,9 @@ import { db } from "@workspace/db";
 import { productsTable, ordersTable, orderItemsTable, usersTable, vendorProfilesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
+import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
 
 const router = Router();
-
-const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
-const FALLBACK_ADMIN_PASSWORD = "tayebat2024";
-
-function getAdminPassword(): string {
-  const env = process.env.ADMIN_PASSWORD;
-  if (env && env.length > 0) return env;
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[admin] ⚠️  ADMIN_PASSWORD env secret is not set — falling back to the legacy default. " +
-    "Set ADMIN_PASSWORD as a Replit Secret to secure the admin panel."
-  );
-  return FALLBACK_ADMIN_PASSWORD;
-}
-
-function isAdmin(req: Request): boolean {
-  const adminEmail = req.headers["x-admin-email"] as string | undefined;
-  const adminKey = req.headers["x-admin-key"] as string | undefined;
-  return adminKey === getAdminPassword() || adminEmail === SUPER_ADMIN_EMAIL;
-}
 
 router.post("/admin/products", async (req, res) => {
   try {
@@ -243,5 +224,4 @@ router.delete("/admin/vendors/:id", async (req, res) => {
   }
 });
 
-export { isAdmin };
 export default router;

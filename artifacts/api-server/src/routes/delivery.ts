@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import type { DeliveryProvider } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { isAdmin } from "./admin";
+import { isAdminReq } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
 import { DeliveryNotConfiguredError } from "../delivery/types";
 
@@ -29,7 +29,7 @@ router.get("/delivery/adapter-types", (_req, res) => {
 
 // GET /api/delivery/providers — list all configured providers (credentials stripped). Admin only.
 router.get("/delivery/providers", async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+  if (!isAdminReq(req)) return res.status(403).json({ error: "Forbidden" });
   try {
     const rows = await db.select().from(deliveryProvidersTable);
     res.json(rows.map(sanitize));
@@ -41,7 +41,7 @@ router.get("/delivery/providers", async (req, res) => {
 
 // POST /api/delivery/providers — create. Admin only.
 router.post("/delivery/providers", async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+  if (!isAdminReq(req)) return res.status(403).json({ error: "Forbidden" });
   try {
     const {
       code, name, nameAr, type = "manual", baseUrl,
@@ -73,7 +73,7 @@ router.post("/delivery/providers", async (req, res) => {
 
 // PATCH /api/delivery/providers/:id — update. Admin only.
 router.patch("/delivery/providers/:id", async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+  if (!isAdminReq(req)) return res.status(403).json({ error: "Forbidden" });
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
@@ -101,7 +101,7 @@ router.patch("/delivery/providers/:id", async (req, res) => {
 
 // DELETE /api/delivery/providers/:id — admin only.
 router.delete("/delivery/providers/:id", async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+  if (!isAdminReq(req)) return res.status(403).json({ error: "Forbidden" });
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
@@ -116,7 +116,7 @@ router.delete("/delivery/providers/:id", async (req, res) => {
 // POST /api/delivery/orders/:orderId/shipment — create a shipment for an order via the chosen
 // (or default) provider. Admin only. Idempotent: if a tracking number already exists, returns it.
 router.post("/delivery/orders/:orderId/shipment", async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+  if (!isAdminReq(req)) return res.status(403).json({ error: "Forbidden" });
   try {
     const orderId = parseInt(req.params.orderId);
     if (isNaN(orderId)) return res.status(400).json({ error: "Invalid orderId" });

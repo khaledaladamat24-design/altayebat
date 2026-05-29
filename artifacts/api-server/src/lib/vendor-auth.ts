@@ -3,15 +3,9 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable, vendorProfilesTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { isAdminReq } from "./admin-auth";
 
-const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
-
-export function isAdminReq(req: Request): boolean {
-  const adminEmail = req.headers["x-admin-email"] as string | undefined;
-  const adminKey = req.headers["x-admin-key"] as string | undefined;
-  const envPw = process.env.ADMIN_PASSWORD || "tayebat2024";
-  return adminKey === envPw || adminEmail === SUPER_ADMIN_EMAIL;
-}
+export { isAdminReq };
 
 /** Resolve the signed-in Clerk user → DB user id, or null. */
 async function getDbUserIdFromClerk(req: Request): Promise<number | null> {

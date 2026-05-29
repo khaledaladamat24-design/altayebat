@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
 
 const router = Router();
-const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
 
 /**
  * Normalize Jordanian phone numbers to the canonical "07XXXXXXXX" form so a
