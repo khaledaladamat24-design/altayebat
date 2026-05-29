@@ -1,8 +1,10 @@
 import { useLocation } from "wouter";
 import { ChevronLeft } from "lucide-react";
+import { useLanguage } from "@/contexts/language";
 
 export default function Splash() {
   const [, setLocation] = useLocation();
+  const { dir, tr } = useLanguage();
 
   const handleContinue = () => {
     localStorage.setItem("al_tayebat_onboarded_v2", "1");
@@ -10,12 +12,12 @@ export default function Splash() {
   };
 
   return (
-    <div className="relative min-h-screen w-full max-w-md mx-auto overflow-hidden" dir="rtl">
+    <div className="relative min-h-screen w-full max-w-md mx-auto overflow-hidden" dir={dir}>
       {/* Background food image */}
       <div className="absolute inset-0">
         <img
           src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=85"
-          alt="طعام صحي"
+          alt={tr("طعام صحي", "Healthy food")}
           className="w-full h-full object-cover"
         />
         {/* Dark gradient overlay - stronger at bottom */}
@@ -27,7 +29,7 @@ export default function Splash() {
         {/* Logo */}
         <div className="flex justify-center pt-16 pb-4">
           <div className="bg-white/15 backdrop-blur-sm border border-white/30 rounded-3xl px-6 py-2 shadow-lg">
-            <span className="text-white text-2xl font-black tracking-wide drop-shadow">الطيبات</span>
+            <span className="text-white text-2xl font-black tracking-wide drop-shadow">{tr("الطيبات", "Al-Tayebat")}</span>
           </div>
         </div>
 
@@ -39,10 +41,10 @@ export default function Splash() {
           {/* Welcome text */}
           <div className="text-center">
             <h1 className="text-white text-3xl font-black mb-2 drop-shadow-lg">
-              أهلاً بك في الطيبات
+              {tr("أهلاً بك في الطيبات", "Welcome to Al-Tayebat")}
             </h1>
             <p className="text-white/85 text-base font-medium drop-shadow">
-              تناول طعاماً أفضل وعيش حياةً أفضل
+              {tr("تناول طعاماً أفضل وعيش حياةً أفضل", "Eat better, live better")}
             </p>
           </div>
 
@@ -51,15 +53,15 @@ export default function Splash() {
             onClick={handleContinue}
             className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] text-primary-foreground text-xl font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2"
           >
-            متابعة
+            {tr("متابعة", "Continue")}
             <ChevronLeft className="w-5 h-5" />
           </button>
 
           {/* Privacy */}
           <p className="text-center text-white/65 text-xs leading-relaxed px-2">
-            بالمتابعة، فإنك توافق على{" "}
-            <span className="underline text-white/85 cursor-pointer">سياسة الخصوصية</span>{" "}
-            الخاصة بنا. تحتاج الطيبات إلى الوصول لموقعك لتسهيل توصيل الطلبات وتقديم توصيات مخصصة لك.
+            {tr("بالمتابعة، فإنك توافق على ", "By continuing, you agree to our ")}
+            <span className="underline text-white/85 cursor-pointer">{tr("سياسة الخصوصية", "Privacy Policy")}</span>
+            {tr(" الخاصة بنا. تحتاج الطيبات إلى الوصول لموقعك لتسهيل توصيل الطلبات وتقديم توصيات مخصصة لك.", ". Al-Tayebat needs access to your location to facilitate order delivery and provide personalized recommendations.")}
           </p>
         </div>
       </div>

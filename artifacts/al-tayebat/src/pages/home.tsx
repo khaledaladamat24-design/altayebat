@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/contexts/language";
 
 type Zone = "healthy" | "regular";
 const ZONE_STORAGE_KEY = "al_tayebat_zone";
 
 export default function Home() {
+  const { lang, tr } = useLanguage();
   const [zone, setZone] = useState<Zone>(() => {
     if (typeof window === "undefined") return "healthy";
     const saved = localStorage.getItem(ZONE_STORAGE_KEY);
@@ -55,9 +57,9 @@ export default function Home() {
           </div>
           <Link href="/settings">
             <div className="cursor-pointer">
-              <p className="text-xs text-primary-foreground/70">التوصيل إلى</p>
+              <p className="text-xs text-primary-foreground/70">{tr("التوصيل إلى", "Delivery to")}</p>
               <p className="font-bold text-sm">
-                {address || "أضف عنوانك ←"}
+                {address || tr("أضف عنوانك ←", "Add your address →")}
               </p>
             </div>
           </Link>
@@ -70,7 +72,7 @@ export default function Home() {
             </div>
             <Input
               type="text"
-              placeholder="عن ماذا تبحث؟ (مثال: خبز كيتو)"
+              placeholder={tr("عن ماذا تبحث؟ (مثال: خبز كيتو)", "What are you looking for? (e.g. keto bread)")}
               className="bg-background text-foreground pl-4 pr-10 rounded-xl border-none shadow-sm pointer-events-none"
               readOnly
             />
@@ -92,7 +94,7 @@ export default function Home() {
             }`}
           >
             <Leaf className="w-4 h-4" />
-            القسم الصحي
+            {tr("القسم الصحي", "Healthy Zone")}
           </button>
           <button
             type="button"
@@ -105,7 +107,7 @@ export default function Home() {
             }`}
           >
             <UtensilsCrossed className="w-4 h-4" />
-            القسم العادي
+            {tr("القسم العادي", "Regular Zone")}
           </button>
         </div>
       </div>
@@ -121,18 +123,18 @@ export default function Home() {
               <div className="w-full h-44 rounded-2xl overflow-hidden relative shadow-sm">
                 <img
                   src={banners[0].imageUrl}
-                  alt={banners[0].titleAr}
+                  alt={lang === "en" ? (banners[0].title || banners[0].titleAr) : banners[0].titleAr}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-l from-black/65 to-transparent flex flex-col justify-end p-5 text-white">
-                  {banners[0].badgeTextAr && (
+                  {(lang === "en" ? (banners[0].badgeText || banners[0].badgeTextAr) : banners[0].badgeTextAr) && (
                     <span className="bg-rose text-white text-xs font-bold px-2.5 py-1 rounded-full w-max mb-2 shadow-sm">
-                      {banners[0].badgeTextAr}
+                      {lang === "en" ? (banners[0].badgeText || banners[0].badgeTextAr) : banners[0].badgeTextAr}
                     </span>
                   )}
-                  <h2 className="text-xl font-bold leading-tight">{banners[0].titleAr}</h2>
-                  {banners[0].subtitleAr && (
-                    <p className="text-sm mt-1 opacity-85">{banners[0].subtitleAr}</p>
+                  <h2 className="text-xl font-bold leading-tight">{lang === "en" ? (banners[0].title || banners[0].titleAr) : banners[0].titleAr}</h2>
+                  {(lang === "en" ? (banners[0].subtitle || banners[0].subtitleAr) : banners[0].subtitleAr) && (
+                    <p className="text-sm mt-1 opacity-85">{lang === "en" ? (banners[0].subtitle || banners[0].subtitleAr) : banners[0].subtitleAr}</p>
                   )}
                 </div>
               </div>
@@ -142,14 +144,14 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-3">
                   {banners.slice(1, 3).map((b) => (
                     <div key={b.id} className="h-24 rounded-xl overflow-hidden relative shadow-sm">
-                      <img src={b.imageUrl} alt={b.titleAr} className="w-full h-full object-cover" />
+                      <img src={b.imageUrl} alt={lang === "en" ? (b.title || b.titleAr) : b.titleAr} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-3 text-white">
-                        {b.badgeTextAr && (
+                        {(lang === "en" ? (b.badgeText || b.badgeTextAr) : b.badgeTextAr) && (
                           <span className="bg-rose/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full w-max mb-1">
-                            {b.badgeTextAr}
+                            {lang === "en" ? (b.badgeText || b.badgeTextAr) : b.badgeTextAr}
                           </span>
                         )}
-                        <p className="text-xs font-bold leading-tight">{b.titleAr}</p>
+                        <p className="text-xs font-bold leading-tight">{lang === "en" ? (b.title || b.titleAr) : b.titleAr}</p>
                       </div>
                     </div>
                   ))}
@@ -169,15 +171,19 @@ export default function Home() {
               )}
             </div>
             <h3 className="font-bold text-base">
-              {zone === "healthy" ? "لا توجد منتجات في القسم الصحي بعد" : "لا توجد منتجات في القسم العادي بعد"}
+              {zone === "healthy"
+                ? tr("لا توجد منتجات في القسم الصحي بعد", "No products in the Healthy Zone yet")
+                : tr("لا توجد منتجات في القسم العادي بعد", "No products in the Regular Zone yet")}
             </h3>
             <p className="text-sm text-muted-foreground max-w-[260px]">
-              جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.
+              {tr("جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.", "Try switching to the other zone above, or check back later.")}
             </p>
             <Link href={`/offers/${zone}`}>
               <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-rose cursor-pointer">
                 <BadgePercent className="w-4 h-4" />
-                {zone === "healthy" ? "تصفّح العروض الصحية" : "تصفّح العروض والتخفيضات"}
+                {zone === "healthy"
+                  ? tr("تصفّح العروض الصحية", "Browse Healthy Offers")
+                  : tr("تصفّح العروض والتخفيضات", "Browse Offers & Discounts")}
               </span>
             </Link>
           </section>
@@ -188,11 +194,11 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-1 h-5 bg-rose rounded-full" />
-              <h2 className="font-bold text-lg">الأقسام</h2>
+              <h2 className="font-bold text-lg">{tr("الأقسام", "Categories")}</h2>
             </div>
             <Link href="/categories">
               <span className="text-xs text-rose font-semibold cursor-pointer flex items-center gap-0.5">
-                عرض الكل <ChevronLeft className="w-3 h-3" />
+                {tr("عرض الكل", "View all")} <ChevronLeft className="w-3 h-3" />
               </span>
             </Link>
           </div>
@@ -205,7 +211,9 @@ export default function Home() {
                   <BadgePercent className="w-7 h-7 text-white" />
                 </div>
                 <span className="text-[11px] font-bold text-rose text-center leading-tight">
-                  {zone === "healthy" ? "عروض صحية" : "عروض وتخفيضات"}
+                  {zone === "healthy"
+                    ? tr("عروض صحية", "Healthy Offers")
+                    : tr("عروض وتخفيضات", "Offers & Discounts")}
                 </span>
               </div>
             </Link>
@@ -221,12 +229,12 @@ export default function Home() {
                     <div className="flex flex-col items-center gap-2 min-w-[68px] cursor-pointer snap-start group">
                       <div className="w-14 h-14 rounded-full bg-rose-soft border-2 border-transparent group-hover:border-rose transition-all duration-200 overflow-hidden flex items-center justify-center shadow-sm">
                         {cat.imageUrl ? (
-                          <img src={cat.imageUrl} alt={cat.nameAr} className="w-full h-full object-contain" />
+                          <img src={cat.imageUrl} alt={lang === "en" ? (cat.name || cat.nameAr) : cat.nameAr} className="w-full h-full object-contain" />
                         ) : (
                           <span className="text-2xl">{cat.icon}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-medium text-center leading-tight">{cat.nameAr}</span>
+                      <span className="text-[11px] font-medium text-center leading-tight">{lang === "en" ? (cat.name || cat.nameAr) : cat.nameAr}</span>
                     </div>
                   </Link>
                 ))}
@@ -237,7 +245,7 @@ export default function Home() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1 h-5 bg-primary rounded-full" />
-            <h2 className="font-bold text-lg">وصل حديثاً</h2>
+            <h2 className="font-bold text-lg">{tr("وصل حديثاً", "New Arrivals")}</h2>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -256,7 +264,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-1 h-5 bg-rose rounded-full" />
-              <h2 className="font-bold text-lg">الأكثر مبيعاً</h2>
+              <h2 className="font-bold text-lg">{tr("الأكثر مبيعاً", "Best Sellers")}</h2>
             </div>
           </div>
 

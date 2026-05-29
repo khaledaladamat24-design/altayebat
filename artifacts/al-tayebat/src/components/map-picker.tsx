@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, Loader2, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useLanguage } from "@/contexts/language";
 import "leaflet/dist/leaflet.css";
 
 interface MapPickerProps {
@@ -23,10 +24,10 @@ interface NominatimResult {
   };
 }
 
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
+async function reverseGeocode(lat: number, lng: number, lang: "ar" | "en"): Promise<string> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ar`,
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${lang}`,
       { headers: { "User-Agent": "AlTayebat-App/1.0" } }
     );
     const data: NominatimResult = await res.json();
@@ -37,13 +38,15 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
       a.road,
       a.house_number,
     ].filter(Boolean);
-    return parts.length > 0 ? parts.join("، ") : data.display_name;
+    const sep = lang === "ar" ? "، " : ", ";
+    return parts.length > 0 ? parts.join(sep) : data.display_name;
   } catch {
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   }
 }
 
 export function MapPicker({ onAddressSelect }: MapPickerProps) {
+  const { lang, dir, tr } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -56,10 +59,10 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     setLoading(true);
     setPickedCoords({ lat, lng });
-    const address = await reverseGeocode(lat, lng);
+    const address = await reverseGeocode(lat, lng, lang);
     setResolvedAddress(address);
     setLoading(false);
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     if (!open) return;
@@ -154,15 +157,15 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
         onClick={() => setOpen(true)}
       >
         <MapPin className="w-4 h-4" />
-        تحديد موقعك على الخريطة
+        {tr("تحديد موقعك على الخريطة", "Pick your location on the map")}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl gap-0" dir="rtl">
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl gap-0" dir={dir}>
           <div className="p-4 border-b border-border flex items-center justify-between bg-primary text-primary-foreground">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-rose-soft" />
-              <h2 className="font-bold text-lg">تحديد موقع التوصيل</h2>
+              <h2 className="font-bold text-lg">{tr("تحديد موقع التوصيل", "Choose delivery location")}</h2>
             </div>
             <Button
               type="button"
@@ -177,7 +180,7 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
               ) : (
                 <Navigation className="w-4 h-4" />
               )}
-              <span className="text-xs">موقعي الحالي</span>
+              <span className="text-xs">{tr("موقعي الحالي", "My current location")}</span>
             </Button>
           </div>
 
@@ -192,11 +195,11 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
               <MapPin className="w-4 h-4 text-rose mt-0.5 shrink-0" />
               {loading ? (
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> جاري تحديد العنوان...
+                  <Loader2 className="w-3 h-3 animate-spin" /> {tr("جاري تحديد العنوان...", "Looking up address...")}
                 </span>
               ) : (
                 <span className="text-sm font-medium leading-relaxed">
-                  {resolvedAddress || "انقر على الخريطة لتحديد موقعك"}
+                  {resolvedAddress || tr("انقر على الخريطة لتحديد موقعك", "Tap the map to pick your location")}
                 </span>
               )}
             </div>
@@ -207,7 +210,7 @@ export function MapPicker({ onAddressSelect }: MapPickerProps) {
               disabled={!resolvedAddress || loading}
               onClick={confirmAddress}
             >
-              تأكيد هذا الموقع
+              {tr("تأكيد هذا الموقع", "Confirm this location")}
             </Button>
           </div>
         </DialogContent>

@@ -3,19 +3,23 @@ import { Link, useParams } from "wouter";
 import { ChevronRight, BadgePercent } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/product-card";
+import { useLanguage } from "@/contexts/language";
 
 type Zone = "healthy" | "regular";
 
 export default function Offers() {
+  const { dir, tr } = useLanguage();
   const params = useParams();
   const zone: Zone = params.zone === "regular" ? "regular" : "healthy";
 
   const { data: products, isLoading } = useListProducts({ foodType: zone, onSale: true });
 
-  const title = zone === "healthy" ? "عروض صحية" : "عروض وتخفيضات";
+  const title = zone === "healthy"
+    ? tr("عروض صحية", "Healthy Offers")
+    : tr("عروض وتخفيضات", "Offers & Discounts");
 
   return (
-    <div className="pb-8">
+    <div className="pb-8" dir={dir}>
       <div className="bg-primary text-primary-foreground pt-12 pb-6 px-4 rounded-b-3xl shadow-sm relative z-10 flex items-center gap-4">
         <Link href="/">
           <div className="bg-primary-foreground/20 p-2 rounded-full cursor-pointer hover:bg-primary-foreground/30 transition">
@@ -41,9 +45,17 @@ export default function Offers() {
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                 <BadgePercent className="w-8 h-8 text-rose" />
               </div>
-              <h3 className="font-bold text-base">لا توجد عروض حالياً</h3>
+              <h3 className="font-bold text-base">{tr("لا توجد عروض حالياً", "No offers right now")}</h3>
               <p className="text-sm text-muted-foreground max-w-[260px]">
-                تابعنا — سنضيف عروضاً وتخفيضات على {zone === "healthy" ? "المنتجات الصحية" : "المنتجات"} قريباً.
+                {zone === "healthy"
+                  ? tr(
+                      "تابعنا — سنضيف عروضاً وتخفيضات على المنتجات الصحية قريباً.",
+                      "Stay tuned — we'll add deals and discounts on healthy products soon."
+                    )
+                  : tr(
+                      "تابعنا — سنضيف عروضاً وتخفيضات على المنتجات قريباً.",
+                      "Stay tuned — we'll add deals and discounts on our products soon."
+                    )}
               </p>
             </div>
           )}

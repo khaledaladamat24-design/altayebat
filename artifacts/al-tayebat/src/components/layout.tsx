@@ -3,10 +3,12 @@ import { Home, Grid, ShoppingCart, ListOrdered, User } from "lucide-react";
 import { useGetCart } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useMemo } from "react";
+import { useLanguage } from "@/contexts/language";
 
 export function BottomNav() {
   const [location] = useLocation();
   const sessionId = useSession();
+  const { tr } = useLanguage();
   // Stable references prevent Orval's useQuery from re-subscribing every render,
   // which on Android WebView could cascade into React error #185.
   const cartParams = useMemo(() => ({ sessionId }), [sessionId]);
@@ -17,11 +19,11 @@ export function BottomNav() {
   const { data: cart } = useGetCart(cartParams, cartOptions);
 
   const navItems = [
-    { name: "الرئيسية", path: "/", icon: Home },
-    { name: "الأقسام", path: "/categories", icon: Grid },
-    { name: "السلة", path: "/cart", icon: ShoppingCart, badge: cart?.itemCount || 0 },
-    { name: "طلباتي", path: "/orders", icon: ListOrdered },
-    { name: "حسابي", path: "/account", icon: User },
+    { name: tr("الرئيسية", "Home"), path: "/", icon: Home },
+    { name: tr("الأقسام", "Categories"), path: "/categories", icon: Grid },
+    { name: tr("السلة", "Cart"), path: "/cart", icon: ShoppingCart, badge: cart?.itemCount || 0 },
+    { name: tr("طلباتي", "My Orders"), path: "/orders", icon: ListOrdered },
+    { name: tr("حسابي", "Account"), path: "/account", icon: User },
   ];
 
   return (

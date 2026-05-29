@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Upload, Loader2, X, ImageIcon, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
+import { useLanguage } from "@/contexts/language";
 
 interface Props {
   value: string;
@@ -33,12 +34,14 @@ export function ImageUpload({
   value,
   onChange,
   folder = "altayebat_menu_images",
-  label = "صورة المنتج",
+  label,
   transform = "f_auto,q_auto,w_800",
 }: Props) {
+  const { tr } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const resolvedLabel = label ?? tr("صورة المنتج", "Product image");
 
   const optimize = (secureUrl: string): string => {
     // Cloudinary URLs look like: https://res.cloudinary.com/<cloud>/image/upload/v123/folder/file.jpg
@@ -49,11 +52,11 @@ export function ImageUpload({
 
   const upload = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("الرجاء اختيار ملف صورة");
+      toast.error(tr("الرجاء اختيار ملف صورة", "Please select an image file"));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("الحد الأقصى للصورة 10 ميغابايت");
+      toast.error(tr("الحد الأقصى للصورة 10 ميغابايت", "Maximum image size is 10 MB"));
       return;
     }
     setUploading(true);
@@ -97,9 +100,9 @@ export function ImageUpload({
       });
 
       onChange(optimize(secureUrl));
-      toast.success("تم رفع الصورة");
+      toast.success(tr("تم رفع الصورة", "Image uploaded"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "فشل رفع الصورة");
+      toast.error(err instanceof Error ? err.message : tr("فشل رفع الصورة", "Image upload failed"));
     } finally {
       setUploading(false);
       setProgress(0);
@@ -109,7 +112,7 @@ export function ImageUpload({
 
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label className="text-xs font-medium text-muted-foreground">{resolvedLabel}</label>
       <input
         ref={inputRef}
         type="file"
@@ -123,25 +126,25 @@ export function ImageUpload({
 
       {value && !uploading ? (
         <div className="relative group rounded-xl overflow-hidden border-2 border-border bg-muted">
-          <img src={value} alt="معاينة" className="w-full h-44 object-cover" />
+          <img src={value} alt={tr("معاينة", "Preview")} className="w-full h-44 object-cover" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
               className="bg-white text-foreground text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-lg"
             >
-              <Upload className="w-3.5 h-3.5" /> استبدال
+              <Upload className="w-3.5 h-3.5" /> {tr("استبدال", "Replace")}
             </button>
             <button
               type="button"
               onClick={() => onChange("")}
               className="bg-destructive text-destructive-foreground text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-lg"
             >
-              <X className="w-3.5 h-3.5" /> إزالة
+              <X className="w-3.5 h-3.5" /> {tr("إزالة", "Remove")}
             </button>
           </div>
           <div className="absolute top-2 right-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
-            <CheckCircle2 className="w-3 h-3" /> تم الرفع
+            <CheckCircle2 className="w-3 h-3" /> {tr("تم الرفع", "Uploaded")}
           </div>
         </div>
       ) : (
@@ -159,7 +162,7 @@ export function ImageUpload({
             {uploading ? (
               <>
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-sm font-bold text-primary">جاري رفع الصورة...</p>
+                <p className="text-sm font-bold text-primary">{tr("جاري رفع الصورة...", "Uploading image...")}</p>
                 <p className="text-xs text-muted-foreground">{progress}%</p>
               </>
             ) : (
@@ -167,8 +170,8 @@ export function ImageUpload({
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm font-bold">📸 رفع صورة الطعام</p>
-                <p className="text-[11px] text-muted-foreground">PNG · JPG · WEBP — حتى 10MB</p>
+                <p className="text-sm font-bold">📸 {tr("رفع صورة الطعام", "Upload food photo")}</p>
+                <p className="text-[11px] text-muted-foreground">{tr("PNG · JPG · WEBP — حتى 10MB", "PNG · JPG · WEBP — up to 10MB")}</p>
               </>
             )}
           </div>

@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
-  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin, Loader2, Navigation, Headphones,
+  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin, Loader2, Navigation, Headphones, Languages,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { openSupport, SUPPORT_PHONE } from "@/lib/support";
+import { useLanguage } from "@/contexts/language";
 
 const SIGNED_IN_KEYS = [
   "al_tayebat_firebase_uid", "al_tayebat_user_id", "al_tayebat_vendor_id",
@@ -24,6 +25,7 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const { signOut, openUserProfile } = useClerk();
   const { user } = useUser();
+  const { lang, setLang, tr } = useLanguage();
 
   const signedIn = isLoggedIn();
   const hasClerkPassword = !!user;
@@ -40,19 +42,19 @@ export default function Settings() {
   const [city, setCity] = useState(() => localStorage.getItem("al_tayebat_city") || "");
   const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem("al_tayebat_address") || "");
   const [locating, setLocating] = useState(false);
-  const savedAddrLabel = [city, neighborhood].filter(Boolean).join("، ") || "لم يُحدَّد";
+  const savedAddrLabel = [city, neighborhood].filter(Boolean).join("، ") || tr("لم يُحدَّد", "Not set");
 
   const handleSaveAddress = () => {
-    if (!city.trim()) { toast.error("اختر المدينة"); return; }
+    if (!city.trim()) { toast.error(tr("اختر المدينة", "Select a city")); return; }
     localStorage.setItem("al_tayebat_city", city.trim());
     localStorage.setItem("al_tayebat_address", neighborhood.trim());
-    toast.success("تم حفظ العنوان");
+    toast.success(tr("تم حفظ العنوان", "Address saved"));
     setShowAddrModal(false);
   };
 
   const handleUseMyLocation = async () => {
     if (!("geolocation" in navigator)) {
-      toast.error("جهازك لا يدعم تحديد الموقع");
+      toast.error(tr("جهازك لا يدعم تحديد الموقع", "Your device doesn't support location"));
       return;
     }
     setLocating(true);
@@ -65,10 +67,10 @@ export default function Settings() {
       const { latitude, longitude } = pos.coords;
       // Reverse geocode via OpenStreetMap Nominatim (free, no key needed)
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=ar`,
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=${lang}`,
         { headers: { "User-Agent": "AlTayebat/1.0" } }
       );
-      if (!res.ok) throw new Error("فشل الاتصال بخدمة الخرائط");
+      if (!res.ok) throw new Error(tr("فشل الاتصال بخدمة الخرائط", "Failed to connect to the maps service"));
       const data = await res.json();
       const addr = data.address || {};
       const detectedCity =
@@ -80,17 +82,17 @@ export default function Settings() {
       if (detectedNeighborhood) setNeighborhood(detectedNeighborhood);
 
       if (!detectedCity && !detectedNeighborhood) {
-        toast("لم نتمكن من تحديد العنوان من الخريطة — أدخله يدوياً");
+        toast(tr("لم نتمكن من تحديد العنوان من الخريطة — أدخله يدوياً", "Couldn't detect the address from the map — enter it manually"));
       } else {
-        toast.success("تم تحديد موقعك ✅ — اضغط حفظ");
+        toast.success(tr("تم تحديد موقعك ✅ — اضغط حفظ", "Location detected ✅ — tap Save"));
       }
     } catch (err: unknown) {
       const e = err as GeolocationPositionError & { message?: string };
       const code = (e as GeolocationPositionError).code;
-      if (code === 1) toast.error("لم تسمح بالوصول للموقع. فعّل الإذن من إعدادات التطبيق.");
-      else if (code === 2) toast.error("تعذّر تحديد الموقع — تأكد من تفعيل GPS");
-      else if (code === 3) toast.error("انتهت مهلة تحديد الموقع — حاول مرة أخرى");
-      else toast.error(e?.message || "فشل تحديد الموقع");
+      if (code === 1) toast.error(tr("لم تسمح بالوصول للموقع. فعّل الإذن من إعدادات التطبيق.", "Location access denied. Enable the permission in app settings."));
+      else if (code === 2) toast.error(tr("تعذّر تحديد الموقع — تأكد من تفعيل GPS", "Couldn't determine location — make sure GPS is on"));
+      else if (code === 3) toast.error(tr("انتهت مهلة تحديد الموقع — حاول مرة أخرى", "Location request timed out — try again"));
+      else toast.error(e?.message || tr("فشل تحديد الموقع", "Failed to determine location"));
     }
     setLocating(false);
   };
@@ -98,7 +100,7 @@ export default function Settings() {
   const handleClearCache = () => {
     const keys = Object.keys(localStorage).filter(k => k.startsWith("al_tayebat_") && k !== "al_tayebat_session");
     keys.forEach(k => localStorage.removeItem(k));
-    toast.success("تم مسح ذاكرة التخزين المؤقتة");
+    toast.success(tr("تم مسح ذاكرة التخزين المؤقتة", "Cache cleared"));
   };
 
   const handleSignOut = async () => {
@@ -109,20 +111,20 @@ export default function Settings() {
 
   const handleChangePassword = async () => {
     if (!user) {
-      toast.error("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني");
+      toast.error(tr("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني", "Changing the password is only available for email accounts"));
       return;
     }
     if (!newPw || newPw.length < 8) {
-      toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return;
+      toast.error(tr("كلمة المرور يجب أن تكون 8 أحرف على الأقل", "Password must be at least 8 characters")); return;
     }
     setPwSaving(true);
     try {
       await user.updatePassword({ newPassword: newPw, currentPassword: oldPw || undefined } as any);
-      toast.success("تم تغيير كلمة المرور");
+      toast.success(tr("تم تغيير كلمة المرور", "Password changed"));
       setShowPwModal(false);
       setOldPw(""); setNewPw("");
     } catch (err: any) {
-      toast.error(err?.errors?.[0]?.longMessage || err?.message || "فشل تغيير كلمة المرور");
+      toast.error(err?.errors?.[0]?.longMessage || err?.message || tr("فشل تغيير كلمة المرور", "Failed to change password"));
     }
     setPwSaving(false);
   };
@@ -137,17 +139,17 @@ export default function Settings() {
       }
       if (userId) {
         const r = await fetch(`/api/users/${userId}`, { method: "DELETE" });
-        if (!r.ok) throw new Error("فشل حذف الحساب من الخادم");
+        if (!r.ok) throw new Error(tr("فشل حذف الحساب من الخادم", "Failed to delete the account from the server"));
       }
       if (user) {
         try { await user.delete(); } catch {}
       }
       SIGNED_IN_KEYS.forEach(k => localStorage.removeItem(k));
       try { await signOut(); } catch {}
-      toast.success("تم حذف حسابك نهائياً");
+      toast.success(tr("تم حذف حسابك نهائياً", "Your account has been permanently deleted"));
       setLocation("/auth");
     } catch (err: any) {
-      toast.error(err?.message || "فشل حذف الحساب");
+      toast.error(err?.message || tr("فشل حذف الحساب", "Failed to delete account"));
       setDeleting(false);
     }
   };
@@ -155,7 +157,7 @@ export default function Settings() {
   const rows = [
     {
       icon: MapPin,
-      label: "عنوان التوصيل",
+      label: tr("عنوان التوصيل", "Delivery address"),
       iconColor: "text-rose-500",
       iconBg: "bg-rose-50",
       suffix: savedAddrLabel,
@@ -163,20 +165,20 @@ export default function Settings() {
     },
     ...(signedIn ? [{
       icon: KeyRound,
-      label: "تغيير كلمة المرور",
+      label: tr("تغيير كلمة المرور", "Change password"),
       iconColor: "text-blue-500",
       iconBg: "bg-blue-50",
-      onPress: () => hasClerkPassword ? setShowPwModal(true) : toast("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني — حسابات الهاتف تستخدم رمز OTP"),
+      onPress: () => hasClerkPassword ? setShowPwModal(true) : toast(tr("تغيير كلمة المرور متاح فقط لحسابات البريد الإلكتروني — حسابات الهاتف تستخدم رمز OTP", "Changing the password is only available for email accounts — phone accounts use an OTP code")),
     }, {
       icon: FileText,
-      label: "إعدادات حساب Clerk",
+      label: tr("إعدادات حساب Clerk", "Clerk account settings"),
       iconColor: "text-indigo-500",
       iconBg: "bg-indigo-50",
-      onPress: () => hasClerkPassword ? openUserProfile() : toast("هذه الإعدادات تخص حسابات البريد الإلكتروني فقط"),
+      onPress: () => hasClerkPassword ? openUserProfile() : toast(tr("هذه الإعدادات تخص حسابات البريد الإلكتروني فقط", "These settings are for email accounts only")),
     }] : []),
     {
       icon: Headphones,
-      label: "تواصل معنا للمساعدة",
+      label: tr("تواصل معنا للمساعدة", "Contact us for help"),
       iconColor: "text-emerald-600",
       iconBg: "bg-emerald-50",
       suffix: SUPPORT_PHONE,
@@ -184,40 +186,78 @@ export default function Settings() {
     },
     {
       icon: ShieldCheck,
-      label: "سياسة الخصوصية",
+      label: tr("سياسة الخصوصية", "Privacy policy"),
       iconColor: "text-emerald-500",
       iconBg: "bg-emerald-50",
       onPress: () => setLocation("/privacy-policy"),
     },
     {
       icon: Trash2,
-      label: "مسح ذاكرة التخزين المؤقتة",
+      label: tr("مسح ذاكرة التخزين المؤقتة", "Clear cache"),
       iconColor: "text-amber-500",
       iconBg: "bg-amber-50",
-      suffix: "محلي",
+      suffix: tr("محلي", "Local"),
       onPress: handleClearCache,
     },
     {
       icon: Info,
-      label: "عن الطيبات",
+      label: tr("عن الطيبات", "About Al-Tayebat"),
       iconColor: "text-primary",
       iconBg: "bg-primary/10",
       suffix: "1.1.0",
-      onPress: () => toast("الطيبات — تطبيق توصيل الغذاء الصحي في الأردن 🇯🇴"),
+      onPress: () => toast(tr("الطيبات — تطبيق توصيل الغذاء الصحي في الأردن 🇯🇴", "Al-Tayebat — healthy food delivery app in Jordan 🇯🇴")),
     },
   ];
 
+  const dir = lang === "ar" ? "rtl" : "ltr";
+
   return (
-    <div className="min-h-screen bg-muted/30" dir="rtl">
+    <div className="min-h-screen bg-muted/30" dir={dir}>
       <div className="max-w-md mx-auto bg-background min-h-screen shadow-sm border-x border-border/50">
       <div className="bg-background border-b border-border sticky top-0 z-20 px-4 pt-12 pb-4 flex items-center gap-3">
         <button onClick={() => setLocation("/account")} className="p-1 -mr-1">
-          <ChevronRight className="w-6 h-6 text-foreground" />
+          {lang === "ar" ? <ChevronRight className="w-6 h-6 text-foreground" /> : <ChevronLeft className="w-6 h-6 text-foreground" />}
         </button>
-        <h1 className="text-xl font-black flex-1 text-center pr-4">الإعدادات</h1>
+        <h1 className="text-xl font-black flex-1 text-center pr-4">{tr("الإعدادات", "Settings")}</h1>
       </div>
 
       <div className="px-4 py-4 space-y-3">
+        {/* Language toggle */}
+        <div className="bg-background rounded-2xl border border-border overflow-hidden shadow-sm p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+              <Languages className="w-5 h-5 text-violet-500" />
+            </div>
+            <span className="flex-1 font-bold text-sm">{tr("اللغة", "Language")}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setLang("ar")}
+              aria-pressed={lang === "ar"}
+              className={`h-11 rounded-xl text-sm font-bold transition-colors ${
+                lang === "ar"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              }`}
+            >
+              العربية
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              aria-pressed={lang === "en"}
+              className={`h-11 rounded-xl text-sm font-bold transition-colors ${
+                lang === "en"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+              }`}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         <div className="bg-background rounded-2xl border border-border overflow-hidden shadow-sm">
           {rows.map((row, i) => (
             <button
@@ -245,7 +285,7 @@ export default function Settings() {
             <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
               <Trash2 className="w-5 h-5 text-destructive" />
             </div>
-            <span className="font-bold text-destructive text-sm flex-1 text-right">حذف الحساب نهائياً</span>
+            <span className="font-bold text-destructive text-sm flex-1 text-right">{tr("حذف الحساب نهائياً", "Delete account permanently")}</span>
             <ChevronLeft className="w-4 h-4 text-destructive/60" />
           </button>
         )}
@@ -258,12 +298,12 @@ export default function Settings() {
             <LogOut className="w-5 h-5 text-destructive" />
           </div>
           <span className="font-bold text-destructive text-sm flex-1 text-right">
-            {signedIn ? "تسجيل الخروج" : "العودة لتسجيل الدخول"}
+            {signedIn ? tr("تسجيل الخروج", "Sign out") : tr("العودة لتسجيل الدخول", "Back to sign in")}
           </span>
         </button>
 
         <p className="text-center text-xs text-muted-foreground pt-4">
-          الطيبات — صنع بكل حب في الأردن 🇯🇴
+          {tr("الطيبات — صنع بكل حب في الأردن 🇯🇴", "Al-Tayebat — made with love in Jordan 🇯🇴")}
         </p>
       </div>
       </div>
@@ -271,22 +311,22 @@ export default function Settings() {
       {/* Change password modal */}
       {showPwModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowPwModal(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir={dir} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-black text-lg">تغيير كلمة المرور</h2>
+              <h2 className="font-black text-lg">{tr("تغيير كلمة المرور", "Change password")}</h2>
               <button onClick={() => setShowPwModal(false)} className="p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">كلمة المرور الحالية</label>
+                <label className="text-xs font-medium text-muted-foreground">{tr("كلمة المرور الحالية", "Current password")}</label>
                 <Input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)} className="h-11 bg-muted border-none" dir="ltr" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">كلمة المرور الجديدة (8+ أحرف)</label>
+                <label className="text-xs font-medium text-muted-foreground">{tr("كلمة المرور الجديدة (8+ أحرف)", "New password (8+ characters)")}</label>
                 <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className="h-11 bg-muted border-none" dir="ltr" />
               </div>
               <Button onClick={handleChangePassword} disabled={pwSaving} className="w-full h-12 rounded-xl mt-2">
-                {pwSaving ? "جاري الحفظ..." : "حفظ كلمة المرور الجديدة"}
+                {pwSaving ? tr("جاري الحفظ...", "Saving...") : tr("حفظ كلمة المرور الجديدة", "Save new password")}
               </Button>
             </div>
           </div>
@@ -296,9 +336,9 @@ export default function Settings() {
       {/* Address modal */}
       {showAddrModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowAddrModal(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir={dir} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-black text-lg">عنوان التوصيل</h2>
+              <h2 className="font-black text-lg">{tr("عنوان التوصيل", "Delivery address")}</h2>
               <button onClick={() => setShowAddrModal(false)} className="p-1 text-muted-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
@@ -310,24 +350,24 @@ export default function Settings() {
                 className="w-full h-12 rounded-xl border-primary/40 text-primary hover:bg-primary/5 flex items-center justify-center gap-2"
               >
                 {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
-                {locating ? "جاري تحديد موقعك..." : "استخدم موقعي الحالي 📍"}
+                {locating ? tr("جاري تحديد موقعك...", "Detecting your location...") : tr("استخدم موقعي الحالي 📍", "Use my current location 📍")}
               </Button>
 
               <div className="flex items-center gap-2 my-1">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">أو أدخله يدوياً</span>
+                <span className="text-xs text-muted-foreground">{tr("أو أدخله يدوياً", "Or enter manually")}</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">المدينة</label>
+                <label className="text-xs font-medium text-muted-foreground">{tr("المدينة", "City")}</label>
                 <Input
                   value={city}
                   onChange={e => setCity(e.target.value)}
                   list="city-list"
-                  placeholder="ابحث أو اختر المدينة..."
+                  placeholder={tr("ابحث أو اختر المدينة...", "Search or pick a city...")}
                   className="h-11 bg-muted border-none"
-                  dir="rtl"
+                  dir={dir}
                 />
                 <datalist id="city-list">
                   {["عمان","الزرقاء","إربد","العقبة","المفرق","الكرك","مادبا","السلط","جرش","عجلون","الطفيلة","معان"].map(c => (
@@ -336,10 +376,10 @@ export default function Settings() {
                 </datalist>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">الحي / المنطقة (اختياري)</label>
-                <Input value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder="مثال: دابوق، الشميساني..." className="h-11 bg-muted border-none" dir="rtl" />
+                <label className="text-xs font-medium text-muted-foreground">{tr("الحي / المنطقة (اختياري)", "Neighborhood / area (optional)")}</label>
+                <Input value={neighborhood} onChange={e => setNeighborhood(e.target.value)} placeholder={tr("مثال: دابوق، الشميساني...", "e.g. Dabouq, Shmeisani...")} className="h-11 bg-muted border-none" dir={dir} />
               </div>
-              <Button onClick={handleSaveAddress} className="w-full h-12 rounded-xl mt-2">حفظ العنوان</Button>
+              <Button onClick={handleSaveAddress} className="w-full h-12 rounded-xl mt-2">{tr("حفظ العنوان", "Save address")}</Button>
             </div>
           </div>
         </div>
@@ -348,18 +388,18 @@ export default function Settings() {
       {/* Delete account modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4" onClick={() => !deleting && setShowDeleteModal(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir="rtl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm p-5 shadow-xl" dir={dir} onClick={e => e.stopPropagation()}>
             <div className="w-12 h-12 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6 text-destructive" />
             </div>
-            <h2 className="font-black text-lg text-center mb-2">حذف الحساب نهائياً</h2>
+            <h2 className="font-black text-lg text-center mb-2">{tr("حذف الحساب نهائياً", "Delete account permanently")}</h2>
             <p className="text-sm text-muted-foreground text-center mb-5">
-              سيتم حذف جميع بياناتك (الملف الشخصي والمتجر إن وجد) ولا يمكن استرجاعها.
+              {tr("سيتم حذف جميع بياناتك (الملف الشخصي والمتجر إن وجد) ولا يمكن استرجاعها.", "All your data (profile and store if any) will be deleted and cannot be recovered.")}
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting} className="flex-1 h-12 rounded-xl">إلغاء</Button>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting} className="flex-1 h-12 rounded-xl">{tr("إلغاء", "Cancel")}</Button>
               <Button onClick={handleDeleteAccount} disabled={deleting} className="flex-1 h-12 rounded-xl bg-destructive hover:bg-destructive/90">
-                {deleting ? "جاري الحذف..." : "تأكيد الحذف"}
+                {deleting ? tr("جاري الحذف...", "Deleting...") : tr("تأكيد الحذف", "Confirm delete")}
               </Button>
             </div>
           </div>

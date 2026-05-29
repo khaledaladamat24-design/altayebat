@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider } from "@clerk/react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LanguageProvider, useLanguage } from "@/contexts/language";
 import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { setBaseUrl } from "@workspace/api-client-react";
 
@@ -174,6 +175,7 @@ function App() {
   }
   return (
     <ErrorBoundary>
+      <LanguageProvider>
       <ClerkProvider
         publishableKey={clerkPubKey}
         {...(import.meta.env.PROD && !isNative ? { proxyUrl: "/api/__clerk" } : {})}
@@ -191,12 +193,18 @@ function App() {
             <WouterRouter base={isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>
-            <Toaster position="top-center" rtl={true} />
+            <AppToaster />
           </TooltipProvider>
         </QueryClientProvider>
       </ClerkProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
+}
+
+function AppToaster() {
+  const { dir } = useLanguage();
+  return <Toaster position="top-center" dir={dir} />;
 }
 
 export default App;

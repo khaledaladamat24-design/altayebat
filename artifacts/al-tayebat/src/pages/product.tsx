@@ -9,8 +9,10 @@ import { useSession } from "@/hooks/use-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ProductCard } from "@/components/product-card";
+import { useLanguage } from "@/contexts/language";
 
 export default function Product() {
+  const { lang, dir, tr } = useLanguage();
   const params = useParams();
   const productId = params.id ? parseInt(params.id, 10) : undefined;
   
@@ -28,6 +30,20 @@ export default function Product() {
   const addToCart = useAddToCart();
   const [quantity, setQuantity] = useState(1);
 
+  const productName = product
+    ? (lang === "en" ? (product.name || product.nameAr) : product.nameAr)
+    : "";
+  const productDescription = product
+    ? (lang === "en"
+        ? (product.description || product.descriptionAr || "")
+        : (product.descriptionAr || ""))
+    : "";
+  const vendorDisplay = product
+    ? (lang === "en"
+        ? (product.vendorName || product.vendorNameAr || "")
+        : (product.vendorNameAr || product.vendorName || ""))
+    : "";
+
   const handleAddToCart = () => {
     if (!sessionId || !product) return;
     
@@ -36,7 +52,9 @@ export default function Product() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-          toast.success(`تمت إضافة ${product.nameAr} إلى السلة`);
+          toast.success(
+            tr(`تمت إضافة ${productName} إلى السلة`, `${productName} added to cart`)
+          );
         },
       }
     );
@@ -44,7 +62,7 @@ export default function Product() {
 
   if (isLoading) {
     return (
-      <div className="pb-24">
+      <div className="pb-24" dir={dir}>
         <Skeleton className="w-full aspect-square" />
         <div className="p-4 space-y-4">
           <Skeleton className="h-8 w-2/3" />
@@ -57,15 +75,15 @@ export default function Product() {
 
   if (!product) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
-        <h2 className="text-xl font-bold mb-2">المنتج غير موجود</h2>
-        <Link href="/"><Button>العودة للرئيسية</Button></Link>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4" dir={dir}>
+        <h2 className="text-xl font-bold mb-2">{tr("المنتج غير موجود", "Product not found")}</h2>
+        <Link href="/"><Button>{tr("العودة للرئيسية", "Back to home")}</Button></Link>
       </div>
     );
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-24" dir={dir}>
       <div className="relative">
         <Link href="~" onClick={(e) => { e.preventDefault(); window.history.back(); }}>
           <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur p-2 rounded-full cursor-pointer shadow-sm">
@@ -75,10 +93,10 @@ export default function Product() {
         
         <div className="aspect-square bg-white relative">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.nameAr} className="w-full h-full object-cover" />
+            <img src={product.imageUrl} alt={productName} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted">
-              صورة المنتج
+              {tr("صورة المنتج", "Product image")}
             </div>
           )}
         </div>
@@ -87,25 +105,31 @@ export default function Product() {
       <div className="p-4 bg-background rounded-t-3xl -mt-6 relative z-10">
         <div className="flex gap-2 mb-3">
           {product.isKeto && (
-            <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md">كيتو 🥑</span>
+            <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md">
+              {tr("كيتو 🥑", "Keto 🥑")}
+            </span>
           )}
           {product.isOrganic && (
-            <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-1 rounded-md">عضوي 🌿</span>
+            <span className="bg-accent/10 text-accent text-xs font-bold px-2 py-1 rounded-md">
+              {tr("عضوي 🌿", "Organic 🌿")}
+            </span>
           )}
           {product.isBestseller && (
-            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-md">الأكثر مبيعاً</span>
+            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-md">
+              {tr("الأكثر مبيعاً", "Bestseller")}
+            </span>
           )}
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">{product.nameAr}</h1>
+        <h1 className="text-2xl font-bold mb-1">{productName}</h1>
         {product.weightOrVolume && (
           <p className="text-sm text-muted-foreground mb-2">{product.weightOrVolume}</p>
         )}
-        {product.vendorNameAr || product.vendorName ? (
-          <Link href={`/search?q=${encodeURIComponent(product.vendorNameAr || product.vendorName || "")}`}>
+        {vendorDisplay ? (
+          <Link href={`/search?q=${encodeURIComponent(vendorDisplay)}`}>
             <div className="inline-flex items-center gap-1.5 bg-primary/5 text-primary text-sm font-bold px-3 py-1.5 rounded-full mb-4 cursor-pointer hover:bg-primary/10 transition-colors">
               <Store className="w-4 h-4" />
-              <span>{product.vendorNameAr || product.vendorName}</span>
+              <span>{vendorDisplay}</span>
             </div>
           </Link>
         ) : null}
@@ -141,15 +165,15 @@ export default function Product() {
         </div>
 
         <div className="mb-8">
-          <h3 className="font-bold text-lg mb-2">الوصف</h3>
+          <h3 className="font-bold text-lg mb-2">{tr("الوصف", "Description")}</h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {product.descriptionAr || 'لا يوجد وصف متاح لهذا المنتج.'}
+            {productDescription || tr("لا يوجد وصف متاح لهذا المنتج.", "No description available for this product.")}
           </p>
         </div>
 
         {relatedProducts && relatedProducts.length > 1 && (
           <div className="mb-8">
-            <h3 className="font-bold text-lg mb-4">منتجات مشابهة</h3>
+            <h3 className="font-bold text-lg mb-4">{tr("منتجات مشابهة", "Similar products")}</h3>
             <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-4 px-4">
               {relatedProducts
                 .filter(p => p.id !== product.id)
@@ -171,7 +195,7 @@ export default function Product() {
           disabled={!product.inStock || addToCart.isPending}
         >
           <ShoppingBag className="w-5 h-5" />
-          {product.inStock ? 'أضف للسلة' : 'غير متوفر'}
+          {product.inStock ? tr("أضف للسلة", "Add to cart") : tr("غير متوفر", "Out of stock")}
           {product.inStock && (
             <span className="bg-primary-foreground/20 px-2 py-0.5 rounded text-sm mr-2">
               {formatPrice(product.price * quantity)}

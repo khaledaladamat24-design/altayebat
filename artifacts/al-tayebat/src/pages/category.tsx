@@ -1,12 +1,14 @@
 import { useGetCategory, useListProducts } from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
-import { ChevronRight, SlidersHorizontal } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/product-card";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/language";
 
 export default function Category() {
+  const { lang, dir, tr } = useLanguage();
   const params = useParams();
   const categoryId = params.id ? parseInt(params.id, 10) : undefined;
   
@@ -29,7 +31,7 @@ export default function Category() {
   });
 
   return (
-    <div className="pb-8">
+    <div className="pb-8" dir={dir}>
       <div className="bg-primary text-primary-foreground pt-12 pb-6 px-4 rounded-b-3xl shadow-sm relative z-10 flex items-center gap-4">
         <Link href="/categories">
           <div className="bg-primary-foreground/20 p-2 rounded-full cursor-pointer hover:bg-primary-foreground/30 transition">
@@ -40,7 +42,9 @@ export default function Category() {
           {loadingCat ? (
             <Skeleton className="h-7 w-32 bg-primary-foreground/20" />
           ) : (
-            <h1 className="text-xl font-bold">{category?.nameAr}</h1>
+            <h1 className="text-xl font-bold">
+              {category ? (lang === "en" ? (category.name || category.nameAr) : category.nameAr) : ""}
+            </h1>
           )}
         </div>
       </div>
@@ -52,28 +56,28 @@ export default function Category() {
             className="rounded-full snap-start whitespace-nowrap"
             onClick={() => setFilter("all")}
           >
-            الكل
+            {tr("الكل", "All")}
           </Button>
           <Button 
             variant={filter === "keto" ? "default" : "outline"} 
             className="rounded-full snap-start whitespace-nowrap"
             onClick={() => setFilter("keto")}
           >
-            كيتو
+            {tr("كيتو", "Keto")}
           </Button>
           <Button 
             variant={filter === "organic" ? "default" : "outline"} 
             className="rounded-full snap-start whitespace-nowrap"
             onClick={() => setFilter("organic")}
           >
-            عضوي
+            {tr("عضوي", "Organic")}
           </Button>
           <Button 
             variant={filter === "instock" ? "default" : "outline"} 
             className="rounded-full snap-start whitespace-nowrap"
             onClick={() => setFilter("instock")}
           >
-            متوفر فقط
+            {tr("متوفر فقط", "In stock only")}
           </Button>
         </div>
 
@@ -88,7 +92,7 @@ export default function Category() {
             ))
           ) : (
             <div className="col-span-2 py-12 text-center text-muted-foreground">
-              <p>لا توجد منتجات تطابق الفلتر المحدد</p>
+              <p>{tr("لا توجد منتجات تطابق الفلتر المحدد", "No products match the selected filter")}</p>
             </div>
           )}
         </div>

@@ -4,26 +4,39 @@ import { useAuth, useUser } from "@clerk/react";
 import { Store, ShoppingBag, ChevronLeft, Loader2, CheckCircle2, Building2, Phone, MapPin, CreditCard, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
+import { useLanguage } from "@/contexts/language";
 
 type Step = "role" | "vendor-details" | "vendor-payout" | "done";
-
-const CATEGORIES = [
-  { value: "keto", label: "منتجات كيتو" },
-  { value: "organic", label: "خضروات عضوية" },
-  { value: "pantry", label: "مؤونة صحية" },
-  { value: "dairy", label: "ألبان ومشتقات" },
-  { value: "nuts", label: "مكسرات وبذور" },
-  { value: "sweets", label: "حلويات طبيعية" },
-  { value: "meat", label: "لحوم ودواجن" },
-  { value: "beverages", label: "مشروبات صحية" },
-];
-
-const CITIES = ["عمان", "الزرقاء", "إربد", "العقبة", "المفرق", "الكرك", "مادبا", "السلط", "جرش", "عجلون"];
 
 export default function Register() {
   const [, setLocation] = useLocation();
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const { dir, tr } = useLanguage();
+
+  const CATEGORIES = [
+    { value: "keto", label: tr("منتجات كيتو", "Keto products") },
+    { value: "organic", label: tr("خضروات عضوية", "Organic vegetables") },
+    { value: "pantry", label: tr("مؤونة صحية", "Healthy pantry") },
+    { value: "dairy", label: tr("ألبان ومشتقات", "Dairy & derivatives") },
+    { value: "nuts", label: tr("مكسرات وبذور", "Nuts & seeds") },
+    { value: "sweets", label: tr("حلويات طبيعية", "Natural sweets") },
+    { value: "meat", label: tr("لحوم ودواجن", "Meat & poultry") },
+    { value: "beverages", label: tr("مشروبات صحية", "Healthy beverages") },
+  ];
+
+  const CITIES: { value: string; label: string }[] = [
+    { value: "عمان", label: tr("عمان", "Amman") },
+    { value: "الزرقاء", label: tr("الزرقاء", "Zarqa") },
+    { value: "إربد", label: tr("إربد", "Irbid") },
+    { value: "العقبة", label: tr("العقبة", "Aqaba") },
+    { value: "المفرق", label: tr("المفرق", "Mafraq") },
+    { value: "الكرك", label: tr("الكرك", "Karak") },
+    { value: "مادبا", label: tr("مادبا", "Madaba") },
+    { value: "السلط", label: tr("السلط", "Salt") },
+    { value: "جرش", label: tr("جرش", "Jerash") },
+    { value: "عجلون", label: tr("عجلون", "Ajloun") },
+  ];
 
   const [step, setStep] = useState<Step>("role");
   const [role, setRole] = useState<"consumer" | "vendor">("consumer");
@@ -57,7 +70,7 @@ export default function Register() {
   const saveUserProfile = async (r: "consumer" | "vendor") => {
     const id = collectIdentity();
     if (!id.email && !id.phone) {
-      throw new Error("لم نجد بريد إلكتروني أو رقم هاتف — يرجى تسجيل الدخول أولاً");
+      throw new Error(tr("لم نجد بريد إلكتروني أو رقم هاتف — يرجى تسجيل الدخول أولاً", "No email or phone found — please sign in first"));
     }
     const res = await fetch(apiUrl("/api/users/profile"), {
       method: "POST",
@@ -66,7 +79,7 @@ export default function Register() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `فشل حفظ الملف الشخصي (HTTP ${res.status})`);
+      throw new Error(body.error || tr(`فشل حفظ الملف الشخصي (HTTP ${res.status})`, `Failed to save profile (HTTP ${res.status})`));
     }
     return res.json();
   };
@@ -77,26 +90,26 @@ export default function Register() {
       const profile = await saveUserProfile("consumer");
       localStorage.setItem("al_tayebat_role", "consumer");
       localStorage.setItem("al_tayebat_user_id", String(profile.id));
-      toast.success("أهلاً بك في الطيبات!");
+      toast.success(tr("أهلاً بك في الطيبات!", "Welcome to Al-Tayebat!"));
       setLocation("/");
     } catch (err) {
-      toast.error((err as Error).message || "حدث خطأ، حاول مجدداً");
+      toast.error((err as Error).message || tr("حدث خطأ، حاول مجدداً", "Something went wrong, please try again"));
     }
     setLoading(false);
   };
 
   const handleVendorDetails = () => {
     if (!vendorDetails.storeName || !vendorDetails.category) {
-      toast.error("يرجى تعبئة اسم المتجر والتخصص");
+      toast.error(tr("يرجى تعبئة اسم المتجر والتخصص", "Please enter store name and specialty"));
       return;
     }
     const phone = vendorDetails.phone.trim();
     if (!phone) {
-      toast.error("رقم الهاتف للتواصل مطلوب");
+      toast.error(tr("رقم الهاتف للتواصل مطلوب", "Contact phone number is required"));
       return;
     }
     if (!/^07\d{8}$/.test(phone)) {
-      toast.error("أدخل رقم هاتف أردني صحيح (07XXXXXXXX)");
+      toast.error(tr("أدخل رقم هاتف أردني صحيح (07XXXXXXXX)", "Enter a valid Jordanian phone number (07XXXXXXXX)"));
       return;
     }
     setStep("vendor-payout");
@@ -106,7 +119,7 @@ export default function Register() {
     setLoading(true);
     try {
       const userProfile = await saveUserProfile("vendor");
-      if (!userProfile?.id) throw new Error("لم نتمكن من إنشاء حساب المورد");
+      if (!userProfile?.id) throw new Error(tr("لم نتمكن من إنشاء حساب المورد", "We couldn't create the vendor account"));
 
       const vRes = await fetch(apiUrl("/api/vendors"), {
         method: "POST",
@@ -119,17 +132,17 @@ export default function Register() {
       });
       if (!vRes.ok) {
         const body = await vRes.json().catch(() => ({}));
-        throw new Error(body.error || `فشل تسجيل المتجر (HTTP ${vRes.status})`);
+        throw new Error(body.error || tr(`فشل تسجيل المتجر (HTTP ${vRes.status})`, `Failed to register the store (HTTP ${vRes.status})`));
       }
       const vendor = await vRes.json();
       localStorage.setItem("al_tayebat_role", "vendor");
       localStorage.setItem("al_tayebat_user_id", String(userProfile.id));
       localStorage.setItem("al_tayebat_vendor_id", String(vendor.id));
-      toast.success("تم تسجيل متجرك بنجاح! 🎉");
+      toast.success(tr("تم تسجيل متجرك بنجاح! 🎉", "Your store has been registered! 🎉"));
       // No more "waiting for approval" — vendors get instant access to their dashboard
       setLocation("/vendor-dashboard");
     } catch (err) {
-      toast.error((err as Error).message || "حدث خطأ أثناء تسجيل المتجر");
+      toast.error((err as Error).message || tr("حدث خطأ أثناء تسجيل المتجر", "Something went wrong while registering the store"));
     }
     setLoading(false);
   };
@@ -139,8 +152,8 @@ export default function Register() {
       <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80" alt="" className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-primary/70 to-primary/90" />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-        <span className="text-white text-2xl font-black drop-shadow">الطيبات</span>
-        <span className="text-white/80 text-sm">اختر طريقة المشاركة</span>
+        <span className="text-white text-2xl font-black drop-shadow">{tr("الطيبات", "Al-Tayebat")}</span>
+        <span className="text-white/80 text-sm">{tr("اختر طريقة المشاركة", "Choose how to join")}</span>
       </div>
     </div>
   );
@@ -148,71 +161,71 @@ export default function Register() {
 
   if (step === "vendor-payout") {
     return (
-      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir={dir}>
         {headerImg}
         <div className="flex-1 px-6 py-6 space-y-5 overflow-y-auto">
           <button onClick={() => setStep("vendor-details")} className="flex items-center gap-1 text-muted-foreground text-sm">
-            <ChevronLeft className="w-4 h-4" /> رجوع
+            <ChevronLeft className="w-4 h-4" /> {tr("رجوع", "Back")}
           </button>
           <div>
-            <h2 className="text-xl font-black">بيانات الدفع والتوصيل</h2>
-            <p className="text-sm text-muted-foreground mt-1">ستُعرض للمستهلك لإتمام الدفع المباشر</p>
+            <h2 className="text-xl font-black">{tr("بيانات الدفع والتوصيل", "Payment & delivery details")}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{tr("ستُعرض للمستهلك لإتمام الدفع المباشر", "Shown to the consumer to complete the direct payment")}</p>
           </div>
 
           <div className="space-y-3">
             <div className="bg-muted/40 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-primary mb-1">
-                <CreditCard className="w-4 h-4" /> معلومات كليك CliQ
+                <CreditCard className="w-4 h-4" /> {tr("معلومات كليك CliQ", "CliQ details")}
               </div>
               <input value={payoutDetails.cliqAlias} onChange={e => setPayoutDetails(p => ({ ...p, cliqAlias: e.target.value }))}
-                placeholder="معرف كليك (مثال: mystore)" dir="ltr"
+                placeholder={tr("معرف كليك (مثال: mystore)", "CliQ alias (e.g. mystore)")} dir="ltr"
                 className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
             </div>
 
             <div className="bg-muted/40 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-primary mb-1">
-                <Wallet className="w-4 h-4" /> المحفظة الإلكترونية
+                <Wallet className="w-4 h-4" /> {tr("المحفظة الإلكترونية", "E-wallet")}
               </div>
               <input value={payoutDetails.walletNumber} onChange={e => setPayoutDetails(p => ({ ...p, walletNumber: e.target.value }))}
-                placeholder="رقم المحفظة (مثال: 0791234567)" dir="ltr"
+                placeholder={tr("رقم المحفظة (مثال: 0791234567)", "Wallet number (e.g. 0791234567)")} dir="ltr"
                 className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
             </div>
 
             <div className="bg-muted/40 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-primary mb-1">
-                <Building2 className="w-4 h-4" /> الحساب البنكي (اختياري)
+                <Building2 className="w-4 h-4" /> {tr("الحساب البنكي (اختياري)", "Bank account (optional)")}
               </div>
               <input value={payoutDetails.bankAccount} onChange={e => setPayoutDetails(p => ({ ...p, bankAccount: e.target.value }))}
-                placeholder="رقم IBAN أو الحساب" dir="ltr"
+                placeholder={tr("رقم IBAN أو الحساب", "IBAN or account number")} dir="ltr"
                 className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
             </div>
 
             <div className="bg-muted/40 rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm font-bold text-primary mb-1">
-                <MapPin className="w-4 h-4" /> رسوم التوصيل
+                <MapPin className="w-4 h-4" /> {tr("رسوم التوصيل", "Delivery fees")}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">رسوم ثابتة (د.أ)</label>
+                  <label className="text-xs text-muted-foreground">{tr("رسوم ثابتة (د.أ)", "Flat fee (JOD)")}</label>
                   <input type="number" step="0.001" value={payoutDetails.deliveryFeeFixed}
                     onChange={e => setPayoutDetails(p => ({ ...p, deliveryFeeFixed: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" dir="ltr" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">توصيل مجاني فوق (د.أ)</label>
+                  <label className="text-xs text-muted-foreground">{tr("توصيل مجاني فوق (د.أ)", "Free delivery above (JOD)")}</label>
                   <input type="number" step="0.001" value={payoutDetails.freeDeliveryAbove}
                     onChange={e => setPayoutDetails(p => ({ ...p, freeDeliveryAbove: e.target.value }))}
                     className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" dir="ltr" />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">* يمكنك تعديل هذه الأسعار لاحقاً من لوحة التحكم</p>
+              <p className="text-xs text-muted-foreground">{tr("* يمكنك تعديل هذه الأسعار لاحقاً من لوحة التحكم", "* You can adjust these later from your dashboard")}</p>
             </div>
           </div>
 
           <button onClick={handleVendorSubmit} disabled={loading}
             className="w-full h-14 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-black text-lg rounded-2xl flex items-center justify-center gap-2">
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {loading ? "جاري الحفظ..." : "إنشاء متجري ✓"}
+            {loading ? tr("جاري الحفظ...", "Saving...") : tr("إنشاء متجري ✓", "Create my store ✓")}
           </button>
         </div>
       </div>
@@ -221,33 +234,33 @@ export default function Register() {
 
   if (step === "vendor-details") {
     return (
-      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+      <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir={dir}>
         {headerImg}
         <div className="flex-1 px-6 py-6 space-y-4 overflow-y-auto">
           <button onClick={() => setStep("role")} className="flex items-center gap-1 text-muted-foreground text-sm">
-            <ChevronLeft className="w-4 h-4" /> رجوع
+            <ChevronLeft className="w-4 h-4" /> {tr("رجوع", "Back")}
           </button>
           <div>
-            <h2 className="text-xl font-black">تفاصيل متجرك</h2>
-            <p className="text-sm text-muted-foreground mt-1">أخبرنا عن مطبخك أو متجرك الصحي</p>
+            <h2 className="text-xl font-black">{tr("تفاصيل متجرك", "Your store details")}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{tr("أخبرنا عن مطبخك أو متجرك الصحي", "Tell us about your kitchen or healthy store")}</p>
           </div>
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">اسم المتجر بالعربي *</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("اسم المتجر بالعربي *", "Store name (Arabic) *")}</label>
               <input value={vendorDetails.storeNameAr} onChange={e => setVendorDetails(v => ({ ...v, storeNameAr: e.target.value }))}
-                placeholder="مثال: مطبخ أم خالد الصحي"
+                placeholder={tr("مثال: مطبخ أم خالد الصحي", "e.g. مطبخ أم خالد الصحي")}
                 className="w-full h-12 rounded-xl border border-border bg-muted/30 px-4 text-sm outline-none focus:border-primary" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">اسم المتجر بالإنجليزي *</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("اسم المتجر بالإنجليزي *", "Store name (English) *")}</label>
               <input value={vendorDetails.storeName} onChange={e => setVendorDetails(v => ({ ...v, storeName: e.target.value }))}
                 placeholder="e.g. Om Khalid Healthy Kitchen" dir="ltr"
                 className="w-full h-12 rounded-xl border border-border bg-muted/30 px-4 text-sm outline-none focus:border-primary" />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">التخصص الغذائي *</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("التخصص الغذائي *", "Food specialty *")}</label>
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map(cat => (
                   <button key={cat.value} type="button" onClick={() => setVendorDetails(v => ({ ...v, category: cat.value }))}
@@ -259,16 +272,16 @@ export default function Register() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">المدينة</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("المدينة", "City")}</label>
               <select value={vendorDetails.city} onChange={e => setVendorDetails(v => ({ ...v, city: e.target.value }))}
                 className="w-full h-12 rounded-xl border border-border bg-muted/30 px-4 text-sm outline-none focus:border-primary">
-                <option value="">اختر المدينة</option>
-                {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="">{tr("اختر المدينة", "Select a city")}</option>
+                {CITIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">رقم الهاتف للتواصل *</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("رقم الهاتف للتواصل *", "Contact phone number *")}</label>
               <div className="relative">
                 <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input value={vendorDetails.phone} onChange={e => setVendorDetails(v => ({ ...v, phone: e.target.value }))}
@@ -278,9 +291,9 @@ export default function Register() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">وصف قصير (اختياري)</label>
+              <label className="text-xs font-bold text-muted-foreground">{tr("وصف قصير (اختياري)", "Short description (optional)")}</label>
               <textarea value={vendorDetails.description} onChange={e => setVendorDetails(v => ({ ...v, description: e.target.value }))}
-                placeholder="اكتب وصفاً موجزاً عن متجرك ومنتجاتك..."
+                placeholder={tr("اكتب وصفاً موجزاً عن متجرك ومنتجاتك...", "Write a brief description of your store and products...")}
                 rows={3}
                 className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm outline-none focus:border-primary resize-none" />
             </div>
@@ -288,7 +301,7 @@ export default function Register() {
 
           <button onClick={handleVendorDetails}
             className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-lg rounded-2xl">
-            التالي — بيانات الدفع
+            {tr("التالي — بيانات الدفع", "Next — Payment details")}
           </button>
         </div>
       </div>
@@ -296,12 +309,12 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto" dir={dir}>
       {headerImg}
       <div className="flex-1 px-6 py-8 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-black">كيف تريد المشاركة؟</h1>
-          <p className="text-muted-foreground text-sm mt-1">اختر دورك في منصة الطيبات</p>
+          <h1 className="text-2xl font-black">{tr("كيف تريد المشاركة؟", "How do you want to join?")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{tr("اختر دورك في منصة الطيبات", "Pick your role on the Al-Tayebat platform")}</p>
         </div>
 
         <button onClick={() => { setRole("consumer"); setStep("role"); }}
@@ -312,15 +325,15 @@ export default function Register() {
               <ShoppingBag className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-black text-lg">مستهلك</p>
-              <p className="text-muted-foreground text-sm">أريد شراء منتجات صحية</p>
+              <p className="font-black text-lg">{tr("مستهلك", "Consumer")}</p>
+              <p className="text-muted-foreground text-sm">{tr("أريد شراء منتجات صحية", "I want to buy healthy products")}</p>
             </div>
             {role === "consumer" && <CheckCircle2 className="w-5 h-5 text-primary mr-auto" />}
           </div>
           <ul className="text-xs text-muted-foreground space-y-1 pr-15">
-            <li>✓ تصفح آلاف المنتجات الصحية</li>
-            <li>✓ طلب وتوصيل لبابك</li>
-            <li>✓ دفع مباشر للمورد بدون عمولات</li>
+            <li>{tr("✓ تصفح آلاف المنتجات الصحية", "✓ Browse thousands of healthy products")}</li>
+            <li>{tr("✓ طلب وتوصيل لبابك", "✓ Order and have it delivered to your door")}</li>
+            <li>{tr("✓ دفع مباشر للمورد بدون عمولات", "✓ Pay vendors directly with no commissions")}</li>
           </ul>
         </button>
 
@@ -332,15 +345,15 @@ export default function Register() {
               <Store className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-black text-lg">مورّد / بائع</p>
-              <p className="text-muted-foreground text-sm">أريد بيع منتجاتي الصحية</p>
+              <p className="font-black text-lg">{tr("مورّد / بائع", "Vendor / Seller")}</p>
+              <p className="text-muted-foreground text-sm">{tr("أريد بيع منتجاتي الصحية", "I want to sell my healthy products")}</p>
             </div>
             {role === "vendor" && <CheckCircle2 className="w-5 h-5 text-rose mr-auto" />}
           </div>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>✓ أنشئ متجرك المجاني في دقائق</li>
-            <li>✓ استقبل الدفع مباشرة (كليك / محفظة)</li>
-            <li>✓ صفر عمولات على مبيعاتك</li>
+            <li>{tr("✓ أنشئ متجرك المجاني في دقائق", "✓ Set up your free store in minutes")}</li>
+            <li>{tr("✓ استقبل الدفع مباشرة (كليك / محفظة)", "✓ Get paid directly (CliQ / e-wallet)")}</li>
+            <li>{tr("✓ صفر عمولات على مبيعاتك", "✓ Zero commissions on your sales")}</li>
           </ul>
         </button>
 
@@ -349,17 +362,17 @@ export default function Register() {
             <button onClick={handleConsumer} disabled={loading}
               className="w-full h-14 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-black text-lg rounded-2xl flex items-center justify-center gap-2">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? "جاري التسجيل..." : "ابدأ التسوق الآن →"}
+              {loading ? tr("جاري التسجيل...", "Signing up...") : tr("ابدأ التسوق الآن →", "Start shopping now →")}
             </button>
           ) : (
             <button onClick={() => setStep("vendor-details")}
               className="w-full h-14 bg-rose hover:bg-rose/90 text-white font-black text-lg rounded-2xl">
-              أنشئ متجرك →
+              {tr("أنشئ متجرك →", "Create your store →")}
             </button>
           )}
 
           <button onClick={() => setLocation("/")} className="w-full text-center text-sm text-muted-foreground py-2">
-            تخطّى — أتصفح كضيف
+            {tr("تخطّى — أتصفح كضيف", "Skip — browse as guest")}
           </button>
         </div>
       </div>

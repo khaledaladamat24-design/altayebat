@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/language";
 
 type ProductWithMacros = Product & {
   calories?: number | null;
@@ -25,6 +26,8 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
   const sessionId = useSession();
   const queryClient = useQueryClient();
   const addToCart = useAddToCart();
+  const { lang, tr } = useLanguage();
+  const title = lang === "en" ? (product.name || product.nameAr) : product.nameAr;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -35,7 +38,7 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey({ sessionId }) });
-          toast.success(`تمت إضافة ${product.nameAr} إلى السلة`);
+          toast.success(tr(`تمت إضافة ${title} إلى السلة`, `${title} added to cart`));
         },
       }
     );
@@ -49,19 +52,19 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
             <img src={product.imageUrl} alt={product.nameAr} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-              صورة المنتج
+              {tr("صورة المنتج", "Product image")}
             </div>
           )}
 
           <div className="absolute top-2 right-2 flex flex-col gap-1">
             {product.isKeto && (
               <span className="bg-primary/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                كيتو
+                {tr("كيتو", "Keto")}
               </span>
             )}
             {product.isOrganic && (
               <span className="bg-rose text-rose-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                عضوي
+                {tr("عضوي", "Organic")}
               </span>
             )}
           </div>
@@ -69,20 +72,20 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
           {(product.isOnSale || hasDiscount) && (
             <div className="absolute top-2 left-2">
               <span className="bg-rose text-rose-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                عرض
+                {tr("عرض", "Sale")}
               </span>
             </div>
           )}
 
           {product.isBestseller && (
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose/80 to-transparent py-1 px-2">
-              <span className="text-white text-[10px] font-bold">الأكثر مبيعاً</span>
+              <span className="text-white text-[10px] font-bold">{tr("الأكثر مبيعاً", "Bestseller")}</span>
             </div>
           )}
         </div>
 
         <div className="p-3 flex flex-col flex-grow">
-          <h3 className="font-semibold text-sm line-clamp-2 mb-1">{product.nameAr}</h3>
+          <h3 className="font-semibold text-sm line-clamp-2 mb-1">{title}</h3>
 
           {hasMacros && (
             <div className="flex flex-wrap gap-1 mb-1.5" dir="ltr">
