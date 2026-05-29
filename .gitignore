@@ -57,8 +57,12 @@ Thumbs.db
 firebase_config.js
 GoogleService-Info.plist
 
-# ── GitHub workflows (Replit OAuth lacks `workflow` scope; add via GitHub Web UI) ──
-.github/
+# ── GitHub: ignore everything except the Android build workflow ──
+.github/*
+!.github/workflows
+.github/workflows/*
+!.github/workflows/main.yml
+.github/instructions/nx.instructions.md
 
 # ── Android build artifacts ──
 # Native android project IS tracked (like Tulip). Only ignore generated build outputs.
@@ -81,6 +85,3 @@ android/app/debug/
 firebase-debug.log
 firestore-debug.log
 .local/keystore/
-
-# GitHub Actions workflows — managed manually on GitHub (Replit OAuth lacks workflow scope)
-.github/workflows/
