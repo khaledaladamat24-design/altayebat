@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   ChevronLeft, MapPin, Heart, Package, Globe, Settings,
-  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X,
+  CreditCard, Zap, Gift, UserCircle, Pencil, Check, X, Headphones,
 } from "lucide-react";
 import { useUser, useAuth, useClerk } from "@clerk/react";
 import { LogOut, Store } from "lucide-react";
@@ -10,6 +10,7 @@ import { useListOrders } from "@workspace/api-client-react";
 import { useSession } from "@/hooks/use-session";
 import { useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api-url";
+import { openSupport } from "@/lib/support";
 
 export default function Account() {
   const [, setLocation] = useLocation();
@@ -133,6 +134,7 @@ export default function Account() {
     { icon: MapPin, label: "العنوان", iconColor: "text-rose", href: null },
     { icon: Heart, label: "المفضلة", iconColor: "text-pink-500", href: null },
     { icon: Zap, label: "ضمان التوصيل في الوقت المحدد", iconColor: "text-green-500", href: null },
+    { icon: Headphones, label: "تواصل معنا للمساعدة", iconColor: "text-emerald-500", href: null, onPress: openSupport },
     { icon: Globe, label: "اللغة", iconColor: "text-slate-500", suffix: "العربية", href: null },
     { icon: Settings, label: "الإعدادات", iconColor: "text-slate-400", href: "/settings" },
   ];
@@ -193,9 +195,13 @@ export default function Account() {
               <LogOut className="w-4 h-4" />
             </button>
           ) : (
-            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
+            <button
+              onClick={openSupport}
+              title="تواصل معنا للمساعدة"
+              className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors"
+            >
               <span className="text-lg">🎧</span>
-            </div>
+            </button>
           )}
         </div>
       </div>
@@ -283,7 +289,7 @@ export default function Account() {
                 {inner}
               </Link>
             ) : (
-              <div key={row.label} className="cursor-pointer">{inner}</div>
+              <div key={row.label} onClick={(row as { onPress?: () => void }).onPress} className="cursor-pointer">{inner}</div>
             );
           })}
         </div>

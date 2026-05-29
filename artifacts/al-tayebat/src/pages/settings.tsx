@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
-  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin, Loader2, Navigation,
+  ChevronRight, ShieldCheck, Trash2, Info, LogOut, ChevronLeft, FileText, KeyRound, X, MapPin, Loader2, Navigation, Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { openSupport, SUPPORT_PHONE } from "@/lib/support";
 
 const SIGNED_IN_KEYS = [
   "al_tayebat_firebase_uid", "al_tayebat_user_id", "al_tayebat_vendor_id",
@@ -173,6 +174,14 @@ export default function Settings() {
       iconBg: "bg-indigo-50",
       onPress: () => hasClerkPassword ? openUserProfile() : toast("هذه الإعدادات تخص حسابات البريد الإلكتروني فقط"),
     }] : []),
+    {
+      icon: Headphones,
+      label: "تواصل معنا للمساعدة",
+      iconColor: "text-emerald-600",
+      iconBg: "bg-emerald-50",
+      suffix: SUPPORT_PHONE,
+      onPress: openSupport,
+    },
     {
       icon: ShieldCheck,
       label: "سياسة الخصوصية",

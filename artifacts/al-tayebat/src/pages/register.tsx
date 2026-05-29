@@ -90,6 +90,15 @@ export default function Register() {
       toast.error("يرجى تعبئة اسم المتجر والتخصص");
       return;
     }
+    const phone = vendorDetails.phone.trim();
+    if (!phone) {
+      toast.error("رقم الهاتف للتواصل مطلوب");
+      return;
+    }
+    if (!/^07\d{8}$/.test(phone)) {
+      toast.error("أدخل رقم هاتف أردني صحيح (07XXXXXXXX)");
+      return;
+    }
     setStep("vendor-payout");
   };
 
@@ -259,7 +268,7 @@ export default function Register() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground">رقم الهاتف للتواصل</label>
+              <label className="text-xs font-bold text-muted-foreground">رقم الهاتف للتواصل *</label>
               <div className="relative">
                 <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input value={vendorDetails.phone} onChange={e => setVendorDetails(v => ({ ...v, phone: e.target.value }))}

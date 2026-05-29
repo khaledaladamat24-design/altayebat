@@ -177,10 +177,25 @@ router.post("/vendors", async (req, res) => {
     const [existing] = await db.select().from(vendorProfilesTable)
       .where(eq(vendorProfilesTable.userId, Number(userId))).limit(1);
 
+    const trimmedPhone = phone !== undefined && phone !== null ? String(phone).trim() : "";
+
+    // Phone is mandatory when creating a new store. On updates (e.g. editing
+    // payout settings, which omit phone) we keep the existing phone instead of
+    // requiring or wiping it.
+    if (!existing) {
+      if (!trimmedPhone) {
+        return res.status(400).json({ error: "رقم الهاتف للتواصل مطلوب" });
+      }
+      if (!/^07\d{8}$/.test(trimmedPhone)) {
+        return res.status(400).json({ error: "أدخل رقم هاتف أردني صحيح (07XXXXXXXX)" });
+      }
+    }
+
     if (existing) {
+      const phoneToSave = trimmedPhone !== "" ? trimmedPhone : existing.phone;
       const [updated] = await db.update(vendorProfilesTable).set({
         storeName, storeNameAr: storeNameAr || null, category,
-        description: description || null, phone: phone || null, city: city || null,
+        description: description || null, phone: phoneToSave, city: city || null,
         cliqAlias: cliqAlias || null, walletNumber: walletNumber || null,
         bankAccount: bankAccount || null,
         deliveryFeeFixed: deliveryFeeFixed || "1.500",
@@ -192,7 +207,7 @@ router.post("/vendors", async (req, res) => {
 
     const [vendor] = await db.insert(vendorProfilesTable).values({
       userId: Number(userId), storeName, storeNameAr: storeNameAr || null,
-      category, description: description || null, phone: phone || null, city: city || null,
+      category, description: description || null, phone: trimmedPhone || null, city: city || null,
       cliqAlias: cliqAlias || null, walletNumber: walletNumber || null,
       bankAccount: bankAccount || null,
       deliveryFeeFixed: deliveryFeeFixed || "1.500",
