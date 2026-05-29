@@ -9,6 +9,7 @@ export const categoriesTable = pgTable("categories", {
   slug: text("slug").notNull().unique(),
   icon: text("icon").notNull().default("🛒"),
   imageUrl: text("image_url"),
+  foodType: text("food_type").notNull().default("healthy"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -5,9 +5,11 @@
  * Al-Tayebat - Healthy Food & Keto Products API for Jordan
  * OpenAPI spec version: 0.1.0
  */
+import type { ListProductsFoodType } from './listProductsFoodType';
 
 export type ListProductsParams = {
 categoryId?: number;
 search?: string;
 featured?: boolean;
+foodType?: ListProductsFoodType;
 };

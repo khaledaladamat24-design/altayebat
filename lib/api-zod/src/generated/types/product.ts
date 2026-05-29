@@ -5,6 +5,7 @@
  * Al-Tayebat - Healthy Food & Keto Products API for Jordan
  * OpenAPI spec version: 0.1.0
  */
+import type { ProductFoodType } from './productFoodType';
 
 export interface Product {
   id: number;
@@ -40,4 +41,5 @@ export interface Product {
   vendorName?: string | null;
   /** @nullable */
   vendorNameAr?: string | null;
+  foodType?: ProductFoodType;
 }

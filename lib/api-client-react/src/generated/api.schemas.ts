@@ -9,6 +9,14 @@ export interface HealthStatus {
   status: string;
 }
 
+export type CategoryFoodType = typeof CategoryFoodType[keyof typeof CategoryFoodType];
+
+
+export const CategoryFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
+
 export interface Category {
   id: number;
   name: string;
@@ -17,9 +25,18 @@ export interface Category {
   icon: string;
   /** @nullable */
   imageUrl?: string | null;
+  foodType?: CategoryFoodType;
   productCount: number;
   sortOrder?: number;
 }
+
+export type ProductFoodType = typeof ProductFoodType[keyof typeof ProductFoodType];
+
+
+export const ProductFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
 
 export interface Product {
   id: number;
@@ -55,6 +72,7 @@ export interface Product {
   vendorName?: string | null;
   /** @nullable */
   vendorNameAr?: string | null;
+  foodType?: ProductFoodType;
 }
 
 export interface CartItem {
@@ -176,11 +194,56 @@ export interface StoreSummary {
   categoryCounts: CategoryCount[];
 }
 
+export type ListCategoriesParams = {
+foodType?: ListCategoriesFoodType;
+};
+
+export type ListCategoriesFoodType = typeof ListCategoriesFoodType[keyof typeof ListCategoriesFoodType];
+
+
+export const ListCategoriesFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
+
 export type ListProductsParams = {
 categoryId?: number;
 search?: string;
 featured?: boolean;
+foodType?: ListProductsFoodType;
 };
+
+export type ListProductsFoodType = typeof ListProductsFoodType[keyof typeof ListProductsFoodType];
+
+
+export const ListProductsFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
+
+export type ListFeaturedProductsParams = {
+foodType?: ListFeaturedProductsFoodType;
+};
+
+export type ListFeaturedProductsFoodType = typeof ListFeaturedProductsFoodType[keyof typeof ListFeaturedProductsFoodType];
+
+
+export const ListFeaturedProductsFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
+
+export type ListBestsellersParams = {
+foodType?: ListBestsellersFoodType;
+};
+
+export type ListBestsellersFoodType = typeof ListBestsellersFoodType[keyof typeof ListBestsellersFoodType];
+
+
+export const ListBestsellersFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+} as const;
 
 export type GetCartParams = {
 sessionId?: string;

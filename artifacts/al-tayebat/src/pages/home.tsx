@@ -1,16 +1,34 @@
 import { useListBanners, useListCategories, useListFeaturedProducts, useListBestsellers } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Search, MapPin, ChevronLeft } from "lucide-react";
+import { Search, MapPin, ChevronLeft, Leaf, UtensilsCrossed } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 
+type Zone = "healthy" | "regular";
+const ZONE_STORAGE_KEY = "al_tayebat_zone";
+
 export default function Home() {
+  const [zone, setZone] = useState<Zone>(() => {
+    if (typeof window === "undefined") return "healthy";
+    const saved = localStorage.getItem(ZONE_STORAGE_KEY);
+    return saved === "regular" ? "regular" : "healthy";
+  });
+
+  const setActiveZone = (z: Zone) => {
+    setZone(z);
+    try {
+      localStorage.setItem(ZONE_STORAGE_KEY, z);
+    } catch {
+      // ignore storage write failures (private mode, etc.)
+    }
+  };
+
   const { data: banners, isLoading: loadingBanners } = useListBanners();
-  const { data: categories, isLoading: loadingCategories } = useListCategories();
-  const { data: featuredProducts, isLoading: loadingFeatured } = useListFeaturedProducts();
-  const { data: bestsellers, isLoading: loadingBestsellers } = useListBestsellers();
+  const { data: categories, isLoading: loadingCategories } = useListCategories({ foodType: zone });
+  const { data: featuredProducts, isLoading: loadingFeatured } = useListFeaturedProducts({ foodType: zone });
+  const { data: bestsellers, isLoading: loadingBestsellers } = useListBestsellers({ foodType: zone });
 
   const [address, setAddress] = useState<string>("");
   useEffect(() => {
@@ -18,6 +36,14 @@ export default function Home() {
     const city = localStorage.getItem("al_tayebat_city") || "";
     setAddress([city, a].filter(Boolean).join("، ") || "");
   }, []);
+
+  const zoneEmpty =
+    !loadingCategories &&
+    !loadingFeatured &&
+    !loadingBestsellers &&
+    (categories?.length ?? 0) === 0 &&
+    (featuredProducts?.length ?? 0) === 0 &&
+    (bestsellers?.length ?? 0) === 0;
 
   return (
     <div className="pb-8">
@@ -50,6 +76,38 @@ export default function Home() {
             />
           </div>
         </Link>
+      </div>
+
+      {/* Zone toggle: switch between Healthy Zone and Regular Zone */}
+      <div className="sticky top-0 z-20 -mt-4 px-4">
+        <div className="bg-card border border-border rounded-2xl shadow-md p-1.5 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveZone("healthy")}
+            aria-pressed={zone === "healthy"}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              zone === "healthy"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Leaf className="w-4 h-4" />
+            القسم الصحي
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveZone("regular")}
+            aria-pressed={zone === "regular"}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              zone === "regular"
+                ? "bg-rose text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <UtensilsCrossed className="w-4 h-4" />
+            القسم العادي
+          </button>
+        </div>
       </div>
 
       <div className="px-4 mt-6 space-y-8">
@@ -101,6 +159,24 @@ export default function Home() {
           ) : null}
         </section>
 
+        {zoneEmpty ? (
+          <section className="flex flex-col items-center justify-center text-center py-16 gap-3">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              {zone === "healthy" ? (
+                <Leaf className="w-8 h-8 text-primary" />
+              ) : (
+                <UtensilsCrossed className="w-8 h-8 text-rose" />
+              )}
+            </div>
+            <h3 className="font-bold text-base">
+              {zone === "healthy" ? "لا توجد منتجات في القسم الصحي بعد" : "لا توجد منتجات في القسم العادي بعد"}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-[260px]">
+              جرّب التبديل إلى القسم الآخر من الأعلى، أو عُد لاحقاً.
+            </p>
+          </section>
+        ) : (
+        <>
         {/* Categories */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -181,6 +257,8 @@ export default function Home() {
                 ))}
           </div>
         </section>
+        </>
+        )}
       </div>
     </div>
   );

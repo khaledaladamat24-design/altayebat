@@ -72,7 +72,7 @@ export default function Admin() {
     nameAr: "", name: "", descriptionAr: "", description: "",
     price: "", originalPrice: "", categoryId: "", imageUrl: "", weightOrVolume: "",
     isKeto: false, isOrganic: false, isFeatured: false, isBestseller: false, inStock: true,
-    calories: "", protein: "", carbs: "", fats: "",
+    calories: "", protein: "", carbs: "", fats: "", foodType: "healthy",
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -98,6 +98,7 @@ export default function Admin() {
       protein: p.protein != null ? String(p.protein) : "",
       carbs: p.carbs != null ? String(p.carbs) : "",
       fats: p.fats != null ? String(p.fats) : "",
+      foodType: p.foodType === "regular" ? "regular" : "healthy",
     });
     setTab("products-add");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -436,9 +437,16 @@ export default function Admin() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">الوزن / الحجم</label>
-                  <Input placeholder="مثال: 500g" value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" />
+                  <label className="text-xs font-medium text-muted-foreground">المنطقة *</label>
+                  <select value={form.foodType} onChange={e => setForm(f => ({ ...f, foodType: e.target.value }))} className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none">
+                    <option value="healthy">القسم الصحي</option>
+                    <option value="regular">القسم العادي</option>
+                  </select>
                 </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">الوزن / الحجم</label>
+                <Input placeholder="مثال: 500g" value={form.weightOrVolume} onChange={e => setForm(f => ({ ...f, weightOrVolume: e.target.value }))} className="h-11 bg-muted border-none text-sm" />
               </div>
               <div className="space-y-1">
                 <ImageUpload value={form.imageUrl} onChange={url => setForm(f => ({ ...f, imageUrl: url }))} />

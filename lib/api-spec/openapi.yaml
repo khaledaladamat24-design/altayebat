@@ -41,6 +41,13 @@ paths:
       operationId: listCategories
       tags: [categories]
       summary: List all categories
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular]
       responses:
         "200":
           description: List of categories
@@ -93,6 +100,12 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular]
       responses:
         "200":
           description: List of products
@@ -129,6 +142,13 @@ paths:
       operationId: listFeaturedProducts
       tags: [products]
       summary: Get featured/promoted products
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular]
       responses:
         "200":
           description: Featured products
@@ -144,6 +164,13 @@ paths:
       operationId: listBestsellers
       tags: [products]
       summary: Get best-selling products
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular]
       responses:
         "200":
           description: Bestselling products
@@ -362,6 +389,9 @@ components:
           type: string
         imageUrl:
           type: ["string", "null"]
+        foodType:
+          type: string
+          enum: [healthy, regular]
         productCount:
           type: integer
         sortOrder:
@@ -415,6 +445,9 @@ components:
           type: ["string", "null"]
         vendorNameAr:
           type: ["string", "null"]
+        foodType:
+          type: string
+          enum: [healthy, regular]
 
     CartItem:
       type: object

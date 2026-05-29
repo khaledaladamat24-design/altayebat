@@ -19,6 +19,10 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary List all categories
  */
+export const ListCategoriesQueryParams = zod.object({
+  "foodType": zod.enum(['healthy', 'regular']).optional()
+})
+
 export const ListCategoriesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -26,6 +30,7 @@ export const ListCategoriesResponseItem = zod.object({
   "slug": zod.string(),
   "icon": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
   "productCount": zod.number(),
   "sortOrder": zod.number().optional()
 })
@@ -46,6 +51,7 @@ export const GetCategoryResponse = zod.object({
   "slug": zod.string(),
   "icon": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional(),
   "productCount": zod.number(),
   "sortOrder": zod.number().optional()
 })
@@ -57,7 +63,8 @@ export const GetCategoryResponse = zod.object({
 export const ListProductsQueryParams = zod.object({
   "categoryId": zod.coerce.number().optional(),
   "search": zod.coerce.string().optional(),
-  "featured": zod.coerce.boolean().optional()
+  "featured": zod.coerce.boolean().optional(),
+  "foodType": zod.enum(['healthy', 'regular']).optional()
 })
 
 export const ListProductsResponseItem = zod.object({
@@ -82,7 +89,8 @@ export const ListProductsResponseItem = zod.object({
   "reviewCount": zod.number().optional(),
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
-  "vendorNameAr": zod.string().nullish()
+  "vendorNameAr": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -116,13 +124,18 @@ export const GetProductResponse = zod.object({
   "reviewCount": zod.number().optional(),
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
-  "vendorNameAr": zod.string().nullish()
+  "vendorNameAr": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional()
 })
 
 
 /**
  * @summary Get featured/promoted products
  */
+export const ListFeaturedProductsQueryParams = zod.object({
+  "foodType": zod.enum(['healthy', 'regular']).optional()
+})
+
 export const ListFeaturedProductsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -145,7 +158,8 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "reviewCount": zod.number().optional(),
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
-  "vendorNameAr": zod.string().nullish()
+  "vendorNameAr": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
 
@@ -153,6 +167,10 @@ export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsRespon
 /**
  * @summary Get best-selling products
  */
+export const ListBestsellersQueryParams = zod.object({
+  "foodType": zod.enum(['healthy', 'regular']).optional()
+})
+
 export const ListBestsellersResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -175,7 +193,8 @@ export const ListBestsellersResponseItem = zod.object({
   "reviewCount": zod.number().optional(),
   "vendorId": zod.number().nullish(),
   "vendorName": zod.string().nullish(),
-  "vendorNameAr": zod.string().nullish()
+  "vendorNameAr": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular']).optional()
 })
 export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 

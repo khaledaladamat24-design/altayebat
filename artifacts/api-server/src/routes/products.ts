@@ -43,17 +43,26 @@ function buildProductRow(p: typeof productsTable.$inferSelect, c: typeof categor
     vendorId: p.vendorId ?? null,
     vendorName: v?.storeName ?? null,
     vendorNameAr: v?.storeNameAr ?? null,
+    foodType: p.foodType,
   };
+}
+
+function foodTypeCondition(raw: unknown) {
+  if (raw === "healthy" || raw === "regular") {
+    return eq(productsTable.foodType, raw);
+  }
+  return undefined;
 }
 
 router.get("/products/featured", async (req, res) => {
   try {
+    const ft = foodTypeCondition(req.query.foodType);
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(and(eq(productsTable.isFeatured, true), vendorOnlineCondition));
+      .where(and(eq(productsTable.isFeatured, true), vendorOnlineCondition, ft));
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list featured products");
@@ -63,12 +72,13 @@ router.get("/products/featured", async (req, res) => {
 
 router.get("/products/bestsellers", async (req, res) => {
   try {
+    const ft = foodTypeCondition(req.query.foodType);
     const rows = await db
       .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(vendorProfilesTable, eq(productsTable.vendorId, vendorProfilesTable.id))
-      .where(and(eq(productsTable.isBestseller, true), vendorOnlineCondition));
+      .where(and(eq(productsTable.isBestseller, true), vendorOnlineCondition, ft));
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
@@ -78,7 +88,7 @@ router.get("/products/bestsellers", async (req, res) => {
 
 router.get("/products", async (req, res) => {
   try {
-    const { categoryId, search, featured } = req.query;
+    const { categoryId, search, featured, foodType } = req.query;
     const conditions = [];
 
     if (categoryId) {
@@ -86,6 +96,8 @@ router.get("/products", async (req, res) => {
       if (!isNaN(catId)) conditions.push(eq(productsTable.categoryId, catId));
     }
     if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
+    const ft = foodTypeCondition(foodType);
+    if (ft) conditions.push(ft);
     if (vendorOnlineCondition) conditions.push(vendorOnlineCondition);
     // Search across product name AND vendor store name so a user can find
     // "خبز كيتو" (product) or "أم علي" (restaurant) with the same input.

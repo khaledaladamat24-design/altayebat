@@ -70,6 +70,16 @@
 - **Authz**: `GET /api/vendors/:id/orders`, `PATCH /api/vendors/:id`, and `PATCH /api/orders/:id/status` are gated by `requireVendorOwner` / `requireOrderVendorOwner` (in `artifacts/api-server/src/lib/vendor-auth.ts`). Caller must be the signed-in Clerk user whose `users.id` matches the vendor's `userId`. Super-admin email + `x-admin-key` bypass. Same-origin fetches from the dashboard send the Clerk session cookie automatically.
 - **Status transitions** are server-enforced (atomic conditional UPDATE): `pending→preparing|cancelled`, `preparing→ready|cancelled`, `ready→out_for_delivery`, `out_for_delivery→delivered`. Returns 409 on stale/invalid transitions so a late "accept" can't overwrite a "delivered" state.
 
+## Zones (Healthy vs Regular)
+
+- Products and categories carry a `food_type` column (`'healthy' | 'regular'`, default `'healthy'`) — `lib/db/src/schema/products.ts` (indexed via `products_food_type_idx`) and `lib/db/src/schema/categories.ts`.
+- `food_type` is anchored on the **product** (a single vendor may sell both zones), and also on categories so the home categories rail can be filtered per zone.
+- API filtering: `GET /api/products`, `/api/products/featured`, `/api/products/bestsellers`, and `/api/categories` all accept an optional `?foodType=healthy|regular` query param. Invalid/missing values return everything. Implemented via `foodTypeCondition()` in `products.ts` (drizzle `and()` ignores the `undefined` condition).
+- Home (`pages/home.tsx`) has a sticky top toggle (الصحي / العادي) that passes `foodType` to all four hooks so the other zone is fully filtered out. Selection persists in `localStorage` key `al_tayebat_zone`; default is `healthy`. Shows an empty-state when the selected zone has no content.
+- Admin product form (`pages/admin.tsx`) has a "المنطقة" selector; admin POST/PUT product routes accept `foodType`. There is no category-CRUD admin UI — category `food_type` is set via DB/seed.
+- **Drift is allowed by design**: a product's `food_type` is independent of its category's `food_type` (a single vendor/category may legitimately span both zones), so there is intentionally no DB constraint forcing them to match. Product filtering always uses the product's own `food_type`. `/categories` `productCount` is NOT zone-aware (counts all products in the category).
+- Always run codegen after spec changes here too: `pnpm --filter @workspace/api-spec run codegen`.
+
 ## Gotchas
 
 - Always run codegen after spec changes: `pnpm --filter @workspace/api-spec run codegen`

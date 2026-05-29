@@ -7,7 +7,8 @@ const router = Router();
 
 router.get("/categories", async (req, res) => {
   try {
-    const rows = await db
+    const foodType = req.query.foodType;
+    const baseQuery = db
       .select({
         id: categoriesTable.id,
         name: categoriesTable.name,
@@ -15,11 +16,17 @@ router.get("/categories", async (req, res) => {
         slug: categoriesTable.slug,
         icon: categoriesTable.icon,
         imageUrl: categoriesTable.imageUrl,
+        foodType: categoriesTable.foodType,
         sortOrder: categoriesTable.sortOrder,
         productCount: sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(Number),
       })
       .from(categoriesTable)
       .orderBy(categoriesTable.sortOrder);
+
+    const rows =
+      foodType === "healthy" || foodType === "regular"
+        ? await baseQuery.where(eq(categoriesTable.foodType, foodType))
+        : await baseQuery;
     res.json(rows);
   } catch (err) {
     req.log.error({ err }, "Failed to list categories");
@@ -40,6 +47,7 @@ router.get("/categories/:id", async (req, res) => {
         slug: categoriesTable.slug,
         icon: categoriesTable.icon,
         imageUrl: categoriesTable.imageUrl,
+        foodType: categoriesTable.foodType,
         sortOrder: categoriesTable.sortOrder,
         productCount: sql<number>`(SELECT COUNT(*) FROM products WHERE products.category_id = ${categoriesTable.id})`.mapWith(Number),
       })

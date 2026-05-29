@@ -28,6 +28,9 @@ import type {
   ClearCartParams,
   GetCartParams,
   HealthStatus,
+  ListBestsellersParams,
+  ListCategoriesParams,
+  ListFeaturedProductsParams,
   ListOrdersParams,
   ListProductsParams,
   Order,
@@ -125,20 +128,27 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getListCategoriesUrl = () => {
+export const getListCategoriesUrl = (params?: ListCategoriesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/categories`
+  return stringifiedParams.length > 0 ? `/api/categories?${stringifiedParams}` : `/api/categories`
 }
 
 /**
  * @summary List all categories
  */
-export const listCategories = async ( options?: RequestInit): Promise<Category[]> => {
+export const listCategories = async (params?: ListCategoriesParams, options?: RequestInit): Promise<Category[]> => {
 
-  return customFetch<Category[]>(getListCategoriesUrl(),
+  return customFetch<Category[]>(getListCategoriesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -151,23 +161,23 @@ export const listCategories = async ( options?: RequestInit): Promise<Category[]
 
 
 
-export const getListCategoriesQueryKey = () => {
+export const getListCategoriesQueryKey = (params?: ListCategoriesParams,) => {
     return [
-    `/api/categories`
+    `/api/categories`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listCategories>>, TError = ErrorType<unknown>>(params?: ListCategoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCategoriesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListCategoriesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCategories>>> = ({ signal }) => listCategories({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCategories>>> = ({ signal }) => listCategories(params, { signal, ...requestOptions });
 
 
 
@@ -185,11 +195,11 @@ export type ListCategoriesQueryError = ErrorType<unknown>
  */
 
 export function useListCategories<TData = Awaited<ReturnType<typeof listCategories>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListCategoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListCategoriesQueryOptions(options)
+  const queryOptions = getListCategoriesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -440,20 +450,27 @@ export function useGetProduct<TData = Awaited<ReturnType<typeof getProduct>>, TE
 
 
 
-export const getListFeaturedProductsUrl = () => {
+export const getListFeaturedProductsUrl = (params?: ListFeaturedProductsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/products/featured`
+  return stringifiedParams.length > 0 ? `/api/products/featured?${stringifiedParams}` : `/api/products/featured`
 }
 
 /**
  * @summary Get featured/promoted products
  */
-export const listFeaturedProducts = async ( options?: RequestInit): Promise<Product[]> => {
+export const listFeaturedProducts = async (params?: ListFeaturedProductsParams, options?: RequestInit): Promise<Product[]> => {
 
-  return customFetch<Product[]>(getListFeaturedProductsUrl(),
+  return customFetch<Product[]>(getListFeaturedProductsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -466,23 +483,23 @@ export const listFeaturedProducts = async ( options?: RequestInit): Promise<Prod
 
 
 
-export const getListFeaturedProductsQueryKey = () => {
+export const getListFeaturedProductsQueryKey = (params?: ListFeaturedProductsParams,) => {
     return [
-    `/api/products/featured`
+    `/api/products/featured`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListFeaturedProductsQueryOptions = <TData = Awaited<ReturnType<typeof listFeaturedProducts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeaturedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListFeaturedProductsQueryOptions = <TData = Awaited<ReturnType<typeof listFeaturedProducts>>, TError = ErrorType<unknown>>(params?: ListFeaturedProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeaturedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListFeaturedProductsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListFeaturedProductsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFeaturedProducts>>> = ({ signal }) => listFeaturedProducts({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFeaturedProducts>>> = ({ signal }) => listFeaturedProducts(params, { signal, ...requestOptions });
 
 
 
@@ -500,11 +517,11 @@ export type ListFeaturedProductsQueryError = ErrorType<unknown>
  */
 
 export function useListFeaturedProducts<TData = Awaited<ReturnType<typeof listFeaturedProducts>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeaturedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListFeaturedProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeaturedProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListFeaturedProductsQueryOptions(options)
+  const queryOptions = getListFeaturedProductsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -517,20 +534,27 @@ export function useListFeaturedProducts<TData = Awaited<ReturnType<typeof listFe
 
 
 
-export const getListBestsellersUrl = () => {
+export const getListBestsellersUrl = (params?: ListBestsellersParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/products/bestsellers`
+  return stringifiedParams.length > 0 ? `/api/products/bestsellers?${stringifiedParams}` : `/api/products/bestsellers`
 }
 
 /**
  * @summary Get best-selling products
  */
-export const listBestsellers = async ( options?: RequestInit): Promise<Product[]> => {
+export const listBestsellers = async (params?: ListBestsellersParams, options?: RequestInit): Promise<Product[]> => {
 
-  return customFetch<Product[]>(getListBestsellersUrl(),
+  return customFetch<Product[]>(getListBestsellersUrl(params),
   {
     ...options,
     method: 'GET'
@@ -543,23 +567,23 @@ export const listBestsellers = async ( options?: RequestInit): Promise<Product[]
 
 
 
-export const getListBestsellersQueryKey = () => {
+export const getListBestsellersQueryKey = (params?: ListBestsellersParams,) => {
     return [
-    `/api/products/bestsellers`
+    `/api/products/bestsellers`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListBestsellersQueryOptions = <TData = Awaited<ReturnType<typeof listBestsellers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBestsellers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListBestsellersQueryOptions = <TData = Awaited<ReturnType<typeof listBestsellers>>, TError = ErrorType<unknown>>(params?: ListBestsellersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBestsellers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListBestsellersQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListBestsellersQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBestsellers>>> = ({ signal }) => listBestsellers({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBestsellers>>> = ({ signal }) => listBestsellers(params, { signal, ...requestOptions });
 
 
 
@@ -577,11 +601,11 @@ export type ListBestsellersQueryError = ErrorType<unknown>
  */
 
 export function useListBestsellers<TData = Awaited<ReturnType<typeof listBestsellers>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBestsellers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListBestsellersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBestsellers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListBestsellersQueryOptions(options)
+  const queryOptions = getListBestsellersQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

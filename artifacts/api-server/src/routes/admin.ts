@@ -32,7 +32,7 @@ router.post("/admin/products", async (req, res) => {
       price, originalPrice, categoryId,
       imageUrl, isKeto, isOrganic, isFeatured, isBestseller,
       weightOrVolume, inStock,
-      calories, protein, carbs, fats, vendorId,
+      calories, protein, carbs, fats, vendorId, foodType,
     } = req.body;
 
     if (!nameAr || !name || !price || !categoryId) {
@@ -60,6 +60,7 @@ router.post("/admin/products", async (req, res) => {
       carbs: num(carbs) !== null ? String(carbs) : null,
       fats: num(fats) !== null ? String(fats) : null,
       vendorId: vendorId ? Number(vendorId) : null,
+      foodType: foodType === "regular" ? "regular" : "healthy",
     }).returning();
 
     res.status(201).json({ ...product, price: Number(product.price) });
@@ -77,7 +78,7 @@ router.put("/admin/products/:id", async (req, res) => {
     const { nameAr, name, price, originalPrice, categoryId, imageUrl,
       isKeto, isOrganic, isFeatured, isBestseller, weightOrVolume,
       inStock, descriptionAr, description,
-      calories, protein, carbs, fats } = req.body;
+      calories, protein, carbs, fats, foodType } = req.body;
 
     const [updated] = await db.update(productsTable).set({
       ...(nameAr && { nameAr }),
@@ -98,6 +99,7 @@ router.put("/admin/products/:id", async (req, res) => {
       ...(protein !== undefined && { protein: protein === "" || protein === null ? null : String(protein) }),
       ...(carbs !== undefined && { carbs: carbs === "" || carbs === null ? null : String(carbs) }),
       ...(fats !== undefined && { fats: fats === "" || fats === null ? null : String(fats) }),
+      ...(foodType !== undefined && { foodType: foodType === "regular" ? "regular" : "healthy" }),
     }).where(eq(productsTable.id, id)).returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });
