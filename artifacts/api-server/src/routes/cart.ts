@@ -77,10 +77,10 @@ router.post("/cart", async (req, res) => {
       });
     }
 
-    res.json(await buildCart(sessionId));
+    return res.json(await buildCart(sessionId));
   } catch (err) {
     req.log.error({ err }, "Failed to add to cart");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -98,10 +98,10 @@ router.patch("/cart/:itemId", async (req, res) => {
       await db.update(cartItemsTable).set({ quantity, updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
     }
 
-    res.json(await buildCart(item[0].sessionId));
+    return res.json(await buildCart(item[0].sessionId));
   } catch (err) {
     req.log.error({ err }, "Failed to update cart item");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -112,10 +112,10 @@ router.delete("/cart/:itemId", async (req, res) => {
     if (!item.length) return res.status(404).json({ error: "Cart item not found" });
 
     await db.delete(cartItemsTable).where(eq(cartItemsTable.id, itemId));
-    res.json(await buildCart(item[0].sessionId));
+    return res.json(await buildCart(item[0].sessionId));
   } catch (err) {
     req.log.error({ err }, "Failed to remove cart item");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

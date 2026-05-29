@@ -55,10 +55,10 @@ router.get("/categories/:id", async (req, res) => {
       .where(eq(categoriesTable.id, id));
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json(rows[0]);
+    return res.json(rows[0]);
   } catch (err) {
     req.log.error({ err }, "Failed to get category");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

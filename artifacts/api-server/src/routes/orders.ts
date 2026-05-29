@@ -58,10 +58,10 @@ router.get("/orders", async (req, res) => {
       .orderBy(ordersTable.createdAt);
 
     const full = await Promise.all(orders.map((o) => getOrderWithItems(o.id)));
-    res.json(full.filter(Boolean));
+    return res.json(full.filter(Boolean));
   } catch (err) {
     req.log.error({ err }, "Failed to list orders");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -124,10 +124,10 @@ router.post("/orders", async (req, res) => {
     await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
 
     const result = await getOrderWithItems(newOrder.id);
-    res.status(201).json(result);
+    return res.status(201).json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to create order");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -138,10 +138,10 @@ router.get("/orders/:id", async (req, res) => {
 
     const result = await getOrderWithItems(id);
     if (!result) return res.status(404).json({ error: "Order not found" });
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to get order");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -176,10 +176,10 @@ router.patch("/orders/:id/status", requireOrderVendorOwner("id"), async (req, re
       // Either the order disappeared or it's in a state we won't transition from.
       return res.status(409).json({ error: "Order is not in a state that allows this transition" });
     }
-    res.json({ id: updated.id, status: updated.status });
+    return res.json({ id: updated.id, status: updated.status });
   } catch (err) {
     req.log.error({ err }, "Failed to update order status");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

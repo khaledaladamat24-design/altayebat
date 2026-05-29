@@ -146,10 +146,10 @@ router.get("/products/:id", async (req, res) => {
       .where(eq(productsTable.id, id));
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json(buildProductRow(rows[0].p, rows[0].c, rows[0].v));
+    return res.json(buildProductRow(rows[0].p, rows[0].c, rows[0].v));
   } catch (err) {
     req.log.error({ err }, "Failed to get product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

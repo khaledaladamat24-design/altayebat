@@ -14,10 +14,10 @@ router.get("/vendors/by-user/:userId", async (req, res) => {
     const [vendor] = await db.select().from(vendorProfilesTable)
       .where(eq(vendorProfilesTable.userId, userId)).limit(1);
     if (!vendor) return res.status(404).json({ error: "No vendor profile" });
-    res.json(vendor);
+    return res.json(vendor);
   } catch (err) {
     req.log.error({ err }, "Failed to get vendor by user");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -28,7 +28,7 @@ router.get("/vendors/:id/products", async (req, res) => {
     const rows = await db.select().from(productsTable)
       .where(eq(productsTable.vendorId, id))
       .orderBy(desc(productsTable.createdAt));
-    res.json(rows.map(p => ({
+    return res.json(rows.map(p => ({
       ...p,
       price: Number(p.price),
       originalPrice: p.originalPrice ? Number(p.originalPrice) : null,
@@ -38,7 +38,7 @@ router.get("/vendors/:id/products", async (req, res) => {
     })));
   } catch (err) {
     req.log.error({ err }, "Failed to list vendor products");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -82,10 +82,10 @@ router.post("/vendors/:id/products", async (req, res) => {
       foodType: foodType === "regular" ? "regular" : "healthy",
       subcategory: subcategory ? String(subcategory) : null,
     }).returning();
-    res.status(201).json({ ...product, price: Number(product.price) });
+    return res.status(201).json({ ...product, price: Number(product.price) });
   } catch (err) {
     req.log.error({ err }, "Failed to create vendor product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -133,10 +133,10 @@ router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
       ...(foodType !== undefined && { foodType: foodType === "regular" ? "regular" : "healthy" }),
       ...(subcategory !== undefined && { subcategory: subcategory ? String(subcategory) : null }),
     }).where(eq(productsTable.id, productId)).returning();
-    res.json({ ...updated, price: Number(updated.price) });
+    return res.json({ ...updated, price: Number(updated.price) });
   } catch (err) {
     req.log.error({ err }, "Failed to update vendor product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -150,10 +150,10 @@ router.delete("/vendors/:vendorId/products/:productId", async (req, res) => {
       return res.status(404).json({ error: "المنتج غير موجود" });
     }
     await db.delete(productsTable).where(eq(productsTable.id, productId));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete vendor product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -173,10 +173,10 @@ router.get("/vendors/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const [vendor] = await db.select().from(vendorProfilesTable).where(eq(vendorProfilesTable.id, id)).limit(1);
     if (!vendor) return res.status(404).json({ error: "Vendor not found" });
-    res.json(vendor);
+    return res.json(vendor);
   } catch (err) {
     req.log.error({ err }, "Failed to get vendor");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -234,10 +234,10 @@ router.post("/vendors", async (req, res) => {
       status: "approved",
     }).returning();
 
-    res.status(201).json(vendor);
+    return res.status(201).json(vendor);
   } catch (err) {
     req.log.error({ err }, "Failed to upsert vendor");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -270,10 +270,10 @@ router.patch("/vendors/:id", requireVendorOwner("id"), async (req, res) => {
     const [updated] = await db.update(vendorProfilesTable)
       .set(patch).where(eq(vendorProfilesTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Vendor not found" });
-    res.json(updated);
+    return res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Failed to update vendor");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -286,10 +286,10 @@ router.patch("/vendors/:id/status", async (req, res) => {
     }
     const [updated] = await db.update(vendorProfilesTable)
       .set({ status }).where(eq(vendorProfilesTable.id, id)).returning();
-    res.json(updated);
+    return res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Failed to update vendor status");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -298,10 +298,10 @@ router.delete("/vendors/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(vendorProfilesTable).where(eq(vendorProfilesTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete vendor");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -328,7 +328,7 @@ router.get("/vendors/:id/orders", requireVendorOwner("id"), async (req, res) => 
           .where(inArray(orderItemsTable.orderId, orderIds))
       : [];
 
-    res.json(orders.map((o) => ({
+    return res.json(orders.map((o) => ({
       id: o.id,
       status: o.status,
       paymentMethod: o.paymentMethod,
@@ -353,7 +353,7 @@ router.get("/vendors/:id/orders", requireVendorOwner("id"), async (req, res) => 
     })));
   } catch (err) {
     req.log.error({ err }, "Failed to list vendor orders");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

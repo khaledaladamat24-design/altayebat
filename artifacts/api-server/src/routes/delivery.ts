@@ -62,17 +62,17 @@ router.post("/delivery/providers", requireAdmin, async (req, res) => {
       contactPhone, contactWhatsapp,
       credentials, settings,
     }).returning();
-    res.status(201).json(sanitize(created));
+    return res.status(201).json(sanitize(created));
   } catch (err) {
     req.log.error({ err }, "Failed to create delivery provider");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // PATCH /api/delivery/providers/:id — update. Admin only.
 router.patch("/delivery/providers/:id", requireAdmin, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const body = req.body ?? {};
     const patch: Record<string, unknown> = { updatedAt: new Date() };
@@ -89,23 +89,23 @@ router.patch("/delivery/providers/:id", requireAdmin, async (req, res) => {
     }
     const [updated] = await db.update(deliveryProvidersTable).set(patch).where(eq(deliveryProvidersTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
-    res.json(sanitize(updated));
+    return res.json(sanitize(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update delivery provider");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // DELETE /api/delivery/providers/:id — admin only.
 router.delete("/delivery/providers/:id", requireAdmin, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(deliveryProvidersTable).where(eq(deliveryProvidersTable.id, id));
-    res.status(204).end();
+    return res.status(204).end();
   } catch (err) {
     req.log.error({ err }, "Failed to delete delivery provider");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -113,7 +113,7 @@ router.delete("/delivery/providers/:id", requireAdmin, async (req, res) => {
 // (or default) provider. Admin only. Idempotent: if a tracking number already exists, returns it.
 router.post("/delivery/orders/:orderId/shipment", requireAdmin, async (req, res) => {
   try {
-    const orderId = parseInt(req.params.orderId);
+    const orderId = parseInt(String(req.params.orderId));
     if (isNaN(orderId)) return res.status(400).json({ error: "Invalid orderId" });
     const providerId = req.body?.providerId ? parseInt(req.body.providerId) : null;
 
@@ -152,7 +152,7 @@ router.post("/delivery/orders/:orderId/shipment", requireAdmin, async (req, res)
         deliveryShippedAt: new Date(),
         status: order.status === "pending" ? "shipped" : order.status,
       }).where(eq(ordersTable.id, orderId));
-      res.json(result);
+      return res.json(result);
     } catch (err) {
       if (err instanceof DeliveryNotConfiguredError) {
         return res.status(400).json({ error: err.message, notConfigured: true });
@@ -161,14 +161,14 @@ router.post("/delivery/orders/:orderId/shipment", requireAdmin, async (req, res)
     }
   } catch (err) {
     req.log.error({ err }, "Failed to create shipment");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // GET /api/delivery/orders/:orderId/track — public tracking by order id. Returns nothing sensitive.
 router.get("/delivery/orders/:orderId/track", async (req, res) => {
   try {
-    const orderId = parseInt(req.params.orderId);
+    const orderId = parseInt(String(req.params.orderId));
     if (isNaN(orderId)) return res.status(400).json({ error: "Invalid orderId" });
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order) return res.status(404).json({ error: "Order not found" });
@@ -181,7 +181,7 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
     if (!adapter) return res.json({ status: order.deliveryStatus, trackingNumber: order.deliveryTrackingNumber });
     try {
       const track = await adapter.trackShipment(provider, order.deliveryTrackingNumber);
-      res.json({
+      return res.json({
         trackingNumber: order.deliveryTrackingNumber,
         awbUrl: order.deliveryAwbUrl,
         providerName: provider.nameAr,
@@ -203,7 +203,7 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
     }
   } catch (err) {
     req.log.error({ err }, "Failed to track shipment");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

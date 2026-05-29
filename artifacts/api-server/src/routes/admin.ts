@@ -52,10 +52,10 @@ router.post("/admin/products", async (req, res) => {
       subcategory: subcategory ? String(subcategory) : null,
     }).returning();
 
-    res.status(201).json({ ...product, price: Number(product.price) });
+    return res.status(201).json({ ...product, price: Number(product.price) });
   } catch (err) {
     req.log.error({ err }, "Failed to create product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -106,10 +106,10 @@ router.put("/admin/products/:id", async (req, res) => {
     }).where(eq(productsTable.id, id)).returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });
-    res.json({ ...updated, price: Number(updated.price) });
+    return res.json({ ...updated, price: Number(updated.price) });
   } catch (err) {
     req.log.error({ err }, "Failed to update product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -118,10 +118,10 @@ router.delete("/admin/products/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(productsTable).where(eq(productsTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete product");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -144,10 +144,10 @@ router.patch("/admin/orders/:id", async (req, res) => {
       ...(status && { status }),
       ...(paymentStatus && { paymentStatus }),
     }).where(eq(ordersTable.id, id)).returning();
-    res.json(updated);
+    return res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Failed to update order");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -157,10 +157,10 @@ router.delete("/admin/orders/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
     await db.delete(ordersTable).where(eq(ordersTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete order");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -182,10 +182,10 @@ router.delete("/admin/users/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(usersTable).where(eq(usersTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete user");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -217,10 +217,10 @@ router.delete("/admin/vendors/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(vendorProfilesTable).where(eq(vendorProfilesTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete vendor");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

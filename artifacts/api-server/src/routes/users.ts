@@ -24,10 +24,10 @@ router.get("/users/profile", async (req, res) => {
     }
     if (!user) return res.status(404).json({ error: "User not found" });
     const isAdmin = user.email === SUPER_ADMIN_EMAIL || user.role === "admin";
-    res.json({ ...user, isAdmin });
+    return res.json({ ...user, isAdmin });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -66,10 +66,10 @@ router.post("/users/profile", async (req, res) => {
       role: resolvedRole,
     }).returning();
 
-    res.status(201).json({ ...newUser, isAdmin: newUser.email === SUPER_ADMIN_EMAIL || newUser.role === "admin" });
+    return res.status(201).json({ ...newUser, isAdmin: newUser.email === SUPER_ADMIN_EMAIL || newUser.role === "admin" });
   } catch (err) {
     req.log.error({ err }, "Failed to upsert user profile");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -95,10 +95,10 @@ router.patch("/users/:id", async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(usersTable.id, id)).returning();
     if (!updated) return res.status(404).json({ error: "User not found" });
-    res.json({ ...updated, isAdmin: updated.email === SUPER_ADMIN_EMAIL || updated.role === "admin" });
+    return res.json({ ...updated, isAdmin: updated.email === SUPER_ADMIN_EMAIL || updated.role === "admin" });
   } catch (err) {
     req.log.error({ err }, "Failed to update user");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -107,10 +107,10 @@ router.delete("/users/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(usersTable).where(eq(usersTable.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete user");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -28,7 +28,7 @@ router.post("/uploads/cloudinary-signature", (req, res) => {
   const toSign = `folder=${folder}&timestamp=${timestamp}`;
   const signature = createHash("sha1").update(toSign + apiSecret).digest("hex");
 
-  res.json({
+  return res.json({
     cloudName,
     apiKey,
     folder,
