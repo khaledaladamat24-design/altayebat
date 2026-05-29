@@ -4,7 +4,7 @@ import { walletsTable, walletTransactionsTable, usersTable } from "@workspace/db
 import { and, eq, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
-import { isAdminReq } from "../lib/admin-auth";
+import { isAdminReq, requireAdmin } from "../lib/admin-auth";
 
 const router = Router();
 
@@ -141,8 +141,7 @@ router.post("/wallet/:userId/pay", requireWalletOwner, async (req, res) => {
 
 /* ── Admin endpoints ── */
 
-router.get("/admin/wallet/transactions", async (req, res) => {
-  if (!isAdminReq(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+router.get("/admin/wallet/transactions", requireAdmin, async (req, res) => {
   try {
     const rows = await db.select().from(walletTransactionsTable).orderBy(desc(walletTransactionsTable.createdAt)).limit(200);
     res.json(rows.map(r => ({ ...r, amount: Number(r.amount) })));
@@ -152,8 +151,7 @@ router.get("/admin/wallet/transactions", async (req, res) => {
   }
 });
 
-router.patch("/admin/wallet/transactions/:id", async (req, res) => {
-  if (!isAdminReq(req)) { res.status(403).json({ error: "Forbidden" }); return; }
+router.patch("/admin/wallet/transactions/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
     const { status } = req.body;
