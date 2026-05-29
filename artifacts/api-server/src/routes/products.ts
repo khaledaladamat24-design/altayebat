@@ -5,7 +5,7 @@ import {
   categoriesTable,
   vendorProfilesTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull } from "drizzle-orm";
 
 // Products without a vendor (admin-uploaded) stay visible. Products linked to
 // a vendor only appear when that vendor is marked online — this lets vendors

@@ -29,7 +29,7 @@ import {
   useListProducts,
 } from "@workspace/api-client-react";
 import { toast } from "sonner";
-import { useAuth, useUser } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
 import { getSubcategoriesForSlug } from "@/lib/subcategories";
@@ -101,7 +101,6 @@ interface AdminVendor {
 
 export default function Admin() {
   const [, setLocation] = useLocation();
-  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { lang, dir, tr } = useLanguage();
 

@@ -18,7 +18,7 @@ export function checkSaleIntegrity(input: {
   price: unknown;
   originalPrice: unknown;
 }): SaleIntegrityResult {
-  if (!Boolean(input.isOnSale)) return { ok: true };
+  if (!input.isOnSale) return { ok: true };
   const { originalPrice } = input;
   const orig =
     originalPrice === undefined ||

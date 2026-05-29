@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth, useUser } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import {
   Store,
   ShoppingBag,
@@ -21,7 +21,6 @@ type Step = "role" | "vendor-details" | "vendor-payout" | "done";
 
 export default function Register() {
   const [, setLocation] = useLocation();
-  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { dir, tr } = useLanguage();
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useClerk, useAuth } from "@clerk/react";
+import { useAuth } from "@clerk/react";
 import { useSignIn, useSignUp } from "@clerk/react/legacy";
 import {
   Mail,
@@ -42,7 +42,6 @@ declare global {
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { openSignIn } = useClerk();
   const { isSignedIn, isLoaded: authLoaded } = useAuth();
   const {
     signIn,

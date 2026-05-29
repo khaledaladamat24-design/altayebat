@@ -16,7 +16,7 @@ vi.mock("@clerk/express", () => ({
 
 const { db, usersTable, walletsTable, walletTransactionsTable } =
   await import("@workspace/db");
-const { eq, inArray } = await import("drizzle-orm");
+const { inArray } = await import("drizzle-orm");
 // Import the real router AFTER the mock so its requireWalletOwner uses the stub.
 const walletRouter = (await import("../wallet")).default;
 
@@ -43,7 +43,6 @@ const tag = Date.now();
 let userAClerk: string;
 let userBClerk: string;
 let userAId: number;
-let userBId: number;
 const userIds: number[] = [];
 
 beforeAll(async () => {
@@ -59,7 +58,6 @@ beforeAll(async () => {
     .values({ clerkId: userBClerk })
     .returning();
   userAId = userA.id;
-  userBId = userB.id;
   userIds.push(userA.id, userB.id);
 });
 

@@ -16,7 +16,7 @@ const FALLBACK_ADMIN_PASSWORD = "tayebat2024";
 export function getAdminPassword(): string {
   const env = process.env.ADMIN_PASSWORD;
   if (env && env.length > 0) return env;
-  // eslint-disable-next-line no-console
+
   console.warn(
     "[admin] ⚠️  ADMIN_PASSWORD env secret is not set — falling back to the legacy default. " +
       "Set ADMIN_PASSWORD as a Replit Secret to secure the admin panel.",

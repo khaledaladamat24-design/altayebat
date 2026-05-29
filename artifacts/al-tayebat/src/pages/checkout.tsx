@@ -83,7 +83,7 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [screenshot, setScreenshot] = useState<string | null>(null);
-  const [screenshotName, setScreenshotName] = useState("");
+  const [_screenshotName, setScreenshotName] = useState("");
   const [vendorPayment, setVendorPayment] = useState<VendorPayment>(
     DEFAULT_VENDOR_PAYMENT,
   );

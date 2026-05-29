@@ -2,7 +2,6 @@ import {
   pgTable,
   serial,
   text,
-  integer,
   boolean,
   jsonb,
   timestamp,

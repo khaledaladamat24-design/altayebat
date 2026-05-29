@@ -6,7 +6,6 @@ import {
   Settings,
   CreditCard,
   Zap,
-  Gift,
   UserCircle,
   Pencil,
   Check,
@@ -26,7 +25,7 @@ import { openSupport } from "@/lib/support";
 import { useLanguage } from "@/contexts/language";
 
 export default function Account() {
-  const { lang, dir, tr } = useLanguage();
+  const { dir, tr } = useLanguage();
   const [, setLocation] = useLocation();
   const { isSignedIn: clerkSignedIn } = useAuth();
   const { signOut } = useClerk();

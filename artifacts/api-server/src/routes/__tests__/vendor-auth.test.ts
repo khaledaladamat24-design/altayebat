@@ -16,7 +16,7 @@ vi.mock("@clerk/express", () => ({
 
 const { db, usersTable, vendorProfilesTable, ordersTable } =
   await import("@workspace/db");
-const { eq, inArray } = await import("drizzle-orm");
+const { inArray } = await import("drizzle-orm");
 const { requireVendorOwner, requireOrderVendorOwner } =
   await import("../../lib/vendor-auth");
 
@@ -54,7 +54,6 @@ const tag = Date.now();
 let userAClerk: string;
 let userBClerk: string;
 let vendorAId: number;
-let vendorBId: number;
 let orderOwnedId: number;
 let orderNullVendorId: number;
 const userIds: number[] = [];
@@ -98,7 +97,6 @@ beforeAll(async () => {
     })
     .returning();
   vendorAId = vendorA.id;
-  vendorBId = vendorB.id;
   vendorIds.push(vendorA.id, vendorB.id);
 
   const [orderOwned] = await db
