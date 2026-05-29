@@ -53,3 +53,39 @@ export function getSubcategoryLabel(value: string | null | undefined, lang: "ar"
   if (!opt) return value;
   return lang === "en" ? opt.en : opt.ar;
 }
+
+export interface CategoryChip {
+  value: string;
+  label: string;
+}
+
+/**
+ * Builds the filter chips shown at the top of a category page. Regular-Zone
+ * categories show "All", their mapped sub-type chips (value prefixed `sub:`),
+ * then "In stock only". Healthy-Zone categories keep the Keto/Organic chips
+ * driven by the isKeto/isOrganic product booleans.
+ */
+export function buildCategoryChips(opts: {
+  isRegular: boolean;
+  slug?: string | null;
+  lang: "ar" | "en";
+}): CategoryChip[] {
+  const { isRegular, slug, lang } = opts;
+  const t = (ar: string, en: string) => (lang === "en" ? en : ar);
+  if (isRegular) {
+    return [
+      { value: "all", label: t("الكل", "All") },
+      ...getSubcategoriesForSlug(slug).map((o) => ({
+        value: `sub:${o.value}`,
+        label: lang === "en" ? o.en : o.ar,
+      })),
+      { value: "instock", label: t("متوفر فقط", "In stock only") },
+    ];
+  }
+  return [
+    { value: "all", label: t("الكل", "All") },
+    { value: "keto", label: t("كيتو", "Keto") },
+    { value: "organic", label: t("عضوي", "Organic") },
+    { value: "instock", label: t("متوفر فقط", "In stock only") },
+  ];
+}

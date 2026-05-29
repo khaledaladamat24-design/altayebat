@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { vendorProfilesTable, productsTable, ordersTable, orderItemsTable } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireVendorOwner } from "../lib/vendor-auth";
+import { checkSaleIntegrity } from "../lib/sale-integrity";
 
 const router = Router();
 
@@ -60,12 +61,8 @@ router.post("/vendors/:id/products", async (req, res) => {
     if (!nameAr || !name || !price || !categoryId) {
       return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
     }
-    if (Boolean(isOnSale)) {
-      const orig = originalPrice === undefined || originalPrice === null || originalPrice === "" ? null : Number(originalPrice);
-      if (orig === null || !(orig > Number(price))) {
-        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
-      }
-    }
+    const saleCheck = checkSaleIntegrity({ isOnSale, price, originalPrice });
+    if (!saleCheck.ok) return res.status(400).json({ error: saleCheck.error });
     const [product] = await db.insert(productsTable).values({
       vendorId, nameAr, name,
       descriptionAr: descriptionAr || null, description: description || null,
@@ -111,10 +108,8 @@ router.patch("/vendors/:vendorId/products/:productId", async (req, res) => {
       const effOnSale = isOnSale !== undefined ? Boolean(isOnSale) : existing.isOnSale;
       const effPrice = price !== undefined ? Number(price) : Number(existing.price);
       const effOrigRaw = originalPrice !== undefined ? originalPrice : existing.originalPrice;
-      const effOrig = effOrigRaw === undefined || effOrigRaw === null || effOrigRaw === "" ? null : Number(effOrigRaw);
-      if (effOnSale && (effOrig === null || !(effOrig > effPrice))) {
-        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
-      }
+      const saleCheck = checkSaleIntegrity({ isOnSale: effOnSale, price: effPrice, originalPrice: effOrigRaw });
+      if (!saleCheck.ok) return res.status(400).json({ error: saleCheck.error });
     }
 
     const [updated] = await db.update(productsTable).set({

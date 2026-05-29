@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/product-card";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/language";
-import { getSubcategoriesForSlug } from "@/lib/subcategories";
+import { buildCategoryChips } from "@/lib/subcategories";
 
 export default function Category() {
   const { lang, dir, tr } = useLanguage();
@@ -23,25 +23,12 @@ export default function Category() {
   );
 
   const isRegular = category?.foodType === "regular";
-  const subOptions = useMemo(
-    () => (isRegular ? getSubcategoriesForSlug(category?.slug) : []),
-    [isRegular, category?.slug],
-  );
-
   // Chips depend on the zone: Regular shows the mapped sub-types, Healthy keeps
   // the Keto/Organic chips driven by the isKeto/isOrganic booleans.
-  const chips: { value: string; label: string }[] = isRegular
-    ? [
-        { value: "all", label: tr("الكل", "All") },
-        ...subOptions.map((o) => ({ value: `sub:${o.value}`, label: lang === "en" ? o.en : o.ar })),
-        { value: "instock", label: tr("متوفر فقط", "In stock only") },
-      ]
-    : [
-        { value: "all", label: tr("الكل", "All") },
-        { value: "keto", label: tr("كيتو", "Keto") },
-        { value: "organic", label: tr("عضوي", "Organic") },
-        { value: "instock", label: tr("متوفر فقط", "In stock only") },
-      ];
+  const chips = useMemo(
+    () => buildCategoryChips({ isRegular, slug: category?.slug, lang }),
+    [isRegular, category?.slug, lang],
+  );
 
   const [filter, setFilter] = useState<string>("all");
 
