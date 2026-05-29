@@ -150,6 +150,12 @@ export default function Checkout() {
       }
     }
 
+    // Final confirmation — orders cannot be cancelled once placed, so make the
+    // customer explicitly acknowledge this before we create the order.
+    if (!window.confirm("تنبيه: لا يمكن إلغاء الطلب بعد تأكيده. هل تريد المتابعة وتأكيد الطلب؟")) {
+      return;
+    }
+
     localStorage.setItem("al_tayebat_name", values.customerName);
     localStorage.setItem("al_tayebat_phone", values.customerPhone);
     localStorage.setItem("al_tayebat_address", values.deliveryAddress);
@@ -407,6 +413,9 @@ export default function Checkout() {
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 p-3 bg-background border-t border-border z-40 max-w-md mx-auto">
+        <p className="text-[11px] text-muted-foreground text-center mb-2 flex items-center justify-center gap-1">
+          <span aria-hidden>⚠️</span> لا يمكن إلغاء الطلب بعد تأكيده
+        </p>
         <Button
           type="submit"
           form="checkout-form"
