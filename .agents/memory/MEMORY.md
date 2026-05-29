@@ -1,0 +1,1 @@
+- [Frontend component testing](frontend-testing.md) — how al-tayebat runs Vitest + Testing Library component tests (jsdom, mocking hooks, QueryClient).
