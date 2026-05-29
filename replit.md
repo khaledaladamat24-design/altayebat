@@ -104,7 +104,7 @@
 
 - Native shell config: `artifacts/al-tayebat/capacitor.config.ts` (appId `com.altayebat.app`, name "الطيبات")
 - CI: `.github/workflows/main.yml` ("Build Android App") runs on every push to `main` (paths-filtered) and on `workflow_dispatch`. It now builds a **signed release APK + AAB** (`al-tayebat-release-apk` / `al-tayebat-release-aab`) downloadable from the workflow run's Artifacts panel. It falls back to an unsigned debug APK only if `ANDROID_KEYSTORE_BASE64` is unset.
-- For native builds, `VITE_API_BASE_URL` must point to the deployed Replit API (e.g. `https://<your-app>.replit.app/api`) — relative `/api` URLs won't reach the backend from the device filesystem
+- For native builds, `VITE_API_BASE_URL` must point to the deployed Replit API — relative `/api` URLs won't reach the backend from the device filesystem. Production deploy is live at `https://al-tayebat-nour.replit.app`, so the `VITE_API_BASE_URL` GitHub secret is set to `https://al-tayebat-nour.replit.app/api`. The privacy-policy URL for the Play Console listing is `https://al-tayebat-nour.replit.app/privacy-policy`.
 - Required GitHub repo secrets: `VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_FIREBASE_*` (6 values)
 - Local Android build (needs Android Studio + JDK 21): `pnpm --filter @workspace/al-tayebat cap:add:android` once, then `pnpm --filter @workspace/al-tayebat cap:sync` before each rebuild
 
