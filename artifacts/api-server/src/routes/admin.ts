@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { db } from "@workspace/db";
 import { productsTable, ordersTable, orderItemsTable, usersTable, vendorProfilesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { checkSaleIntegrity } from "../lib/sale-integrity";
 
 const router = Router();
 
@@ -39,11 +40,9 @@ router.post("/admin/products", async (req, res) => {
       return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
     }
 
-    if (Boolean(isOnSale)) {
-      const orig = originalPrice === undefined || originalPrice === null || originalPrice === "" ? null : Number(originalPrice);
-      if (orig === null || !(orig > Number(price))) {
-        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
-      }
+    const saleCheck = checkSaleIntegrity({ isOnSale, price, originalPrice });
+    if (!saleCheck.ok) {
+      return res.status(400).json({ error: saleCheck.error });
     }
 
     const num = (v: unknown) => (v === undefined || v === null || v === "" ? null : v);
@@ -93,11 +92,11 @@ router.put("/admin/products/:id", async (req, res) => {
       const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id));
       if (!existing) return res.status(404).json({ error: "Not found" });
       const effOnSale = isOnSale !== undefined ? Boolean(isOnSale) : existing.isOnSale;
-      const effPrice = price !== undefined ? Number(price) : Number(existing.price);
+      const effPrice = price !== undefined ? price : existing.price;
       const effOrigRaw = originalPrice !== undefined ? originalPrice : existing.originalPrice;
-      const effOrig = effOrigRaw === undefined || effOrigRaw === null || effOrigRaw === "" ? null : Number(effOrigRaw);
-      if (effOnSale && (effOrig === null || !(effOrig > effPrice))) {
-        return res.status(400).json({ error: "لتفعيل العرض يجب إدخال سعر أصلي أعلى من السعر الحالي" });
+      const saleCheck = checkSaleIntegrity({ isOnSale: effOnSale, price: effPrice, originalPrice: effOrigRaw });
+      if (!saleCheck.ok) {
+        return res.status(400).json({ error: saleCheck.error });
       }
     }
 
