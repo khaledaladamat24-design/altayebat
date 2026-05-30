@@ -80,6 +80,7 @@ beforeAll(async () => {
       customerPhone: "0791234567",
       deliveryProviderId: provider.id,
       deliveryTrackingNumber: "TRK-123",
+      deliveryAwbUrl: "https://awb.example.com/TRK-123",
       deliveryStatus: "shipped",
     })
     .returning();
@@ -120,6 +121,26 @@ describe("GET /api/delivery/orders/:orderId/track — contract serialization", (
     expect(res.status).toBe(200);
     expect(res.body.trackingNumber).toBeNull();
     expect(typeof res.body.status).toBe("string");
+  });
+
+  it("maps a shipped order's delivery columns into the full OrderTracking shape", async () => {
+    mockTrack.mockResolvedValueOnce({
+      status: "in_transit",
+      statusAr: "قيد التوصيل",
+    });
+    const res = await request(app).get(
+      `/api/delivery/orders/${shippedOrderId}/track`,
+    );
+    expect(res.status).toBe(200);
+    // Columns sourced from the order row.
+    expect(res.body.trackingNumber).toBe("TRK-123");
+    expect(res.body.awbUrl).toBe("https://awb.example.com/TRK-123");
+    // Columns sourced from the provider row.
+    expect(res.body.providerName).toBe("مزود التتبع");
+    expect(res.body.providerPhone).toBe("0791112222");
+    // Status fields sourced from the adapter.
+    expect(res.body.status).toBe("in_transit");
+    expect(res.body.statusAr).toBe("قيد التوصيل");
   });
 
   it("strips adapter-only fields (history/raw) not in the OrderTracking contract", async () => {
