@@ -1,12 +1,30 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import type { DeliveryProvider } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { GetOrderTrackingResponse } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
 import { DeliveryNotConfiguredError } from "../delivery/types";
 
 const router = Router();
+
+// Validate/serialize a tracking payload against the OpenAPI `OrderTracking`
+// contract before sending. Delivery adapters can return arbitrary shapes, so
+// this strips unknown fields and rejects malformed data — the client can never
+// receive an off-contract response, and a bad adapter surfaces as a controlled,
+// logged 500 instead of leaking a divergent payload.
+function sendTracking(req: Request, res: Response, candidate: unknown) {
+  const parsed = GetOrderTrackingResponse.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Tracking response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.json(parsed.data);
+}
 
 const PUBLIC_FIELDS = [
   "id",
@@ -265,7 +283,10 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
       .limit(1);
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (!order.deliveryTrackingNumber || !order.deliveryProviderId) {
-      return res.json({ status: order.status, trackingNumber: null });
+      return sendTracking(req, res, {
+        status: order.status,
+        trackingNumber: null,
+      });
     }
     const [provider] = await db
       .select()
@@ -273,13 +294,13 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
       .where(eq(deliveryProvidersTable.id, order.deliveryProviderId))
       .limit(1);
     if (!provider)
-      return res.json({
+      return sendTracking(req, res, {
         status: order.deliveryStatus ?? order.status,
         trackingNumber: order.deliveryTrackingNumber,
       });
     const adapter = getAdapter(provider.type);
     if (!adapter)
-      return res.json({
+      return sendTracking(req, res, {
         status: order.deliveryStatus,
         trackingNumber: order.deliveryTrackingNumber,
       });
@@ -288,7 +309,7 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
         provider,
         order.deliveryTrackingNumber,
       );
-      return res.json({
+      return sendTracking(req, res, {
         trackingNumber: order.deliveryTrackingNumber,
         awbUrl: order.deliveryAwbUrl,
         providerName: provider.nameAr,
@@ -297,7 +318,7 @@ router.get("/delivery/orders/:orderId/track", async (req, res) => {
       });
     } catch (err) {
       if (err instanceof DeliveryNotConfiguredError) {
-        return res.json({
+        return sendTracking(req, res, {
           trackingNumber: order.deliveryTrackingNumber,
           awbUrl: order.deliveryAwbUrl,
           providerName: provider.nameAr,
