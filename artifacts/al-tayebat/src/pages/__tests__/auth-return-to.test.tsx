@@ -455,6 +455,71 @@ describe("Email signup lands a brand-new account on the register screen", () => 
   });
 });
 
+describe("Phone OTP verify surfaces failures instead of stranding the user", () => {
+  // Drives the phone-signup flow up to the OTP screen with a Firebase
+  // confirmation whose confirm() behaviour is supplied per-test, so each
+  // failure branch can assert on the verify handler's behaviour.
+  async function reachPhoneOtpScreen(
+    user: ReturnType<typeof userEvent.setup>,
+    confirm: ReturnType<typeof vi.fn>,
+  ) {
+    h.isConfigured.mockReturnValue(true);
+    h.signInWithPhoneNumber.mockResolvedValue({ confirm });
+
+    renderAuth();
+    await user.click(
+      screen.getByRole("button", { name: /تسجيل الدخول برقم الهاتف/ }),
+    );
+    await user.type(screen.getByPlaceholderText("07XXXXXXXX"), "0791234567");
+    await user.click(
+      screen.getByRole("button", { name: /إنشاء حساب جديد — إرسال الرمز/ }),
+    );
+    await screen.findByPlaceholderText("_ _ _ _ _ _");
+  }
+
+  it("shows an error toast and stays on the OTP screen when the code is wrong", async () => {
+    const confirm = vi.fn().mockRejectedValue(new Error("Code is invalid"));
+
+    const user = userEvent.setup();
+    await reachPhoneOtpScreen(user, confirm);
+
+    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "000000");
+    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Code is invalid"),
+    );
+    // A rejected confirmation must NOT advance the user — they stay on the OTP
+    // screen (the code input is still rendered) and never reach the
+    // set-password screen.
+    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /حفظ والمتابعة/ }),
+    ).toBeNull();
+  });
+
+  it("does not advance when the confirmation resolves without a user", async () => {
+    // Firebase can resolve confirm() without throwing yet hand back no `user`.
+    // The handler must treat this as a no-op rather than silently advancing the
+    // shopper to the set-password screen.
+    const confirm = vi.fn().mockResolvedValue({});
+
+    const user = userEvent.setup();
+    await reachPhoneOtpScreen(user, confirm);
+
+    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
+    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+
+    // Give any pending navigation/advance a chance to fire, then assert none did.
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /حفظ والمتابعة/ }),
+    ).toBeNull();
+    expect(h.mockSetLocation).not.toHaveBeenCalled();
+  });
+});
+
 describe("Register consumer honours the stashed return-to path", () => {
   it("navigates a new consumer to the stashed path after sign-up", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
