@@ -70,6 +70,10 @@ describe("Checkout payment-method selection", () => {
   });
 
   it("disables CliQ and E-Wallet when the vendor has not set payment info", async () => {
+    // Non-cash methods are gated behind sign-in: a guest tapping them is sent to
+    // signup instead of being blocked, so the disabled state only applies to a
+    // signed-in user. Sign in here so we exercise the vendor-payment gating.
+    localStorage.setItem("al_tayebat_user_id", "user_99");
     // All vendor/product lookups fail → defaults keep CliQ/E-Wallet disabled.
     vi.stubGlobal(
       "fetch",
@@ -89,6 +93,9 @@ describe("Checkout payment-method selection", () => {
   });
 
   it("enables CliQ once the vendor exposes a CliQ alias and reveals the receipt-upload prompt on selection", async () => {
+    // CliQ can only be *selected* by a signed-in user; a guest tap is redirected
+    // to signup, so sign in to reach the receipt-upload prompt.
+    localStorage.setItem("al_tayebat_user_id", "user_99");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string) => {
@@ -166,6 +173,9 @@ describe("Checkout payment-method selection", () => {
   });
 
   it("blocks a CliQ order until a payment receipt screenshot is attached", async () => {
+    // CliQ is only selectable once signed in; otherwise the tap redirects to
+    // signup and the submit button never becomes the CliQ "pay" button.
+    localStorage.setItem("al_tayebat_user_id", "user_99");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string) => {
