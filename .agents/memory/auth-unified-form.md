@@ -19,6 +19,7 @@ keeping them and only changing the UI shell avoids reworking Clerk/Firebase
 logic. The user explicitly wanted the Tulip single-form UX.
 
 **How to apply / gotchas when editing this file:**
+
 - Keep the `<div ref={recaptchaRef} />` on whatever screen triggers
   `handleSendPhoneOtp` (currently the signup screen + login fallback) — Firebase
   needs the container mounted.
