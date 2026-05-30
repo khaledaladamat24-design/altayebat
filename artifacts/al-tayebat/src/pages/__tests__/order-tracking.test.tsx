@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/contexts/language";
+
+const mockToastSuccess = vi.fn();
+vi.mock("sonner", () => ({
+  toast: { success: (...args: unknown[]) => mockToastSuccess(...args) },
+}));
 
 const mockUseGetOrder = vi.fn();
 const mockUseListOrders = vi.fn();
@@ -185,6 +190,114 @@ describe("OrderDetail (order tracking page)", () => {
 
     renderWithProviders(<OrderDetail />);
     expect(screen.getByText("مجاني")).toBeInTheDocument();
+  });
+});
+
+describe("OrderDetail shipping section (live tracking after shipping)", () => {
+  // Stub the /api/delivery/orders/:id/track endpoint with a tracking payload.
+  // The page fetches this separately (not part of the OpenAPI Order schema).
+  function stubTrackEndpoint(payload: Record<string, unknown> | null) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: payload !== null,
+        json: async () => payload,
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    mockUseGetOrder.mockReset();
+    mockToastSuccess.mockReset();
+    mockParams = { id: "123" };
+    mockUseGetOrder.mockReturnValue({
+      data: makeOrder({ status: "on_the_way" }),
+      isLoading: false,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renders the shipping section with tracking number, carrier name, and shipment status", async () => {
+    stubTrackEndpoint({
+      trackingNumber: "AWB123456789",
+      providerName: "Aramex",
+      status: "In transit",
+      statusAr: "قيد الشحن",
+      awbUrl: "https://track.example.com/AWB123456789",
+      providerPhone: "0791112233",
+      notConfigured: false,
+    });
+
+    renderWithProviders(<OrderDetail />);
+
+    // The shipping section header appears only once tracking data arrives.
+    expect(await screen.findByText("الشحن")).toBeInTheDocument();
+    // Carrier name.
+    expect(screen.getByText("Aramex")).toBeInTheDocument();
+    // Tracking number.
+    expect(screen.getByText("AWB123456789")).toBeInTheDocument();
+    // Shipment status (Arabic is the default language).
+    expect(screen.getByText("قيد الشحن")).toBeInTheDocument();
+    // AWB link + carrier phone.
+    expect(
+      screen.getByRole("link", { name: /بوليصة الشحن/ }),
+    ).toHaveAttribute("href", "https://track.example.com/AWB123456789");
+    expect(screen.getByText("0791112233")).toBeInTheDocument();
+    // The manual-tracking notice is hidden when the carrier API is integrated.
+    expect(
+      screen.queryByText(/هذه الشركة لم يتم ربط API/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("copies the tracking number to the clipboard and shows a success toast", async () => {
+    stubTrackEndpoint({
+      trackingNumber: "AWB987654321",
+      providerName: "SMSA",
+      statusAr: "تم الشحن",
+    });
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText },
+    });
+
+    renderWithProviders(<OrderDetail />);
+
+    const copyButton = await screen.findByRole("button", { name: "نسخ" });
+    fireEvent.click(copyButton);
+
+    expect(writeText).toHaveBeenCalledWith("AWB987654321");
+    expect(mockToastSuccess).toHaveBeenCalledWith("تم نسخ رقم التتبع");
+  });
+
+  it("shows the manual-tracking notice when the carrier API is not configured", async () => {
+    stubTrackEndpoint({
+      trackingNumber: "MANUAL-001",
+      providerName: "Local Courier",
+      notConfigured: true,
+    });
+
+    renderWithProviders(<OrderDetail />);
+
+    expect(
+      await screen.findByText(/هذه الشركة لم يتم ربط API الخاص بها بعد/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not render the shipping section when there is no tracking number", async () => {
+    stubTrackEndpoint({ trackingNumber: null, notConfigured: false });
+
+    renderWithProviders(<OrderDetail />);
+
+    // Give the effect a chance to resolve, then assert the section is absent.
+    await waitFor(() =>
+      expect(mockUseGetOrder).toHaveBeenCalled(),
+    );
+    expect(screen.queryByText("الشحن")).not.toBeInTheDocument();
   });
 });
 
