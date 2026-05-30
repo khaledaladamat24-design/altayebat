@@ -60,6 +60,9 @@ describe("Checkout payment-method selection", () => {
     mockUseGetCart.mockReset();
     mockMutate.mockReset();
     localStorage.clear();
+    // jsdom does not implement scrollIntoView; checkout calls it when a CliQ/
+    // e-wallet order is submitted without a receipt.
+    Element.prototype.scrollIntoView = vi.fn();
   });
 
   afterEach(() => {
@@ -120,6 +123,118 @@ describe("Checkout payment-method selection", () => {
 
     // Selecting CliQ surfaces the transfer + upload instructions.
     expect(await screen.findByText(/ارفع إيصال الدفع/)).toBeInTheDocument();
+  });
+
+  it("submits a Cash-on-Delivery order with the delivery details and session id", async () => {
+    // No vendor payment info → only COD is available (and selected by default).
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }),
+    );
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
+
+    const user = userEvent.setup();
+    renderCheckout();
+
+    await user.type(screen.getByLabelText("الاسم الكامل"), "أحمد محمد");
+    await user.type(screen.getByLabelText("رقم الهاتف"), "0791234567");
+    await user.type(
+      screen.getByLabelText("عنوان التوصيل"),
+      "عمان، الدوار الخامس، شارع المدينة المنورة، مبنى 12",
+    );
+
+    await user.click(screen.getByRole("button", { name: /تأكيد الطلب/ }));
+
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+
+    // The final confirmation dialog must have been acknowledged.
+    expect(window.confirm).toHaveBeenCalled();
+
+    const payload = mockMutate.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(payload.data).toMatchObject({
+      sessionId: "session_test",
+      paymentMethod: "cod",
+      customerName: "أحمد محمد",
+      customerPhone: "0791234567",
+      deliveryAddress: "عمان، الدوار الخامس، شارع المدينة المنورة، مبنى 12",
+    });
+    // COD never attaches a receipt screenshot.
+    expect(payload.data.paymentScreenshotUrl).toBeUndefined();
+  });
+
+  it("blocks a CliQ order until a payment receipt screenshot is attached", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/api/products/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ vendorId: 7 }),
+          });
+        }
+        if (url.includes("/api/vendors/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              storeNameAr: "متجر",
+              cliqAlias: "altayebat",
+              walletNumber: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }),
+    );
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
+
+    const user = userEvent.setup();
+    renderCheckout();
+
+    await user.type(screen.getByLabelText("الاسم الكامل"), "أحمد محمد");
+    await user.type(screen.getByLabelText("رقم الهاتف"), "0791234567");
+    await user.type(
+      screen.getByLabelText("عنوان التوصيل"),
+      "عمان، الدوار الخامس، شارع المدينة المنورة، مبنى 12",
+    );
+
+    const cliq = screen.getByRole("button", { name: /تحويل كليك/ });
+    await waitFor(() => expect(cliq).toBeEnabled());
+    await user.click(cliq);
+
+    // Submitting without a receipt must NOT create an order.
+    await user.click(screen.getByRole("button", { name: /ادفع عبر كليك/ }));
+    await waitFor(() => expect(window.confirm).not.toHaveBeenCalled());
+    expect(mockMutate).not.toHaveBeenCalled();
+
+    // Attach the payment receipt screenshot.
+    const file = new File(["receipt-bytes"], "receipt.png", {
+      type: "image/png",
+    });
+    const fileInput = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await waitFor(() =>
+      expect(screen.getByText(/تم رفع الإيصال/)).toBeInTheDocument(),
+    );
+
+    // Now the order goes through with the receipt attached.
+    await user.click(screen.getByRole("button", { name: /ادفع عبر كليك/ }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1));
+
+    const payload = mockMutate.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(payload.data).toMatchObject({
+      sessionId: "session_test",
+      paymentMethod: "cliq",
+    });
+    expect(typeof payload.data.paymentScreenshotUrl).toBe("string");
+    expect(payload.data.paymentScreenshotUrl as string).toMatch(/^data:/);
   });
 
   it("shows a loading state instead of the form while the cart is loading", () => {
