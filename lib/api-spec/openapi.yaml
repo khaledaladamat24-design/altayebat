@@ -462,6 +462,14 @@ components:
           type: boolean
         subcategory:
           type: ["string", "null"]
+        calories:
+          type: ["integer", "null"]
+        protein:
+          type: ["number", "null"]
+        carbs:
+          type: ["number", "null"]
+        fats:
+          type: ["number", "null"]
 
     CartItem:
       type: object

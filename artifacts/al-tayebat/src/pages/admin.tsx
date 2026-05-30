@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useListCategories,
   useListProducts,
+  type Product,
 } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/react";
@@ -156,7 +157,7 @@ export default function Admin() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const startEditProduct = (p: any) => {
+  const startEditProduct = (p: Product) => {
     setEditingId(p.id);
     setForm({
       nameAr: p.nameAr ?? "",
@@ -208,6 +209,11 @@ export default function Admin() {
     ) {
       fetchTabData();
     }
+    // `fetchTabData` reads `tab`/`authed` (already deps) and closes over
+    // `adminHeaders`/`tr` which are recreated every render; listing it would
+    // refetch on every render. Data should reload only when auth state or the
+    // active tab changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab]);
 
   const fetchTabData = async () => {
@@ -660,7 +666,7 @@ export default function Admin() {
               const displayName = lang === "en" ? p.name || p.nameAr : p.nameAr;
               const displayCategory =
                 lang === "en"
-                  ? (p as any).categoryName || p.categoryNameAr
+                  ? p.categoryName || p.categoryNameAr
                   : p.categoryNameAr;
               return (
                 <div
@@ -711,7 +717,7 @@ export default function Admin() {
                     </button>
                     <button
                       onClick={() =>
-                        handleDeleteProduct(p.id, p.nameAr, (p as any).name)
+                        handleDeleteProduct(p.id, p.nameAr, p.name)
                       }
                       className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
                       title={tr("حذف", "Delete")}

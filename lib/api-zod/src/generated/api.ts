@@ -94,7 +94,11 @@ export const ListProductsResponseItem = zod.object({
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
   "isOnSale": zod.boolean().optional(),
-  "subcategory": zod.string().nullish()
+  "subcategory": zod.string().nullish(),
+  "calories": zod.number().nullish(),
+  "protein": zod.number().nullish(),
+  "carbs": zod.number().nullish(),
+  "fats": zod.number().nullish()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -131,7 +135,11 @@ export const GetProductResponse = zod.object({
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
   "isOnSale": zod.boolean().optional(),
-  "subcategory": zod.string().nullish()
+  "subcategory": zod.string().nullish(),
+  "calories": zod.number().nullish(),
+  "protein": zod.number().nullish(),
+  "carbs": zod.number().nullish(),
+  "fats": zod.number().nullish()
 })
 
 
@@ -167,7 +175,11 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
   "isOnSale": zod.boolean().optional(),
-  "subcategory": zod.string().nullish()
+  "subcategory": zod.string().nullish(),
+  "calories": zod.number().nullish(),
+  "protein": zod.number().nullish(),
+  "carbs": zod.number().nullish(),
+  "fats": zod.number().nullish()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
 
@@ -204,7 +216,11 @@ export const ListBestsellersResponseItem = zod.object({
   "vendorNameAr": zod.string().nullish(),
   "foodType": zod.enum(['healthy', 'regular']).optional(),
   "isOnSale": zod.boolean().optional(),
-  "subcategory": zod.string().nullish()
+  "subcategory": zod.string().nullish(),
+  "calories": zod.number().nullish(),
+  "protein": zod.number().nullish(),
+  "carbs": zod.number().nullish(),
+  "fats": zod.number().nullish()
 })
 export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 

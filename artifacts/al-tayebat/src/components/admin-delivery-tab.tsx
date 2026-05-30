@@ -97,6 +97,10 @@ export function AdminDeliveryTab({ adminHeaders }: Props) {
 
   useEffect(() => {
     load();
+    // Mount-only load. `load` is also invoked directly after each mutation and
+    // closes over `adminHeaders`/`tr` (recreated every render), so listing it
+    // would cause a refetch loop. No reactive input drives this fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const required =

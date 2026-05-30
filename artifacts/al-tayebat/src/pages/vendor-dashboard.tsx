@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
 import { ImageUpload } from "@/components/image-upload";
 import { useLanguage } from "@/contexts/language";
+import { getErrorMessage } from "@/lib/errors";
 
 interface VendorProfile {
   id: number;
@@ -195,6 +196,11 @@ export default function VendorDashboard() {
       setLoading(false);
     };
     load();
+    // `tr` is only used for an error toast and is recreated every render
+    // (not memoized in the language context), so including it would refetch
+    // store data on every render. This effect should run only when the
+    // vendor identity inputs change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, storedVendorId]);
 
   const refreshProducts = async () => {
@@ -464,8 +470,10 @@ export default function VendorDashboard() {
       setEditingId(null);
       setTab("list");
       await refreshProducts();
-    } catch (err: any) {
-      toast.error(err.message || tr("حدث خطأ", "Something went wrong"));
+    } catch (err) {
+      toast.error(
+        getErrorMessage(err) || tr("حدث خطأ", "Something went wrong"),
+      );
     }
     setSaving(false);
   };

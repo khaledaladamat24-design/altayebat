@@ -16,12 +16,14 @@ import {
   Navigation,
   Headphones,
   Languages,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { openSupport, SUPPORT_PHONE } from "@/lib/support";
 import { useLanguage } from "@/contexts/language";
+import { getErrorMessage } from "@/lib/errors";
 
 const SIGNED_IN_KEYS = [
   "al_tayebat_firebase_uid",
@@ -217,15 +219,14 @@ export default function Settings() {
       await user.updatePassword({
         newPassword: newPw,
         currentPassword: oldPw || undefined,
-      } as any);
+      });
       toast.success(tr("تم تغيير كلمة المرور", "Password changed"));
       setShowPwModal(false);
       setOldPw("");
       setNewPw("");
-    } catch (err: any) {
+    } catch (err) {
       toast.error(
-        err?.errors?.[0]?.longMessage ||
-          err?.message ||
+        getErrorMessage(err) ||
           tr("فشل تغيير كلمة المرور", "Failed to change password"),
       );
     }
@@ -265,15 +266,25 @@ export default function Settings() {
         tr("تم حذف حسابك نهائياً", "Your account has been permanently deleted"),
       );
       setLocation("/auth");
-    } catch (err: any) {
+    } catch (err) {
       toast.error(
-        err?.message || tr("فشل حذف الحساب", "Failed to delete account"),
+        getErrorMessage(err) ||
+          tr("فشل حذف الحساب", "Failed to delete account"),
       );
       setDeleting(false);
     }
   };
 
-  const rows = [
+  type SettingRow = {
+    icon: LucideIcon;
+    label: string;
+    iconColor: string;
+    iconBg: string;
+    suffix?: string;
+    onPress: () => void;
+  };
+
+  const rows: SettingRow[] = [
     {
       icon: MapPin,
       label: tr("عنوان التوصيل", "Delivery address"),
@@ -425,9 +436,9 @@ export default function Settings() {
                   <row.icon className={`w-5 h-5 ${row.iconColor}`} />
                 </div>
                 <span className="flex-1 font-bold text-sm">{row.label}</span>
-                {(row as any).suffix && (
+                {row.suffix && (
                   <span className="text-xs text-muted-foreground font-medium">
-                    {(row as any).suffix}
+                    {row.suffix}
                   </span>
                 )}
                 <ChevronLeft className="w-4 h-4 text-muted-foreground" />

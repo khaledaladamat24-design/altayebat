@@ -68,6 +68,10 @@ export default function WalletPage() {
       );
       setLocation("/auth");
     }
+    // `tr` is only used for the redirect toast and is recreated every render
+    // (not memoized in the language context); the redirect should fire on the
+    // auth-state inputs, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn, setLocation]);
 
   const fetchWallet = async () => {
@@ -86,6 +90,10 @@ export default function WalletPage() {
 
   useEffect(() => {
     fetchWallet();
+    // `fetchWallet` is also called manually after a top-up; it closes over `tr`
+    // (recreated every render) so listing it would refetch on every render.
+    // The wallet only needs to (re)load when the user identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {

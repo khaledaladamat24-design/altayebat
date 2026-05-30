@@ -45,4 +45,12 @@ export interface Product {
   isOnSale?: boolean;
   /** @nullable */
   subcategory?: string | null;
+  /** @nullable */
+  calories?: number | null;
+  /** @nullable */
+  protein?: number | null;
+  /** @nullable */
+  carbs?: number | null;
+  /** @nullable */
+  fats?: number | null;
 }
