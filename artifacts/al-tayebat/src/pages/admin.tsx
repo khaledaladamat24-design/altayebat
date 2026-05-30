@@ -25,6 +25,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   useListCategories,
   useListProducts,
   useCancelOrderShipment,
@@ -129,6 +139,7 @@ export default function Admin() {
   const [vendors, setVendors] = useState<AdminVendor[]>([]);
   const [walletTxs, setWalletTxs] = useState<AdminWalletTx[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [cancelShipmentId, setCancelShipmentId] = useState<number | null>(null);
   const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(
     null,
   );
@@ -586,16 +597,14 @@ export default function Admin() {
     }
   };
 
-  const handleCancelShipment = async (id: number) => {
-    if (
-      !window.confirm(
-        tr(
-          "هل أنت متأكد من إلغاء الشحنة؟ سيتم حذف بيانات التتبع وإعادة الطلب.",
-          "Cancel this shipment? Tracking details will be removed and the order reset.",
-        ),
-      )
-    )
-      return;
+  const handleCancelShipment = (id: number) => {
+    setCancelShipmentId(id);
+  };
+
+  const confirmCancelShipment = async () => {
+    const id = cancelShipmentId;
+    setCancelShipmentId(null);
+    if (id == null) return;
     try {
       const data = await cancelShipmentMutation.mutateAsync({ orderId: id });
       if (data.notImplemented)
@@ -649,6 +658,38 @@ export default function Admin() {
 
   return (
     <div dir={dir} className="pb-8 min-h-screen bg-muted/30">
+      <AlertDialog
+        open={cancelShipmentId != null}
+        onOpenChange={(open) => {
+          if (!open) setCancelShipmentId(null);
+        }}
+      >
+        <AlertDialogContent dir={dir} className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">
+              {tr("إلغاء الشحنة؟", "Cancel shipment?")}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              {tr(
+                "سيتم حذف بيانات التتبع وإعادة الطلب. هل أنت متأكد؟",
+                "Tracking details will be removed and the order reset. Are you sure?",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-start">
+            <AlertDialogAction
+              onClick={confirmCancelShipment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {tr("تأكيد الإلغاء", "Confirm cancel")}
+            </AlertDialogAction>
+            <AlertDialogCancel>
+              {tr("تراجع", "Keep shipment")}
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {previewScreenshot && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
