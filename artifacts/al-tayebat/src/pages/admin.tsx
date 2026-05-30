@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useListCategories,
   useListProducts,
+  useCancelOrderShipment,
   type Product,
 } from "@workspace/api-client-react";
 import { toast } from "sonner";
@@ -73,6 +74,10 @@ interface AdminOrder {
   deliveryFee: string;
   total: string;
   deliveryAddress: string;
+  deliveryProviderId: number | null;
+  deliveryTrackingNumber: string | null;
+  deliveryAwbUrl: string | null;
+  deliveryStatus: string | null;
   createdAt: string;
 }
 
@@ -198,6 +203,10 @@ export default function Admin() {
       ? { "x-admin-email": user.primaryEmailAddress.emailAddress }
       : {}),
   };
+
+  const cancelShipmentMutation = useCancelOrderShipment({
+    request: { headers: adminHeaders },
+  });
 
   useEffect(() => {
     if (
@@ -574,6 +583,48 @@ export default function Admin() {
             "Failed to create shipment. Make sure a default carrier is enabled in the Delivery tab.",
           ),
       );
+    }
+  };
+
+  const handleCancelShipment = async (id: number) => {
+    if (
+      !window.confirm(
+        tr(
+          "هل أنت متأكد من إلغاء الشحنة؟ سيتم حذف بيانات التتبع وإعادة الطلب.",
+          "Cancel this shipment? Tracking details will be removed and the order reset.",
+        ),
+      )
+    )
+      return;
+    try {
+      const data = await cancelShipmentMutation.mutateAsync({ orderId: id });
+      if (data.notImplemented)
+        toast.success(
+          tr(
+            "تم إلغاء الشحنة محلياً (المزود لا يدعم الإلغاء التلقائي مع شركة الشحن)",
+            "Shipment voided locally (the provider doesn't support auto-cancel with the carrier)",
+          ),
+        );
+      else toast.success(tr("تم إلغاء الشحنة", "Shipment cancelled"));
+      fetchTabData();
+    } catch (err) {
+      const data = (err as { data?: { error?: string; notConfigured?: boolean } })
+        ?.data;
+      if (data?.notConfigured)
+        toast.error(
+          tr(
+            `${data.error} · افتح تبويب "التوصيل" وأضف المفاتيح.`,
+            `${data.error} · Open the "Delivery" tab and add the keys.`,
+          ),
+        );
+      else
+        toast.error(
+          data?.error ||
+            tr(
+              "فشل إلغاء الشحنة. حاول مرة أخرى.",
+              "Failed to cancel the shipment. Please try again.",
+            ),
+        );
     }
   };
 
@@ -1173,6 +1224,17 @@ export default function Admin() {
                       {tr("عرض إيصال الدفع", "View payment receipt")}
                     </button>
                   )}
+                  {order.deliveryTrackingNumber && (
+                    <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 text-sm text-indigo-700">
+                      <Truck className="w-4 h-4 shrink-0" />
+                      <span className="font-medium">
+                        {tr("رقم التتبع", "Tracking")}:
+                      </span>
+                      <span className="font-bold break-all">
+                        {order.deliveryTrackingNumber}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex gap-2 flex-wrap">
                     {order.status === "pending" && (
                       <button
@@ -1194,13 +1256,24 @@ export default function Admin() {
                         {tr("تم التوصيل", "Delivered")}
                       </button>
                     )}
-                    {(order.status === "processing" ||
-                      order.status === "pending") && (
+                    {!order.deliveryTrackingNumber &&
+                      (order.status === "processing" ||
+                        order.status === "pending") && (
+                        <button
+                          onClick={() => handleShipOrder(order.id)}
+                          className="flex-1 text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl py-2 font-bold flex items-center justify-center gap-1"
+                        >
+                          <Truck className="w-3 h-3" /> {tr("شحن", "Ship")}
+                        </button>
+                      )}
+                    {order.deliveryTrackingNumber && (
                       <button
-                        onClick={() => handleShipOrder(order.id)}
-                        className="flex-1 text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl py-2 font-bold flex items-center justify-center gap-1"
+                        onClick={() => handleCancelShipment(order.id)}
+                        disabled={cancelShipmentMutation.isPending}
+                        className="flex-1 text-xs bg-orange-50 text-orange-600 border border-orange-200 rounded-xl py-2 font-bold flex items-center justify-center gap-1 disabled:opacity-50"
                       >
-                        <Truck className="w-3 h-3" /> {tr("شحن", "Ship")}
+                        <XCircle className="w-3 h-3" />{" "}
+                        {tr("إلغاء الشحنة", "Cancel shipment")}
                       </button>
                     )}
                     {order.paymentScreenshotUrl &&
