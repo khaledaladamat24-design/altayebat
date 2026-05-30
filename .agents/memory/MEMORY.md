@@ -1,1 +1,2 @@
 - [Guest auth return-to flow](auth-return-flow.md) — stash intent → /auth → consume `takeReturnTo()` on every auth success; discard on skip; pending-payment pre-select with vendor/wallet-checked fallback to COD.
+- [ESLint no-undef off for TS](eslint-no-undef-ts.md) — per-env globals blocks don't emit no-undef on .ts/.tsx (tseslint disables it); test separation by layering no-undef via overrideConfig, never re-enable globally.
