@@ -2,7 +2,10 @@ import { Router, type Request, type Response } from "express";
 import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import type { DeliveryProvider } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { GetOrderTrackingResponse } from "@workspace/api-zod";
+import {
+  GetOrderTrackingResponse,
+  CreateOrderShipmentResponse,
+} from "@workspace/api-zod";
 import { requireAdmin } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
 import { DeliveryNotConfiguredError } from "../delivery/types";
@@ -20,6 +23,24 @@ function sendTracking(req: Request, res: Response, candidate: unknown) {
     req.log.error(
       { err: parsed.error, candidate },
       "Tracking response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.json(parsed.data);
+}
+
+// Validate/serialize a shipment-creation payload against the OpenAPI
+// `ShipmentResult` contract before sending. Delivery adapters can return
+// arbitrary shapes, so this strips unknown fields and rejects malformed data
+// (e.g. a missing/non-string trackingNumber) — the client can never receive an
+// off-contract response, and a bad adapter surfaces as a controlled, logged 500
+// instead of leaking a divergent payload.
+function sendShipment(req: Request, res: Response, candidate: unknown) {
+  const parsed = CreateOrderShipmentResponse.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Shipment response failed contract validation",
     );
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -196,7 +217,7 @@ router.post(
         .limit(1);
       if (!order) return res.status(404).json({ error: "Order not found" });
       if (order.deliveryTrackingNumber) {
-        return res.json({
+        return sendShipment(req, res, {
           trackingNumber: order.deliveryTrackingNumber,
           awbUrl: order.deliveryAwbUrl,
           status: order.deliveryStatus,
@@ -243,18 +264,30 @@ router.post(
           totalCod: order.paymentMethod === "cod" ? Number(order.total) : 0,
           notes: order.notes,
         });
+        // Validate the adapter result against the contract BEFORE persisting,
+        // so a malformed result can never write off-contract values onto the
+        // order row. On failure this returns a controlled, logged 500 and the
+        // order is left untouched.
+        const parsed = CreateOrderShipmentResponse.safeParse(result);
+        if (!parsed.success) {
+          req.log.error(
+            { err: parsed.error, candidate: result },
+            "Shipment response failed contract validation",
+          );
+          return res.status(500).json({ error: "Internal server error" });
+        }
         await db
           .update(ordersTable)
           .set({
             deliveryProviderId: provider.id,
-            deliveryTrackingNumber: result.trackingNumber,
-            deliveryAwbUrl: result.awbUrl ?? null,
-            deliveryStatus: result.status ?? "shipped",
+            deliveryTrackingNumber: parsed.data.trackingNumber,
+            deliveryAwbUrl: parsed.data.awbUrl ?? null,
+            deliveryStatus: parsed.data.status ?? "shipped",
             deliveryShippedAt: new Date(),
             status: order.status === "pending" ? "shipped" : order.status,
           })
           .where(eq(ordersTable.id, orderId));
-        return res.json(result);
+        return res.json(parsed.data);
       } catch (err) {
         if (err instanceof DeliveryNotConfiguredError) {
           return res

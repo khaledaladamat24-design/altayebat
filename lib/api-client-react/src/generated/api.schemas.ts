@@ -178,6 +178,20 @@ export interface OrderTracking {
   notConfigured?: boolean;
 }
 
+export interface ShipmentRequest {
+  /** @nullable */
+  providerId?: number | string | null;
+}
+
+export interface ShipmentResult {
+  trackingNumber: string;
+  /** @nullable */
+  awbUrl?: string | null;
+  /** @nullable */
+  status?: string | null;
+  alreadyShipped?: boolean;
+}
+
 export interface OrderInput {
   sessionId?: string;
   deliveryAddress: string;

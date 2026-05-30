@@ -441,6 +441,26 @@ export const GetOrderResponse = zod.object({
 
 
 /**
+ * Admin only. Idempotent: if a tracking number already exists, returns it with `alreadyShipped: true`. Otherwise creates a fresh shipment through the provider's delivery adapter.
+ * @summary Create a shipment for an order via the chosen (or default) provider
+ */
+export const CreateOrderShipmentParams = zod.object({
+  "orderId": zod.coerce.number()
+})
+
+export const CreateOrderShipmentBody = zod.object({
+  "providerId": zod.union([zod.number(),zod.string()]).nullish()
+})
+
+export const CreateOrderShipmentResponse = zod.object({
+  "trackingNumber": zod.string(),
+  "awbUrl": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "alreadyShipped": zod.boolean().optional()
+})
+
+
+/**
  * Returns shipment tracking details for an order. `trackingNumber` is null until the order has been shipped via a delivery provider.
  * @summary Get public shipment tracking info for an order
  */

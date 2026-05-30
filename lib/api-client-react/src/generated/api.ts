@@ -37,6 +37,8 @@ import type {
   OrderInput,
   OrderTracking,
   Product,
+  ShipmentRequest,
+  ShipmentResult,
   StoreSummary
 } from './api.schemas';
 
@@ -1224,6 +1226,79 @@ export function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>, TError
 
 
 
+
+export const getCreateOrderShipmentUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/delivery/orders/${orderId}/shipment`
+}
+
+/**
+ * Admin only. Idempotent: if a tracking number already exists, returns it with `alreadyShipped: true`. Otherwise creates a fresh shipment through the provider's delivery adapter.
+ * @summary Create a shipment for an order via the chosen (or default) provider
+ */
+export const createOrderShipment = async (orderId: number,
+    shipmentRequest?: ShipmentRequest, options?: RequestInit): Promise<ShipmentResult> => {
+
+  return customFetch<ShipmentResult>(getCreateOrderShipmentUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      shipmentRequest,)
+  }
+);}
+
+
+
+
+export const getCreateOrderShipmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrderShipment>>, TError,{orderId: number;data?: BodyType<ShipmentRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrderShipment>>, TError,{orderId: number;data?: BodyType<ShipmentRequest>}, TContext> => {
+
+const mutationKey = ['createOrderShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrderShipment>>, {orderId: number;data?: BodyType<ShipmentRequest>}> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  createOrderShipment(orderId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrderShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof createOrderShipment>>>
+    export type CreateOrderShipmentMutationBody = BodyType<ShipmentRequest> | undefined
+    export type CreateOrderShipmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a shipment for an order via the chosen (or default) provider
+ */
+export const useCreateOrderShipment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrderShipment>>, TError,{orderId: number;data?: BodyType<ShipmentRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrderShipment>>,
+        TError,
+        {orderId: number;data?: BodyType<ShipmentRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateOrderShipmentMutationOptions(options));
+    }
 
 export const getGetOrderTrackingUrl = (orderId: number,) => {
 

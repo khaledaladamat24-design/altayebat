@@ -15,7 +15,8 @@ import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
 // listAdapterTypes is kept real.
 const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }));
 vi.mock("../../delivery/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../delivery/registry")>();
+  const actual =
+    await importOriginal<typeof import("../../delivery/registry")>();
   return {
     ...actual,
     getAdapter: () => ({
@@ -62,7 +63,10 @@ let notConfiguredOrderId = 0;
 let disabledCaseOrderId = 0;
 let noProviderOrderId = 0;
 
-async function seedOrder(suffix: string, overrides: Record<string, unknown> = {}) {
+async function seedOrder(
+  suffix: string,
+  overrides: Record<string, unknown> = {},
+) {
   const [order] = await db
     .insert(ordersTable)
     .values({
@@ -165,9 +169,9 @@ describe("POST /api/delivery/orders/:orderId/shipment", () => {
     expect(row.deliveryStatus).toBe("shipped");
     expect(row.status).toBe("shipped");
     expect(row.deliveryShippedAt).toBeTruthy();
-    expect(new Date(row.deliveryShippedAt as Date).getTime()).toBeGreaterThanOrEqual(
-      before.getTime() - 1000,
-    );
+    expect(
+      new Date(row.deliveryShippedAt as Date).getTime(),
+    ).toBeGreaterThanOrEqual(before.getTime() - 1000);
   });
 
   it("defaults status to 'shipped' when the adapter omits a status", async () => {
@@ -253,6 +257,37 @@ describe("POST /api/delivery/orders/:orderId/shipment", () => {
       .where(eq(ordersTable.id, notConfiguredOrderId))
       .limit(1);
     expect(row.deliveryTrackingNumber).toBeNull();
+    expect(row.status).toBe("pending");
+  });
+
+  it("returns a controlled 500 (not off-contract data) when the adapter returns a malformed result", async () => {
+    mockCreate.mockClear();
+    logError.mockClear();
+    // Adapter returns a malformed result: trackingNumber is missing/non-string.
+    mockCreate.mockResolvedValueOnce({
+      trackingNumber: 12345,
+      awbUrl: "https://awb.example.com/bad",
+    });
+
+    const orderId = await seedOrder("malformed");
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/${orderId}/shipment`),
+    ).send({ providerId: enabledProviderId });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("Internal server error");
+    // The off-contract field must never leak to the client.
+    expect(res.body.trackingNumber).toBeUndefined();
+    expect(logError).toHaveBeenCalled();
+
+    // The malformed result must NOT have been persisted to the order row.
+    const [row] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+    expect(row.deliveryTrackingNumber).toBeNull();
+    expect(row.deliveryStatus).toBeNull();
     expect(row.status).toBe("pending");
   });
 
