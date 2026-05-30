@@ -22,6 +22,14 @@ vi.mock("@/components/map-picker", () => ({
   MapPicker: () => null,
 }));
 
+// Capture navigation so we can assert the guest redirect to /auth. Link just
+// needs to render its children (the back button).
+const mockSetLocation = vi.fn();
+vi.mock("wouter", () => ({
+  useLocation: () => ["/checkout", mockSetLocation],
+  Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 import Checkout from "../checkout";
 
 function cartWithItems() {
@@ -356,5 +364,121 @@ describe("Checkout payment-method selection", () => {
     expect(
       screen.queryByRole("button", { name: /الدفع عند الاستلام/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("Checkout guest sign-up gate for non-cash payment", () => {
+  beforeEach(() => {
+    mockUseGetCart.mockReset();
+    mockMutate.mockReset();
+    mockSetLocation.mockReset();
+    localStorage.clear();
+    Element.prototype.scrollIntoView = vi.fn();
+    // No vendor/wallet info needed: non-cash options are tappable for guests
+    // regardless (tapping them routes to sign-up), so all lookups can fail.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }),
+    );
+    mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // A guest has no auth markers in localStorage. Each non-cash method must send
+  // them to /auth (sign up) instead of being selected, stashing the chosen
+  // method + a return-to-/checkout path so they finish the order after signup.
+  it.each([
+    ["CliQ", /تحويل كليك/, "cliq"],
+    ["E-Wallet", /محفظة إلكترونية/, "wallet"],
+    ["wallet balance", /الدفع من رصيد محفظتي/, "balance"],
+  ] as const)(
+    "redirects a guest to sign up when they tap %s",
+    async (_label, buttonName, expectedMethod) => {
+      const user = userEvent.setup();
+      renderCheckout();
+
+      await user.click(screen.getByRole("button", { name: buttonName }));
+
+      // Sent to the auth flow rather than selecting the method.
+      expect(mockSetLocation).toHaveBeenCalledWith("/auth");
+      // The chosen method is remembered for after signup...
+      expect(localStorage.getItem("al_tayebat_pending_payment")).toBe(
+        expectedMethod,
+      );
+      // ...and they will be returned to checkout to finish the order.
+      expect(localStorage.getItem("al_tayebat_return_to")).toBe("/checkout");
+      // No order is created from the guest tap.
+      expect(mockMutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps Cash-on-Delivery selectable for guests without redirecting", async () => {
+    const user = userEvent.setup();
+    renderCheckout();
+
+    await user.click(
+      screen.getByRole("button", { name: /الدفع عند الاستلام/ }),
+    );
+
+    expect(mockSetLocation).not.toHaveBeenCalled();
+    expect(localStorage.getItem("al_tayebat_pending_payment")).toBeNull();
+  });
+
+  it("stashes the half-filled delivery form so it is restored after signup", async () => {
+    const user = userEvent.setup();
+    renderCheckout();
+
+    await user.type(screen.getByLabelText("الاسم الكامل"), "أحمد محمد");
+    await user.type(screen.getByLabelText("رقم الهاتف"), "0791234567");
+    await user.type(
+      screen.getByLabelText("عنوان التوصيل"),
+      "عمان، الدوار الخامس، شارع المدينة المنورة، مبنى 12",
+    );
+
+    await user.click(screen.getByRole("button", { name: /تحويل كليك/ }));
+
+    expect(mockSetLocation).toHaveBeenCalledWith("/auth");
+    expect(localStorage.getItem("al_tayebat_name")).toBe("أحمد محمد");
+    expect(localStorage.getItem("al_tayebat_phone")).toBe("0791234567");
+    expect(localStorage.getItem("al_tayebat_address")).toBe(
+      "عمان، الدوار الخامس، شارع المدينة المنورة، مبنى 12",
+    );
+  });
+
+  it("pre-selects the stashed method when a signed-in user returns to checkout", async () => {
+    // Simulate the post-signup return: pending method stashed + user now signed
+    // in, with the vendor exposing a CliQ alias so the method stays valid.
+    localStorage.setItem("al_tayebat_pending_payment", "cliq");
+    localStorage.setItem("al_tayebat_user_id", "user_99");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/api/products/")) {
+          return Promise.resolve({ ok: true, json: async () => ({ vendorId: 7 }) });
+        }
+        if (url.includes("/api/vendors/")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              storeNameAr: "متجر",
+              cliqAlias: "altayebat",
+              walletNumber: null,
+            }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }),
+    );
+
+    renderCheckout();
+
+    // CliQ being pre-selected surfaces its transfer + receipt-upload prompt
+    // without the user having to click anything.
+    expect(await screen.findByText(/ارفع إيصال الدفع/)).toBeInTheDocument();
+    // The pending marker is consumed (cleared) once applied.
+    expect(localStorage.getItem("al_tayebat_pending_payment")).toBeNull();
   });
 });
