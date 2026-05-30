@@ -255,15 +255,13 @@ describe("Checkout payment-method selection", () => {
     expect(payload.data.paymentScreenshotUrl as string).toMatch(/^data:/);
   });
 
-  it("charges the exact order total to the wallet via /pay on a wallet-balance order", async () => {
-    // Signed-in user with a funded internal wallet.
+  it("submits a wallet-balance order without a separate /pay deduction call", async () => {
+    // Signed-in user with a funded internal wallet. The balance is now charged
+    // on the server inside the order-create transaction, so the client must NOT
+    // make a separate /api/wallet/:userId/pay request (which could be lost to a
+    // dropped connection and leave the order placed-but-uncharged).
     localStorage.setItem("al_tayebat_user_id", "user_99");
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      // The /pay deduction endpoint must be checked before the generic
-      // /api/wallet/:userId balance lookup (both share the same prefix).
-      if (url.includes("/api/wallet/") && url.includes("/pay")) {
-        return Promise.resolve({ ok: true, json: async () => ({ balance: 38.5 }) });
-      }
       if (url.includes("/api/wallet/")) {
         return Promise.resolve({ ok: true, json: async () => ({ balance: 50 }) });
       }
@@ -272,7 +270,6 @@ describe("Checkout payment-method selection", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("confirm", vi.fn(() => true));
     mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
-    // Drive the success callback so the post-order /pay deduction fires.
     mockMutate.mockImplementation(
       (_payload: unknown, opts?: { onSuccess?: (o: { id: number }) => void }) => {
         opts?.onSuccess?.({ id: 555 });
@@ -310,21 +307,12 @@ describe("Checkout payment-method selection", () => {
     // Wallet payments never piggy-back a transfer receipt.
     expect(payload.data.paymentScreenshotUrl).toBeUndefined();
 
-    // The wallet must be charged the exact total (subtotal 10 + delivery 1.5),
-    // against the signed-in user, tagged with the freshly created order id.
-    await waitFor(() => {
-      const payCall = fetchMock.mock.calls.find(
-        ([u]: [string]) => typeof u === "string" && u.includes("/pay"),
-      );
-      expect(payCall).toBeTruthy();
-    });
-    const payCall = fetchMock.mock.calls.find(([u]: [string]) =>
-      u.includes("/pay"),
-    ) as [string, RequestInit];
-    expect(payCall[0]).toContain("/api/wallet/user_99/pay");
-    expect(payCall[1].method).toBe("POST");
-    const body = JSON.parse(payCall[1].body as string);
-    expect(body).toMatchObject({ amount: 11.5, orderId: 555 });
+    // No client-side /pay deduction is made — the server charges the wallet
+    // atomically with order creation.
+    const payCall = fetchMock.mock.calls.find(
+      ([u]: [string]) => typeof u === "string" && u.includes("/pay"),
+    );
+    expect(payCall).toBeUndefined();
   });
 
   it("disables the wallet-balance option when the balance is below the total", async () => {

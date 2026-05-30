@@ -330,38 +330,10 @@ export default function Checkout() {
         } as Parameters<typeof createOrder.mutate>[0]["data"],
       },
       {
-        onSuccess: async (order) => {
-          // If paying from internal wallet, deduct balance right after order created
-          if (paymentMethod === "balance" && userId) {
-            try {
-              const res = await fetch(apiUrl(`/api/wallet/${userId}/pay`), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  amount: total,
-                  orderId: order.id,
-                  description: `دفع طلب #${order.id}`,
-                }),
-              });
-              if (!res.ok) {
-                const b = await res.json().catch(() => ({}));
-                toast.error(
-                  b.error ||
-                    tr(
-                      "فشل خصم الرصيد — تم إنشاء الطلب لكن لم يُخصم الرصيد",
-                      "Failed to deduct balance — order created but balance was not charged",
-                    ),
-                );
-              }
-            } catch {
-              toast.error(
-                tr(
-                  "فشل خصم الرصيد من المحفظة",
-                  "Failed to deduct balance from wallet",
-                ),
-              );
-            }
-          }
+        onSuccess: (order) => {
+          // Wallet-balance orders are charged on the server inside the same
+          // transaction that creates the order, so there is no separate deduct
+          // request that could be lost to a dropped connection.
           queryClient.invalidateQueries({
             queryKey: getGetCartQueryKey({ sessionId }),
           });
@@ -370,12 +342,16 @@ export default function Checkout() {
           );
           setLocation(`/orders/${order.id}`);
         },
-        onError: () => {
+        onError: (err) => {
+          // The server rejects a balance order up-front (no order is created)
+          // when the wallet balance is insufficient — surface its message.
+          const apiErr = err as { data?: { error?: string } };
           toast.error(
-            tr(
-              "حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.",
-              "An error occurred while creating the order. Please try again.",
-            ),
+            apiErr?.data?.error ||
+              tr(
+                "حدث خطأ أثناء إنشاء الطلب. يرجى المحاولة مرة أخرى.",
+                "An error occurred while creating the order. Please try again.",
+              ),
           );
         },
       },

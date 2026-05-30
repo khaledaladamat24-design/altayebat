@@ -8,7 +8,9 @@ import { isAdminReq } from "./admin-auth";
 export { isAdminReq };
 
 /** Resolve the signed-in Clerk user → DB user id, or null. */
-async function getDbUserIdFromClerk(req: Request): Promise<number | null> {
+export async function getDbUserIdFromClerk(
+  req: Request,
+): Promise<number | null> {
   const clerk = getAuth(req);
   const clerkUserId = clerk?.userId;
   if (!clerkUserId) return null;

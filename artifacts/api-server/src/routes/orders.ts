@@ -7,7 +7,8 @@ import {
   productsTable,
 } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
-import { requireOrderVendorOwner } from "../lib/vendor-auth";
+import { requireOrderVendorOwner, getDbUserIdFromClerk } from "../lib/vendor-auth";
+import { payOrderFromWallet } from "../lib/wallet-pay";
 
 const router = Router();
 
@@ -111,46 +112,87 @@ router.post("/orders", async (req, res) => {
     const cartVendorId =
       cartItems.find((r) => r.p?.vendorId)?.p?.vendorId ?? null;
 
-    const [newOrder] = await db
-      .insert(ordersTable)
-      .values({
-        sessionId,
-        vendorId: cartVendorId,
-        status: "pending",
-        paymentMethod,
-        paymentStatus:
-          paymentMethod === "balance"
-            ? "paid"
-            : paymentScreenshotUrl
-              ? "pending"
-              : "cod",
-        paymentScreenshotUrl,
-        subtotal: subtotal.toFixed(3),
-        deliveryFee: deliveryFee.toFixed(3),
-        total: total.toFixed(3),
-        deliveryAddress,
-        customerName,
-        customerPhone,
-        notes,
-        estimatedDelivery: estimated.toISOString(),
-      })
-      .returning();
+    // For wallet-balance orders we must charge the wallet in the SAME server
+    // transaction that creates the order, so a dropped client connection can
+    // never leave an order placed-but-uncharged. Resolve the paying user from
+    // the signed-in Clerk session (never trust a client-supplied id).
+    let balanceUserId: number | null = null;
+    if (paymentMethod === "balance") {
+      balanceUserId = await getDbUserIdFromClerk(req);
+      if (!balanceUserId) {
+        return res
+          .status(401)
+          .json({ error: "سجّل دخولك لاستخدام رصيد المحفظة" });
+      }
+    }
 
-    await db.insert(orderItemsTable).values(
-      cartItems.map((r) => ({
-        orderId: newOrder.id,
-        productId: r.ci.productId,
-        quantity: r.ci.quantity,
-        unitPrice: r.ci.unitPrice,
-        totalPrice: (Number(r.ci.unitPrice) * r.ci.quantity).toFixed(3),
-      })),
-    );
+    let newOrderId: number;
+    try {
+      newOrderId = await db.transaction(async (tx) => {
+        const [newOrder] = await tx
+          .insert(ordersTable)
+          .values({
+            sessionId,
+            vendorId: cartVendorId,
+            status: "pending",
+            paymentMethod,
+            paymentStatus:
+              paymentMethod === "balance"
+                ? "paid"
+                : paymentScreenshotUrl
+                  ? "pending"
+                  : "cod",
+            paymentScreenshotUrl,
+            subtotal: subtotal.toFixed(3),
+            deliveryFee: deliveryFee.toFixed(3),
+            total: total.toFixed(3),
+            deliveryAddress,
+            customerName,
+            customerPhone,
+            notes,
+            estimatedDelivery: estimated.toISOString(),
+          })
+          .returning();
 
-    await db
-      .delete(cartItemsTable)
-      .where(eq(cartItemsTable.sessionId, sessionId));
+        await tx.insert(orderItemsTable).values(
+          cartItems.map((r) => ({
+            orderId: newOrder.id,
+            productId: r.ci.productId,
+            quantity: r.ci.quantity,
+            unitPrice: r.ci.unitPrice,
+            totalPrice: (Number(r.ci.unitPrice) * r.ci.quantity).toFixed(3),
+          })),
+        );
 
-    const result = await getOrderWithItems(newOrder.id);
+        // Charge the wallet atomically. Insufficient balance aborts the whole
+        // transaction (the order row is rolled back) so we never create an
+        // order that wasn't paid for.
+        if (paymentMethod === "balance" && balanceUserId) {
+          const pay = await payOrderFromWallet(tx, {
+            userId: balanceUserId,
+            amount: total,
+            orderId: newOrder.id,
+            description: `دفع طلب #${newOrder.id}`,
+          });
+          if (!pay.ok) {
+            throw new Error("INSUFFICIENT_BALANCE");
+          }
+        }
+
+        await tx
+          .delete(cartItemsTable)
+          .where(eq(cartItemsTable.sessionId, sessionId));
+
+        return newOrder.id;
+      });
+    } catch (txErr) {
+      if ((txErr as Error).message === "INSUFFICIENT_BALANCE") {
+        return res.status(400).json({ error: "الرصيد غير كافٍ" });
+      }
+      throw txErr;
+    }
+
+    const result = await getOrderWithItems(newOrderId);
     return res.status(201).json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to create order");

@@ -5,10 +5,11 @@ import {
   walletTransactionsTable,
   usersTable,
 } from "@workspace/db";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { isAdminReq, requireAdmin } from "../lib/admin-auth";
+import { payOrderFromWallet } from "../lib/wallet-pay";
 
 const router = Router();
 
@@ -152,61 +153,18 @@ router.post("/wallet/:userId/pay", requireWalletOwner, async (req, res) => {
       return;
     }
 
-    // Idempotency: if we already approved a payment for this orderId, return it.
-    const [existing] = await db
-      .select()
-      .from(walletTransactionsTable)
-      .where(
-        and(
-          eq(walletTransactionsTable.orderId, orderId),
-          eq(walletTransactionsTable.userId, userId),
-          eq(walletTransactionsTable.type, "payment"),
-          eq(walletTransactionsTable.status, "approved"),
-        ),
-      )
-      .limit(1);
-    if (existing) {
-      res.json({
-        ...existing,
-        amount: Number(existing.amount),
-        idempotent: true,
-      });
-      return;
-    }
-
-    await getOrCreateWallet(userId);
-
-    // Atomic conditional deduction: only succeeds when balance is sufficient.
-    const updated = await db
-      .update(walletsTable)
-      .set({
-        balance: sql`${walletsTable.balance} - ${String(amt)}`,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(walletsTable.userId, userId),
-          sql`${walletsTable.balance} >= ${String(amt)}`,
-        ),
-      )
-      .returning();
-    if (updated.length === 0) {
+    const result = await db.transaction((tx) =>
+      payOrderFromWallet(tx, { userId, amount: amt, orderId, description }),
+    );
+    if (!result.ok) {
       res.status(400).json({ error: "الرصيد غير كافٍ" });
       return;
     }
-
-    const [txn] = await db
-      .insert(walletTransactionsTable)
-      .values({
-        userId,
-        type: "payment",
-        amount: String(amt),
-        status: "approved",
-        description: description || "دفع طلب",
-        orderId,
-      })
-      .returning();
-    res.json({ ...txn, amount: Number(txn.amount) });
+    res.json({
+      ...result.transaction,
+      amount: Number(result.transaction.amount),
+      ...(result.idempotent ? { idempotent: true } : {}),
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to deduct from wallet");
     res.status(500).json({ error: "Internal server error" });
