@@ -258,6 +258,23 @@ describe("Auth success paths honour the stashed return-to path", () => {
     expect(localStorage.getItem(RETURN_KEY)).toBeNull();
   });
 
+  it("choosing 'browse as guest' discards the stashed return path", async () => {
+    localStorage.setItem(RETURN_KEY, "/checkout");
+
+    const user = userEvent.setup();
+    renderAuth();
+
+    await user.click(
+      screen.getByRole("button", { name: /تخطّى — تصفح كضيف/ }),
+    );
+
+    await waitFor(() => expect(h.mockSetLocation).toHaveBeenCalledWith("/"));
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
+    // The stale pay-later redirect is forgotten so a later sign-in won't
+    // unexpectedly bounce the user to checkout.
+    expect(localStorage.getItem(RETURN_KEY)).toBeNull();
+  });
+
   it("falls back to home when no return path is stashed", async () => {
     h.attemptFirstFactor.mockResolvedValue({
       status: "complete",
