@@ -72,6 +72,7 @@ vi.mock("firebase/auth", () => ({
     h.signInWithPhoneNumber(...args),
 }));
 
+import { toast } from "sonner";
 import Auth from "../auth";
 import Register from "../register";
 
@@ -389,6 +390,68 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     );
     // The stashed return path is intentionally NOT honoured here.
     expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
+  });
+
+  // Drives the email-signup flow up to the OTP screen so each failure case can
+  // submit a code and assert on the verify branch's behaviour.
+  async function reachEmailOtpScreen(user: ReturnType<typeof userEvent.setup>) {
+    renderAuth();
+    await user.click(screen.getByRole("button", { name: /إنشاء حساب جديد/ }));
+    await user.type(screen.getByPlaceholderText("أحمد"), "أحمد");
+    await user.type(
+      screen.getByPlaceholderText("البريد الإلكتروني"),
+      "new@user.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText(/كلمة المرور \(8 أحرف على الأقل\)/),
+      "password123",
+    );
+    await user.type(
+      screen.getByPlaceholderText("تأكيد كلمة المرور"),
+      "password123",
+    );
+    await user.click(screen.getByRole("button", { name: /إنشاء الحساب/ }));
+    await screen.findByPlaceholderText("_ _ _ _ _ _");
+  }
+
+  it("shows an error toast and stays on the OTP screen when the code is wrong/expired", async () => {
+    h.attemptEmailVerification.mockRejectedValue({
+      errors: [{ message: "Incorrect code" }],
+    });
+
+    const user = userEvent.setup();
+    await reachEmailOtpScreen(user);
+
+    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "000000");
+    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Incorrect code"),
+    );
+    // A failed verification must NOT advance the user — they stay on the OTP
+    // screen (the code input is still rendered) and never reach /register.
+    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/register");
+  });
+
+  it("does not navigate when verification resolves with a non-complete status", async () => {
+    // Clerk can resolve without throwing yet report the sign-up isn't done
+    // (e.g. status "missing_requirements"). The user must not be silently
+    // dropped onto /register without a session.
+    h.attemptEmailVerification.mockResolvedValue({
+      status: "missing_requirements",
+    });
+
+    const user = userEvent.setup();
+    await reachEmailOtpScreen(user);
+
+    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
+    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+
+    // Give any pending navigation a chance to fire, then assert none did.
+    await waitFor(() => expect(h.attemptEmailVerification).toHaveBeenCalled());
+    expect(h.setActiveSignUp).not.toHaveBeenCalled();
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/register");
   });
 });
 
