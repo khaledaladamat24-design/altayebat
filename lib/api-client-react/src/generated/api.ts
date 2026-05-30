@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdapterType,
   Banner,
   Cart,
   CartItemInput,
@@ -1440,6 +1441,84 @@ export function useGetOrderTracking<TData = Awaited<ReturnType<typeof getOrderTr
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOrderTrackingQueryOptions(orderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDeliveryAdapterTypesUrl = () => {
+
+
+
+
+  return `/api/delivery/adapter-types`
+}
+
+/**
+ * Public. Lets the admin UI render the correct credential form fields per provider type.
+ * @summary List supported delivery provider types and their required credential keys
+ */
+export const listDeliveryAdapterTypes = async ( options?: RequestInit): Promise<AdapterType[]> => {
+
+  return customFetch<AdapterType[]>(getListDeliveryAdapterTypesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeliveryAdapterTypesQueryKey = () => {
+    return [
+    `/api/delivery/adapter-types`
+    ] as const;
+    }
+
+
+export const getListDeliveryAdapterTypesQueryOptions = <TData = Awaited<ReturnType<typeof listDeliveryAdapterTypes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeliveryAdapterTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeliveryAdapterTypesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeliveryAdapterTypes>>> = ({ signal }) => listDeliveryAdapterTypes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeliveryAdapterTypes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeliveryAdapterTypesQueryResult = NonNullable<Awaited<ReturnType<typeof listDeliveryAdapterTypes>>>
+export type ListDeliveryAdapterTypesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List supported delivery provider types and their required credential keys
+ */
+
+export function useListDeliveryAdapterTypes<TData = Awaited<ReturnType<typeof listDeliveryAdapterTypes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeliveryAdapterTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeliveryAdapterTypesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -496,6 +496,21 @@ export const GetOrderTrackingResponse = zod.object({
 
 
 /**
+ * Public. Lets the admin UI render the correct credential form fields per provider type.
+ * @summary List supported delivery provider types and their required credential keys
+ */
+export const ListDeliveryAdapterTypesResponseItem = zod.object({
+  "type": zod.string(),
+  "requiredCredentials": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "placeholder": zod.string().optional()
+}))
+}).describe('A supported delivery provider type and the credential fields the admin UI should render for it.')
+export const ListDeliveryAdapterTypesResponse = zod.array(ListDeliveryAdapterTypesResponseItem)
+
+
+/**
  * Admin only. Returns the public shape of every provider; raw credentials are never included.
  * @summary List all configured delivery providers (credentials stripped)
  */

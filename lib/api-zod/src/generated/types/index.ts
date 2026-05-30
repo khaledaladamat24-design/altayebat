@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adapterType';
+export * from './adapterTypeRequiredCredentialsItem';
 export * from './banner';
 export * from './cart';
 export * from './cartItem';

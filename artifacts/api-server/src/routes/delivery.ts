@@ -8,6 +8,7 @@ import {
   CancelOrderShipmentResponse,
   ListDeliveryProvidersResponse,
   ListDeliveryProvidersResponseItem,
+  ListDeliveryAdapterTypesResponse,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
@@ -127,10 +128,27 @@ function sendProviders(req: Request, res: Response, candidate: unknown) {
   return res.json(parsed.data);
 }
 
+// Validate/serialize the adapter-types payload against the OpenAPI `AdapterType`
+// array contract before sending. listAdapterTypes() aggregates per-adapter
+// requiredCredentials() output, so a drift there (renamed field, missing
+// credential-key metadata) is caught here as a controlled, logged 500 instead of
+// silently breaking the admin form, for the same reasons as sendProvider().
+function sendAdapterTypes(req: Request, res: Response, candidate: unknown) {
+  const parsed = ListDeliveryAdapterTypesResponse.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Delivery adapter-types response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.json(parsed.data);
+}
+
 // GET /api/delivery/adapter-types — list of supported provider types + their required credential keys.
 // Public so the admin UI can render the right form fields per provider type.
-router.get("/delivery/adapter-types", (_req, res) => {
-  res.json(listAdapterTypes());
+router.get("/delivery/adapter-types", (req, res) => {
+  return sendAdapterTypes(req, res, listAdapterTypes());
 });
 
 // GET /api/delivery/providers — list all configured providers (credentials stripped). Admin only.

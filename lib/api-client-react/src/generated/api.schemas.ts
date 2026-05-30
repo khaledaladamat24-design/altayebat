@@ -200,6 +200,20 @@ export interface ShipmentCancelResult {
   notConfigured?: boolean;
 }
 
+export type AdapterTypeRequiredCredentialsItem = {
+  key: string;
+  label: string;
+  placeholder?: string;
+};
+
+/**
+ * A supported delivery provider type and the credential fields the admin UI should render for it.
+ */
+export interface AdapterType {
+  type: string;
+  requiredCredentials: AdapterTypeRequiredCredentialsItem[];
+}
+
 export type DeliveryProviderSettings = { [key: string]: unknown };
 
 /**

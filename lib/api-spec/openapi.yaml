@@ -432,6 +432,22 @@ paths:
         "404":
           description: Order not found
 
+  /delivery/adapter-types:
+    get:
+      operationId: listDeliveryAdapterTypes
+      tags: [delivery]
+      summary: List supported delivery provider types and their required credential keys
+      description: Public. Lets the admin UI render the correct credential form fields per provider type.
+      responses:
+        "200":
+          description: Supported provider types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdapterType"
+
   /delivery/providers:
     get:
       operationId: listDeliveryProviders
@@ -822,6 +838,30 @@ components:
           type: boolean
         notConfigured:
           type: boolean
+
+    AdapterType:
+      type: object
+      description: A supported delivery provider type and the credential fields the admin UI should render for it.
+      required:
+        - type
+        - requiredCredentials
+      properties:
+        type:
+          type: string
+        requiredCredentials:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - label
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              placeholder:
+                type: string
 
     DeliveryProvider:
       type: object
