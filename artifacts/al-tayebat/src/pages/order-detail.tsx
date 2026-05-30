@@ -1,4 +1,9 @@
-import { useGetOrder, getGetOrderQueryKey } from "@workspace/api-client-react";
+import {
+  useGetOrder,
+  getGetOrderQueryKey,
+  useGetOrderTracking,
+  getGetOrderTrackingQueryKey,
+} from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import {
   ChevronRight,
@@ -14,20 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { useEffect, useState } from "react";
-import { apiUrl } from "@/lib/api-url";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/language";
-
-interface TrackInfo {
-  trackingNumber: string | null;
-  awbUrl?: string | null;
-  status?: string | null;
-  statusAr?: string | null;
-  providerName?: string | null;
-  providerPhone?: string | null;
-  notConfigured?: boolean;
-}
 
 const statusOrder = [
   "pending",
@@ -85,18 +78,15 @@ export default function OrderDetail() {
     query: { enabled: !!orderId, queryKey: getGetOrderQueryKey(orderId!) },
   });
 
-  // Tracking lives outside the OpenAPI Order schema for now (server side has
-  // delivery_* columns but they're not exposed via /api/orders). We fetch it
-  // separately from /api/delivery/orders/:id/track which returns null tracking
-  // for orders that haven't been shipped yet.
-  const [track, setTrack] = useState<TrackInfo | null>(null);
-  useEffect(() => {
-    if (!orderId) return;
-    fetch(apiUrl(`/api/delivery/orders/${orderId}/track`))
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setTrack)
-      .catch(() => setTrack(null));
-  }, [orderId]);
+  // Shipment tracking comes from a separate endpoint (delivery_* columns aren't
+  // part of the Order schema). It returns a null trackingNumber for orders that
+  // haven't been shipped yet, in which case the shipping section stays hidden.
+  const { data: track } = useGetOrderTracking(orderId!, {
+    query: {
+      enabled: !!orderId,
+      queryKey: getGetOrderTrackingQueryKey(orderId!),
+    },
+  });
 
   if (isLoading || !order) {
     return (

@@ -162,6 +162,22 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface OrderTracking {
+  /** @nullable */
+  trackingNumber: string | null;
+  /** @nullable */
+  awbUrl?: string | null;
+  /** @nullable */
+  status?: string | null;
+  /** @nullable */
+  statusAr?: string | null;
+  /** @nullable */
+  providerName?: string | null;
+  /** @nullable */
+  providerPhone?: string | null;
+  notConfigured?: boolean;
+}
+
 export interface OrderInput {
   sessionId?: string;
   deliveryAddress: string;

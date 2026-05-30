@@ -9,11 +9,14 @@ vi.mock("sonner", () => ({
 }));
 
 const mockUseGetOrder = vi.fn();
+const mockUseGetOrderTracking = vi.fn();
 const mockUseListOrders = vi.fn();
 
 vi.mock("@workspace/api-client-react", () => ({
   useGetOrder: (...args: unknown[]) => mockUseGetOrder(...args),
   getGetOrderQueryKey: (id: number) => ["order", id],
+  useGetOrderTracking: (...args: unknown[]) => mockUseGetOrderTracking(...args),
+  getGetOrderTrackingQueryKey: (id: number) => ["order-tracking", id],
   useListOrders: (...args: unknown[]) => mockUseListOrders(...args),
   getListOrdersQueryKey: (params: unknown) => ["orders", params],
 }));
@@ -85,16 +88,10 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("OrderDetail (order tracking page)", () => {
   beforeEach(() => {
     mockUseGetOrder.mockReset();
+    mockUseGetOrderTracking.mockReset();
+    // Tracking comes from its own hook; default to "not shipped yet" (no data).
+    mockUseGetOrderTracking.mockReturnValue({ data: undefined });
     mockParams = { id: "123" };
-    // The page fetches shipping/tracking info separately; default to "none".
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, json: async () => null }),
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
   });
 
   it("shows a loading skeleton while the order is still loading", () => {
@@ -194,20 +191,15 @@ describe("OrderDetail (order tracking page)", () => {
 });
 
 describe("OrderDetail shipping section (live tracking after shipping)", () => {
-  // Stub the /api/delivery/orders/:id/track endpoint with a tracking payload.
-  // The page fetches this separately (not part of the OpenAPI Order schema).
+  // The shipping section is fed by the generated useGetOrderTracking hook.
+  // Drive it directly with a tracking payload (or null = not shipped yet).
   function stubTrackEndpoint(payload: Record<string, unknown> | null) {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: payload !== null,
-        json: async () => payload,
-      }),
-    );
+    mockUseGetOrderTracking.mockReturnValue({ data: payload ?? undefined });
   }
 
   beforeEach(() => {
     mockUseGetOrder.mockReset();
+    mockUseGetOrderTracking.mockReset();
     mockToastSuccess.mockReset();
     mockParams = { id: "123" };
     mockUseGetOrder.mockReturnValue({

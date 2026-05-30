@@ -30,6 +30,7 @@ export * from './order';
 export * from './orderInput';
 export * from './orderItem';
 export * from './orderStatus';
+export * from './orderTracking';
 export * from './product';
 export * from './productFoodType';
 export * from './storeSummary';

@@ -441,6 +441,25 @@ export const GetOrderResponse = zod.object({
 
 
 /**
+ * Returns shipment tracking details for an order. `trackingNumber` is null until the order has been shipped via a delivery provider.
+ * @summary Get public shipment tracking info for an order
+ */
+export const GetOrderTrackingParams = zod.object({
+  "orderId": zod.coerce.number()
+})
+
+export const GetOrderTrackingResponse = zod.object({
+  "trackingNumber": zod.string().nullable(),
+  "awbUrl": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "statusAr": zod.string().nullish(),
+  "providerName": zod.string().nullish(),
+  "providerPhone": zod.string().nullish(),
+  "notConfigured": zod.boolean().optional()
+})
+
+
+/**
  * @summary Get home page promotional banners
  */
 export const ListBannersResponseItem = zod.object({

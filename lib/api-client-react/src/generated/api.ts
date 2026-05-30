@@ -35,6 +35,7 @@ import type {
   ListProductsParams,
   Order,
   OrderInput,
+  OrderTracking,
   Product,
   StoreSummary
 } from './api.schemas';
@@ -1212,6 +1213,84 @@ export function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOrderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOrderTrackingUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/delivery/orders/${orderId}/track`
+}
+
+/**
+ * Returns shipment tracking details for an order. `trackingNumber` is null until the order has been shipped via a delivery provider.
+ * @summary Get public shipment tracking info for an order
+ */
+export const getOrderTracking = async (orderId: number, options?: RequestInit): Promise<OrderTracking> => {
+
+  return customFetch<OrderTracking>(getGetOrderTrackingUrl(orderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrderTrackingQueryKey = (orderId: number,) => {
+    return [
+    `/api/delivery/orders/${orderId}/track`
+    ] as const;
+    }
+
+
+export const getGetOrderTrackingQueryOptions = <TData = Awaited<ReturnType<typeof getOrderTracking>>, TError = ErrorType<void>>(orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrderTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrderTrackingQueryKey(orderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrderTracking>>> = ({ signal }) => getOrderTracking(orderId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(orderId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrderTracking>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOrderTrackingQueryResult = NonNullable<Awaited<ReturnType<typeof getOrderTracking>>>
+export type GetOrderTrackingQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get public shipment tracking info for an order
+ */
+
+export function useGetOrderTracking<TData = Awaited<ReturnType<typeof getOrderTracking>>, TError = ErrorType<void>>(
+ orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOrderTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOrderTrackingQueryOptions(orderId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
