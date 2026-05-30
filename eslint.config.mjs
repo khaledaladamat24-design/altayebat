@@ -37,7 +37,6 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "module",
-      globals: { ...globals.node, ...globals.browser },
     },
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -53,6 +52,32 @@ export default tseslint.config(
       // Advisory, not blocking: existing app code uses `any` in places. Surfaced
       // as a warning so new uses are visible without failing the gate.
       "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  // Frontend (browser) code: browser globals only, so a stray Node-only global
+  // (process, Buffer, __dirname) is flagged here.
+  {
+    files: [
+      "artifacts/al-tayebat/src/**/*.{ts,tsx}",
+      "lib/api-client-react/src/**/*.{ts,tsx}",
+    ],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+  // Backend/runtime, scripts, libs, and build/config files: Node globals only,
+  // so a stray browser-only global (window, document) is flagged here.
+  {
+    files: [
+      "artifacts/api-server/src/**/*.{ts,tsx}",
+      "scripts/**/*.{ts,tsx,js,mjs,cjs}",
+      "lib/db/**/*.{ts,tsx}",
+      "**/*.config.{ts,js,mjs,cjs}",
+      "**/build.mjs",
+      "eslint.config.mjs",
+    ],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
   // React hooks rules for the frontend.
@@ -73,9 +98,13 @@ export default tseslint.config(
       "no-console": ["error", { allow: ["warn", "error"] }],
     },
   },
-  // Tests can be looser.
+  // Tests can be looser, and run in both environments (Node test runner + jsdom),
+  // so they get both global sets.
   {
     files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },
