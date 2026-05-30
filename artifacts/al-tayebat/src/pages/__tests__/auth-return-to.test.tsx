@@ -347,6 +347,51 @@ describe("Auth success paths honour the stashed return-to path", () => {
   });
 });
 
+describe("Email signup lands a brand-new account on the register screen", () => {
+  it("navigates to /register after OTP verify, not the stashed return path", async () => {
+    // Even with a stashed return path, a fresh email signup must go to
+    // /register to complete the profile — it does NOT honour al_tayebat_return_to.
+    localStorage.setItem(RETURN_KEY, "/checkout");
+    h.attemptEmailVerification.mockResolvedValue({
+      status: "complete",
+      createdSessionId: "sess_signup",
+    });
+
+    const user = userEvent.setup();
+    renderAuth();
+
+    // Landing → email signup form.
+    await user.click(
+      screen.getByRole("button", { name: /إنشاء حساب جديد/ }),
+    );
+
+    await user.type(screen.getByPlaceholderText("أحمد"), "أحمد");
+    await user.type(
+      screen.getByPlaceholderText("البريد الإلكتروني"),
+      "new@user.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText(/كلمة المرور \(8 أحرف على الأقل\)/),
+      "password123",
+    );
+    await user.type(
+      screen.getByPlaceholderText("تأكيد كلمة المرور"),
+      "password123",
+    );
+    await user.click(screen.getByRole("button", { name: /إنشاء الحساب/ }));
+
+    // OTP screen (pendingSignUp=true): confirm the code → lands on /register.
+    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
+    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+
+    await waitFor(() =>
+      expect(h.mockSetLocation).toHaveBeenCalledWith("/register"),
+    );
+    // The stashed return path is intentionally NOT honoured here.
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
+  });
+});
+
 describe("Register consumer honours the stashed return-to path", () => {
   it("navigates a new consumer to the stashed path after sign-up", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
