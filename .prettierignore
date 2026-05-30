@@ -11,6 +11,9 @@ coverage
 lib/api-client-react/src/generated
 lib/api-zod/src/generated
 
+# Generated mockup component registry
+artifacts/mockup-sandbox/src/.generated
+
 # Lockfiles
 pnpm-lock.yaml
 

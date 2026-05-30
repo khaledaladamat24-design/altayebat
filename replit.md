@@ -12,6 +12,12 @@
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
+### Git hooks (auto-formatting)
+
+- A husky `pre-commit` hook runs `lint-staged` (`prettier --write --ignore-unknown` on staged files only) so commits are auto-formatted and the CI `format:check` gate stays green. **Why**: CI fails a push if any file isn't Prettier-formatted; the hook fixes style locally instead of pushing the cleanup burden to CI.
+- Setup activates automatically: the root `prepare` script runs `husky` after every `pnpm install`. No manual step needed.
+- Hook lives at `.husky/pre-commit`; lint-staged config is the `lint-staged` block in root `package.json`.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
