@@ -78,6 +78,12 @@ import Register from "../register";
 
 const RETURN_KEY = "al_tayebat_return_to";
 
+// The unified login/signup form: a single field accepts a phone OR an email.
+const IDENTIFIER_PLACEHOLDER = "رقم الهاتف أو البريد الإلكتروني";
+const SIGNUP_PASSWORD_PLACEHOLDER = /كلمة المرور \(6 أحرف على الأقل\)/;
+const CONFIRM_PASSWORD_PLACEHOLDER = "تأكيد كلمة المرور";
+const OTP_PLACEHOLDER = "_ _ _ _ _ _";
+
 function renderAuth() {
   return render(
     <LanguageProvider>
@@ -92,6 +98,20 @@ function renderRegister() {
       <Register />
     </LanguageProvider>,
   );
+}
+
+// Logs in through the unified landing form (identifier + password → دخول).
+async function loginWith(
+  user: ReturnType<typeof userEvent.setup>,
+  identifier: string,
+  password: string,
+) {
+  await user.type(
+    screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+    identifier,
+  );
+  await user.type(screen.getByPlaceholderText("كلمة المرور"), password);
+  await user.click(screen.getByRole("button", { name: /^دخول$/ }));
 }
 
 beforeEach(() => {
@@ -128,17 +148,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /تسجيل الدخول بالبريد الإلكتروني/,
-      }),
-    );
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "a@b.com",
-    );
-    await user.type(screen.getByPlaceholderText("كلمة المرور"), "password123");
-    await user.click(screen.getByRole("button", { name: /^تسجيل الدخول$/ }));
+    await loginWith(user, "a@b.com", "password123");
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
@@ -160,17 +170,8 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    await user.click(
-      screen.getByRole("button", { name: /تسجيل الدخول برقم الهاتف/ }),
-    );
-    await user.type(screen.getByPlaceholderText("07XXXXXXXX"), "0791234567");
-    await user.type(
-      screen.getByPlaceholderText(/كلمة المرور \(لمن لديه حساب\)/),
-      "secret1",
-    );
-    await user.click(
-      screen.getByRole("button", { name: /تسجيل الدخول بكلمة المرور/ }),
-    );
+    // A bare phone number (no "@") routes through the phone-password login.
+    await loginWith(user, "0791234567", "secret1");
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
@@ -178,7 +179,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
     expect(localStorage.getItem(RETURN_KEY)).toBeNull();
   });
 
-  it("phone set-password (new account) navigates to the stashed path", async () => {
+  it("phone signup (new account) navigates to the stashed path", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
     h.isConfigured.mockReturnValue(true);
     h.signInWithPhoneNumber.mockResolvedValue({
@@ -192,29 +193,25 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    // Landing → phone screen → request an OTP for a brand-new account.
-    await user.click(
-      screen.getByRole("button", { name: /تسجيل الدخول برقم الهاتف/ }),
-    );
-    await user.type(screen.getByPlaceholderText("07XXXXXXXX"), "0791234567");
-    await user.click(
-      screen.getByRole("button", { name: /إنشاء حساب جديد — إرسال الرمز/ }),
-    );
-
-    // OTP screen: confirm the code → lands on the set-password screen.
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
-
-    await screen.findByRole("button", { name: /حفظ والمتابعة/ });
+    // Landing → signup form → enter phone + password up front → request OTP.
+    await user.click(screen.getByRole("button", { name: /سجّل الآن/ }));
     await user.type(
-      screen.getByPlaceholderText(/كلمة المرور \(6 أحرف على الأقل\)/),
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+      "0791234567",
+    );
+    await user.type(
+      screen.getByPlaceholderText(SIGNUP_PASSWORD_PLACEHOLDER),
       "secret1",
     );
     await user.type(
-      screen.getByPlaceholderText("تأكيد كلمة المرور"),
+      screen.getByPlaceholderText(CONFIRM_PASSWORD_PLACEHOLDER),
       "secret1",
     );
-    await user.click(screen.getByRole("button", { name: /حفظ والمتابعة/ }));
+    await user.click(screen.getByRole("button", { name: /إرسال رمز التحقق/ }));
+
+    // OTP screen: confirm the code → password is auto-saved → goAfterAuth.
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
@@ -239,19 +236,14 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /تسجيل الدخول بالبريد الإلكتروني/,
-      }),
-    );
     await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
       "a@b.com",
     );
     await user.click(screen.getByRole("button", { name: /نسيت كلمة المرور؟/ }));
 
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
@@ -283,17 +275,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /تسجيل الدخول بالبريد الإلكتروني/,
-      }),
-    );
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "a@b.com",
-    );
-    await user.type(screen.getByPlaceholderText("كلمة المرور"), "password123");
-    await user.click(screen.getByRole("button", { name: /^تسجيل الدخول$/ }));
+    await loginWith(user, "a@b.com", "password123");
 
     await waitFor(() => expect(h.mockSetLocation).toHaveBeenCalledWith("/"));
   });
@@ -308,17 +290,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     const first = renderAuth();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /تسجيل الدخول بالبريد الإلكتروني/,
-      }),
-    );
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "a@b.com",
-    );
-    await user.type(screen.getByPlaceholderText("كلمة المرور"), "password123");
-    await user.click(screen.getByRole("button", { name: /^تسجيل الدخول$/ }));
+    await loginWith(user, "a@b.com", "password123");
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
@@ -329,17 +301,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
 
     // A second, unrelated sign-in (no return path stashed) must land home.
     renderAuth();
-    await user.click(
-      screen.getByRole("button", {
-        name: /تسجيل الدخول بالبريد الإلكتروني/,
-      }),
-    );
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "a@b.com",
-    );
-    await user.type(screen.getByPlaceholderText("كلمة المرور"), "password123");
-    await user.click(screen.getByRole("button", { name: /^تسجيل الدخول$/ }));
+    await loginWith(user, "a@b.com", "password123");
 
     await waitFor(() => expect(h.mockSetLocation).toHaveBeenCalledWith("/"));
     expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
@@ -347,6 +309,27 @@ describe("Auth success paths honour the stashed return-to path", () => {
 });
 
 describe("Email signup lands a brand-new account on the register screen", () => {
+  // Drives the email-signup flow up to the OTP screen so each case can submit a
+  // code and assert on the verify branch's behaviour.
+  async function reachEmailOtpScreen(user: ReturnType<typeof userEvent.setup>) {
+    renderAuth();
+    await user.click(screen.getByRole("button", { name: /سجّل الآن/ }));
+    await user.type(
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+      "new@user.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText(SIGNUP_PASSWORD_PLACEHOLDER),
+      "password123",
+    );
+    await user.type(
+      screen.getByPlaceholderText(CONFIRM_PASSWORD_PLACEHOLDER),
+      "password123",
+    );
+    await user.click(screen.getByRole("button", { name: /إرسال رمز التحقق/ }));
+    await screen.findByPlaceholderText(OTP_PLACEHOLDER);
+  }
+
   it("navigates to /register after OTP verify, not the stashed return path", async () => {
     // Even with a stashed return path, a fresh email signup must go to
     // /register to complete the profile — it does NOT honour al_tayebat_return_to.
@@ -357,29 +340,10 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     });
 
     const user = userEvent.setup();
-    renderAuth();
+    await reachEmailOtpScreen(user);
 
-    // Landing → email signup form.
-    await user.click(screen.getByRole("button", { name: /إنشاء حساب جديد/ }));
-
-    await user.type(screen.getByPlaceholderText("أحمد"), "أحمد");
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "new@user.com",
-    );
-    await user.type(
-      screen.getByPlaceholderText(/كلمة المرور \(8 أحرف على الأقل\)/),
-      "password123",
-    );
-    await user.type(
-      screen.getByPlaceholderText("تأكيد كلمة المرور"),
-      "password123",
-    );
-    await user.click(screen.getByRole("button", { name: /إنشاء الحساب/ }));
-
-    // OTP screen (pendingSignUp=true): confirm the code → lands on /register.
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     await waitFor(() =>
       expect(h.mockSetLocation).toHaveBeenCalledWith("/register"),
@@ -387,28 +351,6 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     // The stashed return path is intentionally NOT honoured here.
     expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
   });
-
-  // Drives the email-signup flow up to the OTP screen so each failure case can
-  // submit a code and assert on the verify branch's behaviour.
-  async function reachEmailOtpScreen(user: ReturnType<typeof userEvent.setup>) {
-    renderAuth();
-    await user.click(screen.getByRole("button", { name: /إنشاء حساب جديد/ }));
-    await user.type(screen.getByPlaceholderText("أحمد"), "أحمد");
-    await user.type(
-      screen.getByPlaceholderText("البريد الإلكتروني"),
-      "new@user.com",
-    );
-    await user.type(
-      screen.getByPlaceholderText(/كلمة المرور \(8 أحرف على الأقل\)/),
-      "password123",
-    );
-    await user.type(
-      screen.getByPlaceholderText("تأكيد كلمة المرور"),
-      "password123",
-    );
-    await user.click(screen.getByRole("button", { name: /إنشاء الحساب/ }));
-    await screen.findByPlaceholderText("_ _ _ _ _ _");
-  }
 
   it("shows an error toast and stays on the OTP screen when the code is wrong/expired", async () => {
     h.attemptEmailVerification.mockRejectedValue({
@@ -418,15 +360,15 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     const user = userEvent.setup();
     await reachEmailOtpScreen(user);
 
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "000000");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "000000");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Incorrect code"),
     );
     // A failed verification must NOT advance the user — they stay on the OTP
     // screen (the code input is still rendered) and never reach /register.
-    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(screen.getByPlaceholderText(OTP_PLACEHOLDER)).toBeTruthy();
     expect(h.mockSetLocation).not.toHaveBeenCalledWith("/register");
   });
 
@@ -441,8 +383,8 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     const user = userEvent.setup();
     await reachEmailOtpScreen(user);
 
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     // Give any pending navigation a chance to fire, then assert none did.
     await waitFor(() => expect(h.attemptEmailVerification).toHaveBeenCalled());
@@ -463,14 +405,21 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     h.signInWithPhoneNumber.mockResolvedValue({ confirm });
 
     renderAuth();
-    await user.click(
-      screen.getByRole("button", { name: /تسجيل الدخول برقم الهاتف/ }),
+    await user.click(screen.getByRole("button", { name: /سجّل الآن/ }));
+    await user.type(
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+      "0791234567",
     );
-    await user.type(screen.getByPlaceholderText("07XXXXXXXX"), "0791234567");
-    await user.click(
-      screen.getByRole("button", { name: /إنشاء حساب جديد — إرسال الرمز/ }),
+    await user.type(
+      screen.getByPlaceholderText(SIGNUP_PASSWORD_PLACEHOLDER),
+      "secret1",
     );
-    await screen.findByPlaceholderText("_ _ _ _ _ _");
+    await user.type(
+      screen.getByPlaceholderText(CONFIRM_PASSWORD_PLACEHOLDER),
+      "secret1",
+    );
+    await user.click(screen.getByRole("button", { name: /إرسال رمز التحقق/ }));
+    await screen.findByPlaceholderText(OTP_PLACEHOLDER);
   }
 
   it("shows an error toast and stays on the OTP screen when the code is wrong", async () => {
@@ -479,8 +428,8 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     const user = userEvent.setup();
     await reachPhoneOtpScreen(user, confirm);
 
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "000000");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "000000");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Code is invalid"),
@@ -488,7 +437,7 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     // A rejected confirmation must NOT advance the user — they stay on the OTP
     // screen (the code input is still rendered) and never reach the
     // set-password screen.
-    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(screen.getByPlaceholderText(OTP_PLACEHOLDER)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /حفظ والمتابعة/ })).toBeNull();
   });
 
@@ -501,14 +450,59 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     const user = userEvent.setup();
     await reachPhoneOtpScreen(user, confirm);
 
-    await user.type(screen.getByPlaceholderText("_ _ _ _ _ _"), "123456");
-    await user.click(screen.getByRole("button", { name: /تأكيد/ }));
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
 
     // Give any pending navigation/advance a chance to fire, then assert none did.
     await waitFor(() => expect(confirm).toHaveBeenCalled());
-    expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
+    expect(screen.getByPlaceholderText(OTP_PLACEHOLDER)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /حفظ والمتابعة/ })).toBeNull();
     expect(h.mockSetLocation).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the retryable set-password screen when the auto-save fails", async () => {
+    // OTP succeeds but persisting the up-front password fails. The OTP is
+    // single-use, so the user must NOT be stranded — they land on the
+    // set-password screen where they can retry without re-verifying.
+    h.isConfigured.mockReturnValue(true);
+    h.signInWithPhoneNumber.mockResolvedValue({
+      confirm: vi.fn().mockResolvedValue({ user: { uid: "fb_uid" } }),
+    });
+    // 1st fetch = profile upsert (ok), 2nd fetch = set-password (fails).
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 9 }) })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "boom" }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    renderAuth();
+
+    await user.click(screen.getByRole("button", { name: /سجّل الآن/ }));
+    await user.type(
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+      "0791234567",
+    );
+    await user.type(
+      screen.getByPlaceholderText(SIGNUP_PASSWORD_PLACEHOLDER),
+      "secret1",
+    );
+    await user.type(
+      screen.getByPlaceholderText(CONFIRM_PASSWORD_PLACEHOLDER),
+      "secret1",
+    );
+    await user.click(screen.getByRole("button", { name: /إرسال رمز التحقق/ }));
+
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
+
+    // The retry screen appears and the failure is surfaced; no navigation.
+    await screen.findByRole("button", { name: /حفظ والمتابعة/ });
+    expect(toast.error).toHaveBeenCalledWith("boom");
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
   });
 });
 

@@ -553,7 +553,7 @@ export default function Auth() {
         tr("تم إنشاء حسابك بنجاح 🎉", "Your account has been created 🎉"),
       );
       setLoading(false);
-      setLocation("/register");
+      goAfterAuth("/");
       return true;
     } catch (err) {
       toast.error((err as Error).message);

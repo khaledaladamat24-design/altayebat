@@ -10,11 +10,9 @@ combined form (Tulip Market style): one identifier field accepting phone OR
 email, plus password. There is intentionally no "choose a method" landing
 screen and no separate email/phone screens.
 
-**Rule:** the visible field is `identifier`; a change handler derives the
-hidden `email`/`phone` state from it (email iff the value contains `@`). The
-existing backend handlers (Clerk email password login, Firebase phone OTP +
-`/api/auth/phone-login` + `/api/auth/set-password`) read `email`/`phone` and
-are kept unchanged — only thin dispatchers route to them.
+**Rule:** the visible field derives hidden email/phone state (email iff the
+value contains `@`). The existing Clerk-email / Firebase-phone backend handlers
+are kept unchanged — only thin dispatchers route to them by that detection.
 
 **Why:** the backend auth flows are battle-tested (see replit.md "Auth flows");
 keeping them and only changing the UI shell avoids reworking Clerk/Firebase
