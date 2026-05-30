@@ -37,6 +37,7 @@ import type {
   OrderInput,
   OrderTracking,
   Product,
+  ShipmentCancelResult,
   ShipmentRequest,
   ShipmentResult,
   StoreSummary
@@ -1298,6 +1299,77 @@ export const useCreateOrderShipment = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateOrderShipmentMutationOptions(options));
+    }
+
+export const getCancelOrderShipmentUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/delivery/orders/${orderId}/shipment/cancel`
+}
+
+/**
+ * Admin only. Calls the provider's `cancelShipment` adapter method when implemented, then clears the order's delivery tracking columns and resets the order status. When the adapter does not implement `cancelShipment`, the shipment is voided locally only (`notImplemented: true`).
+ * @summary Cancel/void an existing shipment for an order
+ */
+export const cancelOrderShipment = async (orderId: number, options?: RequestInit): Promise<ShipmentCancelResult> => {
+
+  return customFetch<ShipmentCancelResult>(getCancelOrderShipmentUrl(orderId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCancelOrderShipmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrderShipment>>, TError,{orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelOrderShipment>>, TError,{orderId: number}, TContext> => {
+
+const mutationKey = ['cancelOrderShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelOrderShipment>>, {orderId: number}> = (props) => {
+          const {orderId} = props ?? {};
+
+          return  cancelOrderShipment(orderId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelOrderShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof cancelOrderShipment>>>
+
+    export type CancelOrderShipmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Cancel/void an existing shipment for an order
+ */
+export const useCancelOrderShipment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelOrderShipment>>, TError,{orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelOrderShipment>>,
+        TError,
+        {orderId: number},
+        TContext
+      > => {
+      return useMutation(getCancelOrderShipmentMutationOptions(options));
     }
 
 export const getGetOrderTrackingUrl = (orderId: number,) => {

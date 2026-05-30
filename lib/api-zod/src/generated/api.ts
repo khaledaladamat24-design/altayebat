@@ -461,6 +461,22 @@ export const CreateOrderShipmentResponse = zod.object({
 
 
 /**
+ * Admin only. Calls the provider's `cancelShipment` adapter method when implemented, then clears the order's delivery tracking columns and resets the order status. When the adapter does not implement `cancelShipment`, the shipment is voided locally only (`notImplemented: true`).
+ * @summary Cancel/void an existing shipment for an order
+ */
+export const CancelOrderShipmentParams = zod.object({
+  "orderId": zod.coerce.number()
+})
+
+export const CancelOrderShipmentResponse = zod.object({
+  "cancelled": zod.boolean(),
+  "status": zod.string().nullish(),
+  "notImplemented": zod.boolean().optional(),
+  "notConfigured": zod.boolean().optional()
+})
+
+
+/**
  * Returns shipment tracking details for an order. `trackingNumber` is null until the order has been shipped via a delivery provider.
  * @summary Get public shipment tracking info for an order
  */

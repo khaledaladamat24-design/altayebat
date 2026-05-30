@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import {
   GetOrderTrackingResponse,
   CreateOrderShipmentResponse,
+  CancelOrderShipmentResponse,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
@@ -41,6 +42,21 @@ function sendShipment(req: Request, res: Response, candidate: unknown) {
     req.log.error(
       { err: parsed.error, candidate },
       "Shipment response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.json(parsed.data);
+}
+
+// Validate/serialize a shipment-cancellation payload against the OpenAPI
+// `ShipmentCancelResult` contract before sending, so the client can never
+// receive an off-contract response.
+function sendCancel(req: Request, res: Response, candidate: unknown) {
+  const parsed = CancelOrderShipmentResponse.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Shipment cancel response failed contract validation",
     );
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -298,6 +314,93 @@ router.post(
       }
     } catch (err) {
       req.log.error({ err }, "Failed to create shipment");
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// POST /api/delivery/orders/:orderId/shipment/cancel — cancel/void an existing shipment. Admin only.
+// Calls the provider's cancelShipment adapter method when present, then clears the order's
+// delivery_* tracking columns and resets the order status. If the adapter doesn't implement
+// cancelShipment, the shipment is voided locally only (notImplemented: true).
+router.post(
+  "/delivery/orders/:orderId/shipment/cancel",
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const orderId = parseInt(String(req.params.orderId));
+      if (isNaN(orderId))
+        return res.status(400).json({ error: "Invalid orderId" });
+
+      const [order] = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, orderId))
+        .limit(1);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      if (!order.deliveryTrackingNumber) {
+        return res
+          .status(400)
+          .json({ error: "Order has no shipment to cancel" });
+      }
+
+      // Resolve the provider/adapter the shipment was created with, if any.
+      let provider: DeliveryProvider | undefined;
+      if (order.deliveryProviderId) {
+        [provider] = await db
+          .select()
+          .from(deliveryProvidersTable)
+          .where(eq(deliveryProvidersTable.id, order.deliveryProviderId))
+          .limit(1);
+      }
+      const adapter = provider ? getAdapter(provider.type) : null;
+
+      // Clears all delivery tracking columns and resets a "shipped" order back to
+      // "pending". Returns the persisted payload validated against the contract.
+      const voidShipmentLocally = async (notImplemented: boolean) => {
+        const nextStatus = order.status === "shipped" ? "pending" : order.status;
+        await db
+          .update(ordersTable)
+          .set({
+            deliveryProviderId: null,
+            deliveryTrackingNumber: null,
+            deliveryAwbUrl: null,
+            deliveryStatus: null,
+            deliveryShippedAt: null,
+            status: nextStatus,
+          })
+          .where(eq(ordersTable.id, orderId));
+        return sendCancel(req, res, {
+          cancelled: true,
+          status: nextStatus,
+          ...(notImplemented ? { notImplemented: true } : {}),
+        });
+      };
+
+      // No usable adapter, or the adapter can't cancel with the carrier:
+      // void the shipment locally so the admin isn't stuck.
+      if (!adapter || typeof adapter.cancelShipment !== "function") {
+        return voidShipmentLocally(true);
+      }
+
+      try {
+        await adapter.cancelShipment(
+          provider as DeliveryProvider,
+          order.deliveryTrackingNumber,
+        );
+      } catch (err) {
+        if (err instanceof DeliveryNotConfiguredError) {
+          // Carrier couldn't be reached — leave the order untouched.
+          return res
+            .status(400)
+            .json({ error: err.message, notConfigured: true });
+        }
+        throw err;
+      }
+
+      return voidShipmentLocally(false);
+    } catch (err) {
+      req.log.error({ err }, "Failed to cancel shipment");
       return res.status(500).json({ error: "Internal server error" });
     }
   },

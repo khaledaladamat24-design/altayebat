@@ -192,6 +192,14 @@ export interface ShipmentResult {
   alreadyShipped?: boolean;
 }
 
+export interface ShipmentCancelResult {
+  cancelled: boolean;
+  /** @nullable */
+  status?: string | null;
+  notImplemented?: boolean;
+  notConfigured?: boolean;
+}
+
 export interface OrderInput {
   sessionId?: string;
   deliveryAddress: string;

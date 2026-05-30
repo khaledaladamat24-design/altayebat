@@ -13,7 +13,14 @@ import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
 // Inject a fake delivery adapter so we control exactly what createShipment
 // returns (a valid ShipmentResult, or a thrown DeliveryNotConfiguredError).
 // listAdapterTypes is kept real.
-const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }));
+const { mockCreate, mockCancel, adapterConfig } = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+  mockCancel: vi.fn(),
+  // `hasCancel` toggles whether the faked adapter exposes the optional
+  // cancelShipment method, so a single mock can drive both the
+  // implemented and not-implemented cases.
+  adapterConfig: { hasCancel: true },
+}));
 vi.mock("../../delivery/registry", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../delivery/registry")>();
@@ -25,6 +32,7 @@ vi.mock("../../delivery/registry", async (importOriginal) => {
       requiredCredentials: () => [],
       createShipment: mockCreate,
       trackShipment: vi.fn(),
+      ...(adapterConfig.hasCancel ? { cancelShipment: mockCancel } : {}),
     }),
   };
 });
@@ -298,5 +306,135 @@ describe("POST /api/delivery/orders/:orderId/shipment", () => {
       .send({ providerId: enabledProviderId });
     expect(res.status).toBe(403);
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/delivery/orders/:orderId/shipment/cancel", () => {
+  async function seedShippedOrder(suffix: string) {
+    return seedOrder(suffix, {
+      status: "shipped",
+      deliveryProviderId: enabledProviderId,
+      deliveryTrackingNumber: `TRK-CANCEL-${suffix}-${tag}`,
+      deliveryAwbUrl: `https://awb.example.com/${suffix}`,
+      deliveryStatus: "shipped",
+      deliveryShippedAt: new Date(),
+    });
+  }
+
+  it("cancels a shipment: calls the adapter, clears tracking columns, resets status to pending", async () => {
+    adapterConfig.hasCancel = true;
+    mockCancel.mockClear();
+    mockCancel.mockResolvedValueOnce(undefined);
+
+    const orderId = await seedShippedOrder("ok");
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/${orderId}/shipment/cancel`),
+    ).send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.cancelled).toBe(true);
+    expect(res.body.status).toBe("pending");
+    expect(res.body.notImplemented).toBeUndefined();
+    expect(mockCancel).toHaveBeenCalledTimes(1);
+    expect(mockCancel).toHaveBeenCalledWith(
+      expect.anything(),
+      `TRK-CANCEL-ok-${tag}`,
+    );
+
+    const [row] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+    expect(row.deliveryProviderId).toBeNull();
+    expect(row.deliveryTrackingNumber).toBeNull();
+    expect(row.deliveryAwbUrl).toBeNull();
+    expect(row.deliveryStatus).toBeNull();
+    expect(row.deliveryShippedAt).toBeNull();
+    expect(row.status).toBe("pending");
+  });
+
+  it("voids locally with notImplemented when the adapter has no cancelShipment", async () => {
+    adapterConfig.hasCancel = false;
+    mockCancel.mockClear();
+
+    const orderId = await seedShippedOrder("noimpl");
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/${orderId}/shipment/cancel`),
+    ).send();
+
+    adapterConfig.hasCancel = true;
+
+    expect(res.status).toBe(200);
+    expect(res.body.cancelled).toBe(true);
+    expect(res.body.notImplemented).toBe(true);
+    expect(res.body.status).toBe("pending");
+    expect(mockCancel).not.toHaveBeenCalled();
+
+    const [row] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+    expect(row.deliveryTrackingNumber).toBeNull();
+    expect(row.deliveryProviderId).toBeNull();
+    expect(row.status).toBe("pending");
+  });
+
+  it("maps DeliveryNotConfiguredError to 400 { notConfigured: true } and leaves the order untouched", async () => {
+    adapterConfig.hasCancel = true;
+    mockCancel.mockClear();
+    mockCancel.mockRejectedValueOnce(new DeliveryNotConfiguredError("مزود الشحن"));
+
+    const orderId = await seedShippedOrder("notcfg");
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/${orderId}/shipment/cancel`),
+    ).send();
+
+    expect(res.status).toBe(400);
+    expect(res.body.notConfigured).toBe(true);
+    expect(res.body.error).toBeTruthy();
+
+    // The shipment must remain intact on a failed cancel.
+    const [row] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+    expect(row.deliveryTrackingNumber).toBe(`TRK-CANCEL-notcfg-${tag}`);
+    expect(row.deliveryProviderId).toBe(enabledProviderId);
+    expect(row.status).toBe("shipped");
+  });
+
+  it("returns 400 when the order has no shipment to cancel", async () => {
+    adapterConfig.hasCancel = true;
+    mockCancel.mockClear();
+
+    const orderId = await seedOrder("noship");
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/${orderId}/shipment/cancel`),
+    ).send();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/no shipment/i);
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for an unknown order", async () => {
+    const res = await asAdmin(
+      request(app).post(`/api/delivery/orders/999999999/shipment/cancel`),
+    ).send();
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects non-admin callers with 403", async () => {
+    adapterConfig.hasCancel = true;
+    mockCancel.mockClear();
+    const orderId = await seedShippedOrder("noadmin");
+    const res = await request(app)
+      .post(`/api/delivery/orders/${orderId}/shipment/cancel`)
+      .send();
+    expect(res.status).toBe(403);
+    expect(mockCancel).not.toHaveBeenCalled();
   });
 });

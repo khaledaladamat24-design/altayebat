@@ -33,6 +33,7 @@ export * from './orderStatus';
 export * from './orderTracking';
 export * from './product';
 export * from './productFoodType';
+export * from './shipmentCancelResult';
 export * from './shipmentRequest';
 export * from './shipmentResult';
 export * from './storeSummary';
