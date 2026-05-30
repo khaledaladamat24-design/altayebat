@@ -617,8 +617,9 @@ export default function Admin() {
       else toast.success(tr("تم إلغاء الشحنة", "Shipment cancelled"));
       fetchTabData();
     } catch (err) {
-      const data = (err as { data?: { error?: string; notConfigured?: boolean } })
-        ?.data;
+      const data = (
+        err as { data?: { error?: string; notConfigured?: boolean } }
+      )?.data;
       if (data?.notConfigured)
         toast.error(
           tr(

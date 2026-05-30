@@ -13,7 +13,8 @@ import { DeliveryNotConfiguredError } from "../../delivery/types";
 // returns (valid, malformed, or extra fields). listAdapterTypes is kept real.
 const { mockTrack } = vi.hoisted(() => ({ mockTrack: vi.fn() }));
 vi.mock("../../delivery/registry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../delivery/registry")>();
+  const actual =
+    await importOriginal<typeof import("../../delivery/registry")>();
   return {
     ...actual,
     getAdapter: () => ({

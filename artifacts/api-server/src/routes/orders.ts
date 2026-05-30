@@ -7,7 +7,10 @@ import {
   productsTable,
 } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
-import { requireOrderVendorOwner, getDbUserIdFromClerk } from "../lib/vendor-auth";
+import {
+  requireOrderVendorOwner,
+  getDbUserIdFromClerk,
+} from "../lib/vendor-auth";
 import { payOrderFromWallet } from "../lib/wallet-pay";
 
 const router = Router();

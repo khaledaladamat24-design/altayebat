@@ -10,10 +10,11 @@ method at checkout), stash an intent and route through `/auth`, then bring them
 back.
 
 **Mechanism** (`artifacts/al-tayebat/src/lib/post-auth.ts`):
+
 - `setReturnTo(path)` / `takeReturnTo()` use localStorage key `al_tayebat_return_to`.
 - `takeReturnTo()` reads-and-clears (single use).
 
-**Rule:** every auth *success* path must finish with `takeReturnTo() || fallback`,
+**Rule:** every auth _success_ path must finish with `takeReturnTo() || fallback`,
 and explicit guest-exit paths (`skipAuth`) must call `takeReturnTo()` to discard a
 stale intent. Email signup goes through `/register`, so its consumer-completion
 handler is the one that consumes the return path for the email-signup branch.

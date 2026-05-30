@@ -39,6 +39,6 @@ constant.
 
 **Gotcha — DB `Date` columns vs `zod.string()`.** Drizzle returns timestamp
 columns as JS `Date`. The contract types them as `string` (ISO), and `res.json`
-would coerce a `Date` to ISO — but if you `safeParse` *before* sending, a raw
+would coerce a `Date` to ISO — but if you `safeParse` _before_ sending, a raw
 `Date` fails `zod.string()`. Convert dates to `.toISOString()` inside the
 sanitize/builder step so the candidate already matches the contract.

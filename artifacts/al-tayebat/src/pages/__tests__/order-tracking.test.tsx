@@ -148,9 +148,7 @@ describe("OrderDetail (order tracking page)", () => {
 
     expect(screen.getByText("تم إلغاء هذا الطلب")).toBeInTheDocument();
     // The progress fill bar must not be rendered for cancelled orders.
-    expect(
-      container.querySelector(".transition-all.duration-500"),
-    ).toBeNull();
+    expect(container.querySelector(".transition-all.duration-500")).toBeNull();
   });
 
   it("renders the full order details (items, totals, delivery info)", () => {
@@ -234,9 +232,10 @@ describe("OrderDetail shipping section (live tracking after shipping)", () => {
     // Shipment status (Arabic is the default language).
     expect(screen.getByText("قيد الشحن")).toBeInTheDocument();
     // AWB link + carrier phone.
-    expect(
-      screen.getByRole("link", { name: /بوليصة الشحن/ }),
-    ).toHaveAttribute("href", "https://track.example.com/AWB123456789");
+    expect(screen.getByRole("link", { name: /بوليصة الشحن/ })).toHaveAttribute(
+      "href",
+      "https://track.example.com/AWB123456789",
+    );
     expect(screen.getByText("0791112233")).toBeInTheDocument();
     // The manual-tracking notice is hidden when the carrier API is integrated.
     expect(
@@ -286,9 +285,7 @@ describe("OrderDetail shipping section (live tracking after shipping)", () => {
     renderWithProviders(<OrderDetail />);
 
     // Give the effect a chance to resolve, then assert the section is absent.
-    await waitFor(() =>
-      expect(mockUseGetOrder).toHaveBeenCalled(),
-    );
+    await waitFor(() => expect(mockUseGetOrder).toHaveBeenCalled());
     expect(screen.queryByText("الشحن")).not.toBeInTheDocument();
   });
 });

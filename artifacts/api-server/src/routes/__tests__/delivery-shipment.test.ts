@@ -384,7 +384,9 @@ describe("POST /api/delivery/orders/:orderId/shipment/cancel", () => {
   it("maps DeliveryNotConfiguredError to 400 { notConfigured: true } and leaves the order untouched", async () => {
     adapterConfig.hasCancel = true;
     mockCancel.mockClear();
-    mockCancel.mockRejectedValueOnce(new DeliveryNotConfiguredError("مزود الشحن"));
+    mockCancel.mockRejectedValueOnce(
+      new DeliveryNotConfiguredError("مزود الشحن"),
+    );
 
     const orderId = await seedShippedOrder("notcfg");
     const res = await asAdmin(

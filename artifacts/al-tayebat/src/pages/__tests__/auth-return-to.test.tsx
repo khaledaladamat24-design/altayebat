@@ -265,9 +265,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
     const user = userEvent.setup();
     renderAuth();
 
-    await user.click(
-      screen.getByRole("button", { name: /تخطّى — تصفح كضيف/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /تخطّى — تصفح كضيف/ }));
 
     await waitFor(() => expect(h.mockSetLocation).toHaveBeenCalledWith("/"));
     expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
@@ -362,9 +360,7 @@ describe("Email signup lands a brand-new account on the register screen", () => 
     renderAuth();
 
     // Landing → email signup form.
-    await user.click(
-      screen.getByRole("button", { name: /إنشاء حساب جديد/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /إنشاء حساب جديد/ }));
 
     await user.type(screen.getByPlaceholderText("أحمد"), "أحمد");
     await user.type(
@@ -493,9 +489,7 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     // screen (the code input is still rendered) and never reach the
     // set-password screen.
     expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /حفظ والمتابعة/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /حفظ والمتابعة/ })).toBeNull();
   });
 
   it("does not advance when the confirmation resolves without a user", async () => {
@@ -513,9 +507,7 @@ describe("Phone OTP verify surfaces failures instead of stranding the user", () 
     // Give any pending navigation/advance a chance to fire, then assert none did.
     await waitFor(() => expect(confirm).toHaveBeenCalled());
     expect(screen.getByPlaceholderText("_ _ _ _ _ _")).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /حفظ والمتابعة/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /حفظ والمتابعة/ })).toBeNull();
     expect(h.mockSetLocation).not.toHaveBeenCalled();
   });
 });

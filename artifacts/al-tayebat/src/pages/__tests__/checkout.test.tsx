@@ -146,7 +146,10 @@ describe("Checkout payment-method selection", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }),
     );
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
 
     const user = userEvent.setup();
@@ -206,7 +209,10 @@ describe("Checkout payment-method selection", () => {
         return Promise.resolve({ ok: false, json: async () => ({}) });
       }),
     );
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
 
     const user = userEvent.setup();
@@ -263,15 +269,24 @@ describe("Checkout payment-method selection", () => {
     localStorage.setItem("al_tayebat_user_id", "user_99");
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url.includes("/api/wallet/")) {
-        return Promise.resolve({ ok: true, json: async () => ({ balance: 50 }) });
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ balance: 50 }),
+        });
       }
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
     mockUseGetCart.mockReturnValue({ data: cartWithItems(), isLoading: false });
     mockMutate.mockImplementation(
-      (_payload: unknown, opts?: { onSuccess?: (o: { id: number }) => void }) => {
+      (
+        _payload: unknown,
+        opts?: { onSuccess?: (o: { id: number }) => void },
+      ) => {
         opts?.onSuccess?.({ id: 555 });
       },
     );
@@ -322,7 +337,10 @@ describe("Checkout payment-method selection", () => {
       vi.fn().mockImplementation((url: string) => {
         if (url.includes("/api/wallet/")) {
           // Balance (5) < total (11.5).
-          return Promise.resolve({ ok: true, json: async () => ({ balance: 5 }) });
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ balance: 5 }),
+          });
         }
         return Promise.resolve({ ok: false, json: async () => ({}) });
       }),
@@ -336,9 +354,7 @@ describe("Checkout payment-method selection", () => {
     });
     // Once the (insufficient) balance has loaded, the option stays disabled so
     // an underfunded wallet can never be selected to pay.
-    await waitFor(() =>
-      expect(screen.getByText(/5\.00/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/5\.00/)).toBeInTheDocument());
     expect(balanceBtn).toBeDisabled();
   });
 
@@ -445,7 +461,10 @@ describe("Checkout guest sign-up gate for non-cash payment", () => {
       "fetch",
       vi.fn().mockImplementation((url: string) => {
         if (url.includes("/api/products/")) {
-          return Promise.resolve({ ok: true, json: async () => ({ vendorId: 7 }) });
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ vendorId: 7 }),
+          });
         }
         if (url.includes("/api/vendors/")) {
           return Promise.resolve({

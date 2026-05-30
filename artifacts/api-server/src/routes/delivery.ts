@@ -416,7 +416,8 @@ router.post(
       // Clears all delivery tracking columns and resets a "shipped" order back to
       // "pending". Returns the persisted payload validated against the contract.
       const voidShipmentLocally = async (notImplemented: boolean) => {
-        const nextStatus = order.status === "shipped" ? "pending" : order.status;
+        const nextStatus =
+          order.status === "shipped" ? "pending" : order.status;
         await db
           .update(ordersTable)
           .set({

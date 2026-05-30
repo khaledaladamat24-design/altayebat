@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  vi,
+} from "vitest";
 import express, {
   type Request,
   type Response,
@@ -69,7 +77,9 @@ async function balanceOf(): Promise<number> {
 
 async function seedCart() {
   // 2 units @ 12.5 = 25 subtotal → free delivery (>= 20) → total 25
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+  await db
+    .delete(cartItemsTable)
+    .where(eq(cartItemsTable.sessionId, sessionId));
   await db.insert(cartItemsTable).values({
     sessionId,
     productId,
@@ -136,7 +146,9 @@ afterAll(async () => {
     await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, o.id));
   }
   await db.delete(ordersTable).where(eq(ordersTable.sessionId, sessionId));
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.sessionId, sessionId));
+  await db
+    .delete(cartItemsTable)
+    .where(eq(cartItemsTable.sessionId, sessionId));
   await db
     .delete(walletTransactionsTable)
     .where(eq(walletTransactionsTable.userId, userId));

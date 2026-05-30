@@ -12,6 +12,7 @@ process (committing merged task checkpoints), which holds `.git` locks. The push
 **remote** still completes — only the local tracking-ref update is skipped.
 
 **How to apply:**
+
 - Never manually delete `.git/refs/.../*.lock` — a live pipeline process owns it.
 - Verify the push actually landed by comparing HEADs:
   `git --no-optional-locks rev-parse HEAD` vs
