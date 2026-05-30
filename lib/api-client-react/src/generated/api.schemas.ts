@@ -200,6 +200,52 @@ export interface ShipmentCancelResult {
   notConfigured?: boolean;
 }
 
+export type DeliveryProviderSettings = { [key: string]: unknown };
+
+/**
+ * Public shape of a delivery provider. Raw credentials are never included; `hasCredentials` indicates whether any are configured.
+ */
+export interface DeliveryProvider {
+  id: number;
+  code: string;
+  name: string;
+  nameAr: string;
+  type: string;
+  /** @nullable */
+  baseUrl?: string | null;
+  enabled: boolean;
+  isDefault: boolean;
+  /** @nullable */
+  contactPhone?: string | null;
+  /** @nullable */
+  contactWhatsapp?: string | null;
+  settings: DeliveryProviderSettings;
+  hasCredentials: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DeliveryProviderInputCredentials = {[key: string]: string};
+
+export type DeliveryProviderInputSettings = { [key: string]: unknown };
+
+export interface DeliveryProviderInput {
+  code: string;
+  name: string;
+  nameAr: string;
+  type?: string;
+  /** @nullable */
+  baseUrl?: string | null;
+  enabled?: boolean;
+  isDefault?: boolean;
+  /** @nullable */
+  contactPhone?: string | null;
+  /** @nullable */
+  contactWhatsapp?: string | null;
+  credentials?: DeliveryProviderInputCredentials;
+  settings?: DeliveryProviderInputSettings;
+}
+
 export interface OrderInput {
   sessionId?: string;
   deliveryAddress: string;

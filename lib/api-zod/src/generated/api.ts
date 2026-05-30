@@ -496,6 +496,88 @@ export const GetOrderTrackingResponse = zod.object({
 
 
 /**
+ * Admin only. Returns the public shape of every provider; raw credentials are never included.
+ * @summary List all configured delivery providers (credentials stripped)
+ */
+export const ListDeliveryProvidersResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "type": zod.string(),
+  "baseUrl": zod.string().nullish(),
+  "enabled": zod.boolean(),
+  "isDefault": zod.boolean(),
+  "contactPhone": zod.string().nullish(),
+  "contactWhatsapp": zod.string().nullish(),
+  "settings": zod.record(zod.string(), zod.unknown()),
+  "hasCredentials": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).describe('Public shape of a delivery provider. Raw credentials are never included; `hasCredentials` indicates whether any are configured.')
+export const ListDeliveryProvidersResponse = zod.array(ListDeliveryProvidersResponseItem)
+
+
+/**
+ * Admin only. Returns the created provider in its public shape (credentials stripped).
+ * @summary Create a delivery provider
+ */
+export const CreateDeliveryProviderBody = zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "type": zod.string().optional(),
+  "baseUrl": zod.string().nullish(),
+  "enabled": zod.boolean().optional(),
+  "isDefault": zod.boolean().optional(),
+  "contactPhone": zod.string().nullish(),
+  "contactWhatsapp": zod.string().nullish(),
+  "credentials": zod.record(zod.string(), zod.string()).optional(),
+  "settings": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * Admin only. Returns the updated provider in its public shape (credentials stripped).
+ * @summary Update a delivery provider
+ */
+export const UpdateDeliveryProviderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDeliveryProviderBody = zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "type": zod.string().optional(),
+  "baseUrl": zod.string().nullish(),
+  "enabled": zod.boolean().optional(),
+  "isDefault": zod.boolean().optional(),
+  "contactPhone": zod.string().nullish(),
+  "contactWhatsapp": zod.string().nullish(),
+  "credentials": zod.record(zod.string(), zod.string()).optional(),
+  "settings": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const UpdateDeliveryProviderResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "type": zod.string(),
+  "baseUrl": zod.string().nullish(),
+  "enabled": zod.boolean(),
+  "isDefault": zod.boolean(),
+  "contactPhone": zod.string().nullish(),
+  "contactWhatsapp": zod.string().nullish(),
+  "settings": zod.record(zod.string(), zod.unknown()),
+  "hasCredentials": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}).describe('Public shape of a delivery provider. Raw credentials are never included; `hasCredentials` indicates whether any are configured.')
+
+
+/**
  * @summary Get home page promotional banners
  */
 export const ListBannersResponseItem = zod.object({

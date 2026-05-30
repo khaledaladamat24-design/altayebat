@@ -29,3 +29,16 @@ typed DB JSON). Error responses (400/404) intentionally stay outside this helper
 Always keep the OpenAPI schema in sync with intended fields — a field missing
 from the schema will be stripped even if it's legitimately new (run codegen:
 `pnpm --filter @workspace/api-spec run codegen`).
+
+**Gotcha — orval only emits a response Zod schema for the `200` response.** A
+`201`-only operation (e.g. a create endpoint) generates `...Body`/`...Params`
+but NO `Create...Response`. For a `201` whose body equals a `200`/array-item
+shape elsewhere, reuse that shared schema (e.g. validate a created provider with
+`ListDeliveryProvidersResponseItem`) rather than expecting a per-operation
+constant.
+
+**Gotcha — DB `Date` columns vs `zod.string()`.** Drizzle returns timestamp
+columns as JS `Date`. The contract types them as `string` (ISO), and `res.json`
+would coerce a `Date` to ISO — but if you `safeParse` *before* sending, a raw
+`Date` fails `zod.string()`. Convert dates to `.toISOString()` inside the
+sanitize/builder step so the candidate already matches the contract.

@@ -6,6 +6,8 @@ import {
   GetOrderTrackingResponse,
   CreateOrderShipmentResponse,
   CancelOrderShipmentResponse,
+  ListDeliveryProvidersResponse,
+  ListDeliveryProvidersResponseItem,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../lib/admin-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
@@ -63,28 +65,66 @@ function sendCancel(req: Request, res: Response, candidate: unknown) {
   return res.json(parsed.data);
 }
 
-const PUBLIC_FIELDS = [
-  "id",
-  "code",
-  "name",
-  "nameAr",
-  "type",
-  "baseUrl",
-  "enabled",
-  "isDefault",
-  "contactPhone",
-  "contactWhatsapp",
-  "settings",
-  "createdAt",
-  "updatedAt",
-] as const;
-
-/** Strip credentials before returning a provider to the client. */
+/**
+ * Strip credentials and build the public shape of a provider. Dates are
+ * serialized to ISO strings so the result matches the OpenAPI `DeliveryProvider`
+ * contract (which types `createdAt`/`updatedAt` as strings).
+ */
 function sanitize(p: DeliveryProvider) {
-  const out: Record<string, unknown> = {};
-  for (const k of PUBLIC_FIELDS) out[k] = p[k as keyof DeliveryProvider];
-  out.hasCredentials = Object.keys(p.credentials ?? {}).length > 0;
-  return out;
+  return {
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    nameAr: p.nameAr,
+    type: p.type,
+    baseUrl: p.baseUrl,
+    enabled: p.enabled,
+    isDefault: p.isDefault,
+    contactPhone: p.contactPhone,
+    contactWhatsapp: p.contactWhatsapp,
+    settings: p.settings ?? {},
+    hasCredentials: Object.keys(p.credentials ?? {}).length > 0,
+    createdAt:
+      p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+    updatedAt:
+      p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
+  };
+}
+
+// Validate/serialize a single provider payload against the OpenAPI
+// `DeliveryProvider` contract before sending. A default Zod object strips
+// unknown keys, so credentials (or any other off-contract field) can never leak
+// to the admin UI; a malformed row surfaces as a controlled, logged 500.
+function sendProvider(
+  req: Request,
+  res: Response,
+  candidate: unknown,
+  status = 200,
+) {
+  const parsed = ListDeliveryProvidersResponseItem.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Delivery provider response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.status(status).json(parsed.data);
+}
+
+// Validate/serialize the provider-list payload against the OpenAPI
+// `DeliveryProvider` array contract before sending, for the same reasons as
+// sendProvider().
+function sendProviders(req: Request, res: Response, candidate: unknown) {
+  const parsed = ListDeliveryProvidersResponse.safeParse(candidate);
+  if (!parsed.success) {
+    req.log.error(
+      { err: parsed.error, candidate },
+      "Delivery providers list response failed contract validation",
+    );
+    return res.status(500).json({ error: "Internal server error" });
+  }
+  return res.json(parsed.data);
 }
 
 // GET /api/delivery/adapter-types — list of supported provider types + their required credential keys.
@@ -97,10 +137,10 @@ router.get("/delivery/adapter-types", (_req, res) => {
 router.get("/delivery/providers", requireAdmin, async (req, res) => {
   try {
     const rows = await db.select().from(deliveryProvidersTable);
-    res.json(rows.map(sanitize));
+    return sendProviders(req, res, rows.map(sanitize));
   } catch (err) {
     req.log.error({ err }, "Failed to list delivery providers");
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -145,7 +185,7 @@ router.post("/delivery/providers", requireAdmin, async (req, res) => {
         settings,
       })
       .returning();
-    return res.status(201).json(sanitize(created));
+    return sendProvider(req, res, sanitize(created), 201);
   } catch (err) {
     req.log.error({ err }, "Failed to create delivery provider");
     return res.status(500).json({ error: "Internal server error" });
@@ -190,7 +230,7 @@ router.patch("/delivery/providers/:id", requireAdmin, async (req, res) => {
       .where(eq(deliveryProvidersTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
-    return res.json(sanitize(updated));
+    return sendProvider(req, res, sanitize(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update delivery provider");
     return res.status(500).json({ error: "Internal server error" });

@@ -26,6 +26,8 @@ import type {
   CartItemUpdate,
   Category,
   ClearCartParams,
+  DeliveryProvider,
+  DeliveryProviderInput,
   GetCartParams,
   HealthStatus,
   ListBestsellersParams,
@@ -1449,6 +1451,229 @@ export function useGetOrderTracking<TData = Awaited<ReturnType<typeof getOrderTr
 
 
 
+
+export const getListDeliveryProvidersUrl = () => {
+
+
+
+
+  return `/api/delivery/providers`
+}
+
+/**
+ * Admin only. Returns the public shape of every provider; raw credentials are never included.
+ * @summary List all configured delivery providers (credentials stripped)
+ */
+export const listDeliveryProviders = async ( options?: RequestInit): Promise<DeliveryProvider[]> => {
+
+  return customFetch<DeliveryProvider[]>(getListDeliveryProvidersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeliveryProvidersQueryKey = () => {
+    return [
+    `/api/delivery/providers`
+    ] as const;
+    }
+
+
+export const getListDeliveryProvidersQueryOptions = <TData = Awaited<ReturnType<typeof listDeliveryProviders>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeliveryProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeliveryProvidersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeliveryProviders>>> = ({ signal }) => listDeliveryProviders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeliveryProviders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeliveryProvidersQueryResult = NonNullable<Awaited<ReturnType<typeof listDeliveryProviders>>>
+export type ListDeliveryProvidersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all configured delivery providers (credentials stripped)
+ */
+
+export function useListDeliveryProviders<TData = Awaited<ReturnType<typeof listDeliveryProviders>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeliveryProviders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeliveryProvidersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDeliveryProviderUrl = () => {
+
+
+
+
+  return `/api/delivery/providers`
+}
+
+/**
+ * Admin only. Returns the created provider in its public shape (credentials stripped).
+ * @summary Create a delivery provider
+ */
+export const createDeliveryProvider = async (deliveryProviderInput: DeliveryProviderInput, options?: RequestInit): Promise<DeliveryProvider> => {
+
+  return customFetch<DeliveryProvider>(getCreateDeliveryProviderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deliveryProviderInput,)
+  }
+);}
+
+
+
+
+export const getCreateDeliveryProviderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeliveryProvider>>, TError,{data: BodyType<DeliveryProviderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDeliveryProvider>>, TError,{data: BodyType<DeliveryProviderInput>}, TContext> => {
+
+const mutationKey = ['createDeliveryProvider'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDeliveryProvider>>, {data: BodyType<DeliveryProviderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDeliveryProvider(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDeliveryProviderMutationResult = NonNullable<Awaited<ReturnType<typeof createDeliveryProvider>>>
+    export type CreateDeliveryProviderMutationBody = BodyType<DeliveryProviderInput>
+    export type CreateDeliveryProviderMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a delivery provider
+ */
+export const useCreateDeliveryProvider = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeliveryProvider>>, TError,{data: BodyType<DeliveryProviderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDeliveryProvider>>,
+        TError,
+        {data: BodyType<DeliveryProviderInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDeliveryProviderMutationOptions(options));
+    }
+
+export const getUpdateDeliveryProviderUrl = (id: number,) => {
+
+
+
+
+  return `/api/delivery/providers/${id}`
+}
+
+/**
+ * Admin only. Returns the updated provider in its public shape (credentials stripped).
+ * @summary Update a delivery provider
+ */
+export const updateDeliveryProvider = async (id: number,
+    deliveryProviderInput: DeliveryProviderInput, options?: RequestInit): Promise<DeliveryProvider> => {
+
+  return customFetch<DeliveryProvider>(getUpdateDeliveryProviderUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deliveryProviderInput,)
+  }
+);}
+
+
+
+
+export const getUpdateDeliveryProviderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeliveryProvider>>, TError,{id: number;data: BodyType<DeliveryProviderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDeliveryProvider>>, TError,{id: number;data: BodyType<DeliveryProviderInput>}, TContext> => {
+
+const mutationKey = ['updateDeliveryProvider'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDeliveryProvider>>, {id: number;data: BodyType<DeliveryProviderInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDeliveryProvider(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDeliveryProviderMutationResult = NonNullable<Awaited<ReturnType<typeof updateDeliveryProvider>>>
+    export type UpdateDeliveryProviderMutationBody = BodyType<DeliveryProviderInput>
+    export type UpdateDeliveryProviderMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a delivery provider
+ */
+export const useUpdateDeliveryProvider = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeliveryProvider>>, TError,{id: number;data: BodyType<DeliveryProviderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDeliveryProvider>>,
+        TError,
+        {id: number;data: BodyType<DeliveryProviderInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDeliveryProviderMutationOptions(options));
+    }
 
 export const getListBannersUrl = () => {
 

@@ -432,6 +432,78 @@ paths:
         "404":
           description: Order not found
 
+  /delivery/providers:
+    get:
+      operationId: listDeliveryProviders
+      tags: [delivery]
+      summary: List all configured delivery providers (credentials stripped)
+      description: Admin only. Returns the public shape of every provider; raw credentials are never included.
+      responses:
+        "200":
+          description: Delivery providers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryProvider"
+        "403":
+          description: Forbidden
+    post:
+      operationId: createDeliveryProvider
+      tags: [delivery]
+      summary: Create a delivery provider
+      description: Admin only. Returns the created provider in its public shape (credentials stripped).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryProviderInput"
+      responses:
+        "201":
+          description: Created provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryProvider"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+
+  /delivery/providers/{id}:
+    patch:
+      operationId: updateDeliveryProvider
+      tags: [delivery]
+      summary: Update a delivery provider
+      description: Admin only. Returns the updated provider in its public shape (credentials stripped).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryProviderInput"
+      responses:
+        "200":
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryProvider"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /banners:
     get:
       operationId: listBanners
@@ -750,6 +822,82 @@ components:
           type: boolean
         notConfigured:
           type: boolean
+
+    DeliveryProvider:
+      type: object
+      description: Public shape of a delivery provider. Raw credentials are never included; `hasCredentials` indicates whether any are configured.
+      required:
+        - id
+        - code
+        - name
+        - nameAr
+        - type
+        - enabled
+        - isDefault
+        - settings
+        - hasCredentials
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        nameAr:
+          type: string
+        type:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        isDefault:
+          type: boolean
+        contactPhone:
+          type: ["string", "null"]
+        contactWhatsapp:
+          type: ["string", "null"]
+        settings:
+          type: object
+          additionalProperties: true
+        hasCredentials:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    DeliveryProviderInput:
+      type: object
+      required: [code, name, nameAr]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        nameAr:
+          type: string
+        type:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        isDefault:
+          type: boolean
+        contactPhone:
+          type: ["string", "null"]
+        contactWhatsapp:
+          type: ["string", "null"]
+        credentials:
+          type: object
+          additionalProperties:
+            type: string
+        settings:
+          type: object
+          additionalProperties: true
 
     OrderInput:
       type: object
