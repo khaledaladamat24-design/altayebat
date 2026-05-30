@@ -35,6 +35,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPicker } from "@/components/map-picker";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
+import { setReturnTo } from "@/lib/post-auth";
 
 type PaymentMethod = "cod" | "cliq" | "wallet" | "balance";
 
@@ -81,17 +82,41 @@ export default function Checkout() {
     storeName: tr("الطيبات", "Al-Tayebat"),
   };
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+  // Pre-select the payment method the guest tapped before being sent to sign up,
+  // so they land back here with their intended method already chosen.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => {
+    if (typeof window !== "undefined") {
+      const pending = localStorage.getItem("al_tayebat_pending_payment");
+      localStorage.removeItem("al_tayebat_pending_payment");
+      if (pending === "cliq" || pending === "wallet" || pending === "balance") {
+        return pending;
+      }
+    }
+    return "cod";
+  });
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [_screenshotName, setScreenshotName] = useState("");
   const [vendorPayment, setVendorPayment] = useState<VendorPayment>(
     DEFAULT_VENDOR_PAYMENT,
   );
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  // Track whether the async vendor/wallet lookups have finished, so we only
+  // downgrade an invalid pre-selected payment method once we actually know.
+  const [vendorChecked, setVendorChecked] = useState(false);
+  const [walletChecked, setWalletChecked] = useState(false);
   const userId =
     typeof window !== "undefined"
       ? localStorage.getItem("al_tayebat_user_id")
       : null;
+  // A visitor counts as signed-in if any auth marker exists (phone, Firebase, or
+  // Clerk). Guests must create an account before using non-cash payment methods.
+  const isLoggedIn =
+    typeof window !== "undefined" &&
+    !!(
+      localStorage.getItem("al_tayebat_user_id") ||
+      localStorage.getItem("al_tayebat_firebase_uid") ||
+      localStorage.getItem("__clerk_db_jwt")
+    );
 
   const { data: cart, isLoading } = useGetCart(
     { sessionId },
@@ -153,6 +178,8 @@ export default function Checkout() {
         });
       } catch {
         // Keep default — checkout still works (COD always available)
+      } finally {
+        if (!cancelled) setVendorChecked(true);
       }
     })();
     return () => {
@@ -162,16 +189,63 @@ export default function Checkout() {
 
   // Load internal wallet balance for signed-in users
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setWalletChecked(true);
+      return;
+    }
+    let cancelled = false;
     fetch(apiUrl(`/api/wallet/${userId}`))
       .then(async (r) => {
         if (r.ok) {
           const d = await r.json();
-          setWalletBalance(Number(d.balance));
+          if (!cancelled) setWalletBalance(Number(d.balance));
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setWalletChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
+
+  // If a method was pre-selected (e.g. a guest came back from signup) but it
+  // turns out to be unavailable — guest, vendor hasn't enabled it, or wallet
+  // balance is insufficient — fall back to COD so the user never lands on a
+  // selected-but-disabled payment option.
+  useEffect(() => {
+    if (paymentMethod === "cod" || !cart) return;
+    if (!isLoggedIn) {
+      setPaymentMethod("cod");
+      return;
+    }
+    const total = Number(cart.subtotal) + Number(cart.deliveryFee || 0);
+    if (paymentMethod === "cliq" && vendorChecked && !vendorPayment.cliqAlias) {
+      setPaymentMethod("cod");
+    } else if (
+      paymentMethod === "wallet" &&
+      vendorChecked &&
+      !vendorPayment.walletNumber
+    ) {
+      setPaymentMethod("cod");
+    } else if (
+      paymentMethod === "balance" &&
+      walletChecked &&
+      (!userId || walletBalance === null || walletBalance < total)
+    ) {
+      setPaymentMethod("cod");
+    }
+  }, [
+    paymentMethod,
+    isLoggedIn,
+    vendorChecked,
+    walletChecked,
+    vendorPayment,
+    walletBalance,
+    userId,
+    cart,
+  ]);
 
   const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -306,6 +380,28 @@ export default function Checkout() {
         },
       },
     );
+  };
+
+  // Guest tapped a non-cash method: stash the half-filled form + the chosen
+  // method, then send them to create an account. After signup they're returned
+  // to /checkout (cart is preserved via sessionId) with the method pre-selected.
+  const goSignupForPayment = (method: PaymentMethod) => {
+    const values = form.getValues();
+    if (values.customerName)
+      localStorage.setItem("al_tayebat_name", values.customerName);
+    if (values.customerPhone)
+      localStorage.setItem("al_tayebat_phone", values.customerPhone);
+    if (values.deliveryAddress)
+      localStorage.setItem("al_tayebat_address", values.deliveryAddress);
+    localStorage.setItem("al_tayebat_pending_payment", method);
+    setReturnTo("/checkout");
+    toast.info(
+      tr(
+        "أنشئ حسابك لإتمام الدفع بهذه الطريقة",
+        "Create an account to pay with this method",
+      ),
+    );
+    setLocation("/auth");
   };
 
   if (isLoading || !cart) {
@@ -470,40 +566,52 @@ export default function Checkout() {
                 id: "cliq" as PaymentMethod,
                 icon: Smartphone,
                 label: tr("تحويل كليك CliQ", "CliQ Transfer"),
-                sub: vendorPayment.cliqAlias
+                sub: !isLoggedIn
                   ? tr(
-                      `معرف كليك: ${vendorPayment.cliqAlias}@`,
-                      `CliQ alias: ${vendorPayment.cliqAlias}@`,
+                      "أنشئ حساباً للدفع عبر كليك",
+                      "Create an account to pay via CliQ",
                     )
-                  : tr(
-                      "المورد لم يفعّل الدفع عبر كليك بعد",
-                      "The vendor has not enabled CliQ payments yet",
-                    ),
-                disabled: !vendorPayment.cliqAlias,
+                  : vendorPayment.cliqAlias
+                    ? tr(
+                        `معرف كليك: ${vendorPayment.cliqAlias}@`,
+                        `CliQ alias: ${vendorPayment.cliqAlias}@`,
+                      )
+                    : tr(
+                        "المورد لم يفعّل الدفع عبر كليك بعد",
+                        "The vendor has not enabled CliQ payments yet",
+                      ),
+                // Guests can tap to be sent to signup; only disable for
+                // signed-in users when the vendor hasn't enabled CliQ.
+                disabled: isLoggedIn && !vendorPayment.cliqAlias,
               },
               {
                 id: "wallet" as PaymentMethod,
                 icon: Wallet,
                 label: tr("محفظة إلكترونية", "E-Wallet"),
-                sub: vendorPayment.walletNumber
+                sub: !isLoggedIn
                   ? tr(
-                      `رقم المحفظة: ${vendorPayment.walletNumber}`,
-                      `Wallet number: ${vendorPayment.walletNumber}`,
+                      "أنشئ حساباً للدفع بالمحفظة",
+                      "Create an account to pay by wallet",
                     )
-                  : tr(
-                      "المورد لم يفعّل الدفع بالمحفظة بعد",
-                      "The vendor has not enabled wallet payments yet",
-                    ),
-                disabled: !vendorPayment.walletNumber,
+                  : vendorPayment.walletNumber
+                    ? tr(
+                        `رقم المحفظة: ${vendorPayment.walletNumber}`,
+                        `Wallet number: ${vendorPayment.walletNumber}`,
+                      )
+                    : tr(
+                        "المورد لم يفعّل الدفع بالمحفظة بعد",
+                        "The vendor has not enabled wallet payments yet",
+                      ),
+                disabled: isLoggedIn && !vendorPayment.walletNumber,
               },
               {
                 id: "balance" as PaymentMethod,
                 icon: Wallet,
                 label: tr("الدفع من رصيد محفظتي", "Pay from My Wallet Balance"),
-                sub: !userId
+                sub: !isLoggedIn
                   ? tr(
-                      "سجّل دخولك لاستخدام رصيد محفظتك",
-                      "Sign in to use your wallet balance",
+                      "أنشئ حساباً للدفع من رصيد محفظتك",
+                      "Create an account to pay from your wallet balance",
                     )
                   : walletBalance === null
                     ? tr("جاري التحقق من الرصيد...", "Checking balance...")
@@ -511,18 +619,28 @@ export default function Checkout() {
                         `الرصيد المتاح: ${walletBalance.toFixed(2)} د.أ`,
                         `Available balance: ${walletBalance.toFixed(2)} JOD`,
                       ),
+                // Guests tap to sign up; signed-in users need a funded wallet.
                 disabled:
-                  !userId ||
-                  walletBalance === null ||
-                  walletBalance <
-                    Number(cart.subtotal) + Number(cart.deliveryFee || 0),
+                  isLoggedIn &&
+                  (!userId ||
+                    walletBalance === null ||
+                    walletBalance <
+                      Number(cart.subtotal) + Number(cart.deliveryFee || 0)),
               },
             ].map((opt) => (
               <button
                 key={opt.id}
                 type="button"
                 disabled={opt.disabled}
-                onClick={() => !opt.disabled && setPaymentMethod(opt.id)}
+                onClick={() => {
+                  if (opt.disabled) return;
+                  // Guests must register before any non-cash method.
+                  if (!isLoggedIn && opt.id !== "cod") {
+                    goSignupForPayment(opt.id);
+                    return;
+                  }
+                  setPaymentMethod(opt.id);
+                }}
                 className={`w-full border-2 rounded-xl p-4 flex items-center gap-3 transition-all ${opt.disabled ? "opacity-50 cursor-not-allowed border-border bg-muted/10" : paymentMethod === opt.id ? "border-primary bg-primary/5" : "border-border bg-muted/30"}`}
               >
                 <div

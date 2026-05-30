@@ -12,10 +12,12 @@ import {
   MapPin,
   CreditCard,
   Wallet,
+  Leaf,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
+import { takeReturnTo } from "@/lib/post-auth";
 
 type Step = "role" | "vendor-details" | "vendor-payout" | "done";
 
@@ -119,7 +121,8 @@ export default function Register() {
       localStorage.setItem("al_tayebat_role", "consumer");
       localStorage.setItem("al_tayebat_user_id", String(profile.id));
       toast.success(tr("أهلاً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-      setLocation("/");
+      // Return to wherever the user came from (e.g. checkout) when applicable.
+      setLocation(takeReturnTo() || "/");
     } catch (err) {
       toast.error(
         (err as Error).message ||
@@ -211,20 +214,21 @@ export default function Register() {
   };
 
   const headerImg = (
-    <div className="relative h-36 shrink-0 overflow-hidden rounded-b-3xl">
-      <img
-        src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80"
-        alt=""
-        className="w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/70 to-primary/90" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-        <span className="text-white text-2xl font-black drop-shadow">
-          {tr("الطيبات", "Al-Tayebat")}
-        </span>
-        <span className="text-white/80 text-sm">
-          {tr("اختر طريقة المشاركة", "Choose how to join")}
-        </span>
+    <div className="relative shrink-0 overflow-hidden rounded-b-[2rem] bg-gradient-to-bl from-primary via-primary to-rose px-6 pt-10 pb-7">
+      <div className="absolute -top-12 -right-10 w-36 h-36 rounded-full bg-white/10" />
+      <div className="absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-white/5" />
+      <div className="relative flex flex-col items-center gap-2.5">
+        <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-lg ring-1 ring-white/25">
+          <Leaf className="w-8 h-8 text-white" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-white text-2xl font-black drop-shadow-sm">
+            {tr("الطيبات", "Al-Tayebat")}
+          </h1>
+          <p className="text-white/85 text-sm mt-0.5">
+            {tr("اختر طريقة المشاركة", "Choose how to join")}
+          </p>
+        </div>
       </div>
     </div>
   );

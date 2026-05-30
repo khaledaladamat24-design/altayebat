@@ -1,1 +1,1 @@
-- [Frontend component testing](frontend-testing.md) — how al-tayebat runs Vitest + Testing Library component tests (jsdom, mocking hooks, QueryClient).
+- [Guest auth return-to flow](auth-return-flow.md) — stash intent → /auth → consume `takeReturnTo()` on every auth success; discard on skip; pending-payment pre-select with vendor/wallet-checked fallback to COD.

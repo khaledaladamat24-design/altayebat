@@ -10,10 +10,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   Loader2,
+  Leaf,
 } from "lucide-react";
 import { toast } from "sonner";
 import { isConfigured, auth } from "@/lib/firebase";
 import { apiUrl } from "@/lib/api-url";
+import { takeReturnTo } from "@/lib/post-auth";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -84,7 +86,7 @@ export default function Auth() {
     if (authLoaded && isSignedIn && !redirectedRef.current) {
       redirectedRef.current = true;
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
-      setLocation("/");
+      setLocation(takeReturnTo() || "/");
     }
     // setLocation omitted: wouter v3 may return a new reference per render,
     // which would loop the effect (React #185) on Android WebView.
@@ -107,9 +109,18 @@ export default function Auth() {
   }, []);
 
   const skipAuth = () => {
+    // User chose to stay a guest — drop any stashed "return to checkout" intent
+    // so a later sign-in doesn't unexpectedly bounce them back there.
+    takeReturnTo();
     localStorage.setItem("al_tayebat_auth_skipped_v2", "1");
     localStorage.setItem("al_tayebat_onboarded_v2", "1");
     setLocation("/");
+  };
+
+  // After a successful sign-in/sign-up, return the user to wherever they were
+  // headed (e.g. checkout) if a return path was stashed, otherwise go home.
+  const goAfterAuth = (fallback: string) => {
+    setLocation(takeReturnTo() || fallback);
   };
 
   /* ── Email Login: password ONLY. OTP is a separate "forgot password" flow. ──
@@ -148,7 +159,7 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
         persistRemembered("email", email);
         toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-        setLocation("/");
+        goAfterAuth("/");
       } else {
         toast.error(
           tr("تعذّر إكمال تسجيل الدخول", "Couldn't complete sign-in"),
@@ -424,7 +435,7 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           persistRemembered("email", email);
           toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-          setLocation("/");
+          goAfterAuth("/");
         }
       }
     } catch (err: unknown) {
@@ -488,7 +499,7 @@ export default function Auth() {
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
       persistRemembered("phone", phone);
       toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-      setLocation("/");
+      goAfterAuth("/");
     } catch (err) {
       toast.error(
         (err as Error).message || tr("فشل تسجيل الدخول", "Sign-in failed"),
@@ -534,7 +545,7 @@ export default function Auth() {
           "Password saved — you can sign in later without a code",
         ),
       );
-      setLocation("/");
+      goAfterAuth("/");
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -662,20 +673,22 @@ export default function Auth() {
   };
 
   const headerImg = (
-    <div className="relative h-44 shrink-0 overflow-hidden rounded-b-3xl">
-      <img
-        src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=800&q=80"
-        alt=""
-        className="w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-primary/80" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-        <span className="text-white text-3xl font-black drop-shadow">
-          {tr("الطيبات", "Al-Tayebat")}
-        </span>
-        <span className="text-white/80 text-sm">
-          {tr("طعام صحي يوصل لبابك", "Healthy food delivered to your door")}
-        </span>
+    <div className="relative shrink-0 overflow-hidden rounded-b-[2rem] bg-gradient-to-bl from-primary via-primary to-rose px-6 pt-12 pb-9">
+      {/* soft decorative circles */}
+      <div className="absolute -top-12 -right-10 w-40 h-40 rounded-full bg-white/10" />
+      <div className="absolute -bottom-14 -left-8 w-44 h-44 rounded-full bg-white/5" />
+      <div className="relative flex flex-col items-center gap-3">
+        <div className="w-20 h-20 rounded-3xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-lg ring-1 ring-white/25">
+          <Leaf className="w-10 h-10 text-white" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-white text-3xl font-black drop-shadow-sm">
+            {tr("الطيبات", "Al-Tayebat")}
+          </h1>
+          <p className="text-white/85 text-sm mt-0.5">
+            {tr("طعام صحي يوصل لبابك", "Healthy food delivered to your door")}
+          </p>
+        </div>
       </div>
     </div>
   );
