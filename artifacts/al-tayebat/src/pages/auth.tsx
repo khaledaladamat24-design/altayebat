@@ -20,6 +20,7 @@ import {
   signInWithPhoneNumber,
   type ConfirmationResult,
 } from "firebase/auth";
+import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { useLanguage } from "@/contexts/language";
 
 const REMEMBER_EMAIL_KEY = "al_tayebat_remember_email";
@@ -76,6 +77,10 @@ export default function Auth() {
   const [pendingSignUp, setPendingSignUp] = useState(false);
   const [pendingPhonePassword, setPendingPhonePassword] = useState(false);
   const recaptchaRef = useRef<HTMLDivElement>(null);
+  // On native (Capacitor) we verify via the native Firebase SDK, which returns a
+  // verificationId through the `phoneCodeSent` listener instead of a web
+  // ConfirmationResult. We stash it here to confirm the code in the next step.
+  const phoneVerificationIdRef = useRef<string | null>(null);
 
   const firebaseEnabled = isConfigured();
 
@@ -562,6 +567,56 @@ export default function Auth() {
     }
   };
 
+  /* ── After OTP verify: create/find profile, then set password or move on ── */
+  // Shared post-verification finalize used by BOTH the manual OTP path and the
+  // native auto-verification path (instant verification with no code entry).
+  const completePhoneAuth = async (uid: string) => {
+    localStorage.setItem("al_tayebat_firebase_uid", uid);
+    localStorage.setItem("al_tayebat_phone", phone);
+    localStorage.setItem("al_tayebat_onboarded_v2", "1");
+    persistRemembered("phone", phone);
+    const res = await fetch(apiUrl("/api/users/profile"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firebaseUid: uid, phone, role: "consumer" }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(
+        body.error || tr("فشل حفظ الملف الشخصي", "Failed to save profile"),
+      );
+    }
+    const profile = await res.json();
+    localStorage.setItem("al_tayebat_user_id", String(profile.id));
+    // The verification session is fully consumed now — don't let a stale id pass
+    // the "session exists" gate on a later attempt.
+    phoneVerificationIdRef.current = null;
+
+    // If the user already chose a password during signup, save it now and skip
+    // the extra "set password" screen (single signup form).
+    if (pendingPhonePassword && password.length >= 6) {
+      const saved = await handlePhoneSetPassword();
+      if (saved) {
+        setPendingPhonePassword(false);
+      } else {
+        // Auto-save failed (e.g. network) — the OTP code is already consumed, so
+        // drop the user on the retryable password screen instead of stranding
+        // them on the OTP step.
+        setMode("phone-set-password");
+      }
+    } else {
+      toast.success(
+        tr(
+          "تم التحقق! اختر كلمة المرور للدخول لاحقاً بدون رمز",
+          "Verified! Choose a password so you can sign in later without a code",
+        ),
+      );
+      setPassword("");
+      setPassword2("");
+      setMode("phone-set-password");
+    }
+  };
+
   /* ── Firebase Phone Send OTP ── */
   const handleSendPhoneOtp = async () => {
     const e164 = toE164JO(phone);
@@ -587,6 +642,91 @@ export default function Auth() {
 
     setLoading(true);
     try {
+      if (Capacitor.isNativePlatform()) {
+        // Native Android/iOS: verify through the native Firebase SDK (backed by
+        // Play Integrity / device verification) instead of the JS reCAPTCHA web
+        // flow, which loops and freezes the Capacitor WebView. This is what makes
+        // live SMS verification work for ANY real phone number.
+        const { FirebaseAuthentication } =
+          await import("@capacitor-firebase/authentication");
+        phoneVerificationIdRef.current = null;
+        await FirebaseAuthentication.removeAllListeners();
+        const handles: PluginListenerHandle[] = [];
+        type Outcome =
+          | { type: "code"; verificationId: string }
+          | { type: "completed"; uid: string };
+        try {
+          const outcome = await new Promise<Outcome>((resolve, reject) => {
+            let settled = false;
+            const settle = (fn: () => void) => {
+              if (settled) return;
+              settled = true;
+              fn();
+            };
+            // Register ALL listeners BEFORE firing the request, otherwise a fast
+            // `phoneCodeSent`/`phoneVerificationCompleted` (instant verification)
+            // can arrive before the listener exists and the promise hangs.
+            Promise.all([
+              FirebaseAuthentication.addListener("phoneCodeSent", (event) =>
+                settle(() =>
+                  resolve({
+                    type: "code",
+                    verificationId: event.verificationId,
+                  }),
+                ),
+              ),
+              FirebaseAuthentication.addListener(
+                "phoneVerificationCompleted",
+                (event) =>
+                  settle(() => {
+                    if (event.user?.uid)
+                      resolve({ type: "completed", uid: event.user.uid });
+                    else
+                      reject(
+                        new Error(tr("فشل التحقق", "Verification failed")),
+                      );
+                  }),
+              ),
+              FirebaseAuthentication.addListener(
+                "phoneVerificationFailed",
+                (event) => settle(() => reject(new Error(event.message))),
+              ),
+            ])
+              .then((registered) => {
+                handles.push(...registered);
+                return FirebaseAuthentication.signInWithPhoneNumber({
+                  phoneNumber: e164,
+                });
+              })
+              .catch((e) => settle(() => reject(e as Error)));
+          });
+
+          if (outcome.type === "completed") {
+            // Instant verification: the native SDK already signed the user in,
+            // so skip the OTP entry screen and finalize directly.
+            toast(tr("تم التحقق تلقائياً", "Verified automatically"));
+            await completePhoneAuth(outcome.uid);
+            return;
+          }
+          phoneVerificationIdRef.current = outcome.verificationId;
+          setMode("otp-phone");
+          toast(
+            tr(
+              "تم إرسال رمز التحقق إلى هاتفك",
+              "A verification code has been sent to your phone",
+            ),
+          );
+        } finally {
+          for (const h of handles) {
+            try {
+              await h.remove();
+            } catch {}
+          }
+          setLoading(false);
+        }
+        return;
+      }
+
       if (!window.recaptchaVerifier && recaptchaRef.current) {
         window.recaptchaVerifier = new RecaptchaVerifier(
           auth,
@@ -629,7 +769,11 @@ export default function Auth() {
       toast.error(tr("أدخل الرمز المكون من 6 أرقام", "Enter the 6-digit code"));
       return;
     }
-    if (!window.confirmationResult) {
+    const isNative = Capacitor.isNativePlatform();
+    const hasSession = isNative
+      ? !!phoneVerificationIdRef.current
+      : !!window.confirmationResult;
+    if (!hasSession) {
       toast.error(
         tr(
           "انتهت صلاحية الجلسة. أعد المحاولة.",
@@ -640,53 +784,21 @@ export default function Auth() {
     }
     setLoading(true);
     try {
-      const result = await window.confirmationResult.confirm(otp);
-      if (result.user) {
-        localStorage.setItem("al_tayebat_firebase_uid", result.user.uid);
-        localStorage.setItem("al_tayebat_phone", phone);
-        localStorage.setItem("al_tayebat_onboarded_v2", "1");
-        persistRemembered("phone", phone);
-        const res = await fetch(apiUrl("/api/users/profile"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firebaseUid: result.user.uid,
-            phone,
-            role: "consumer",
-          }),
+      let uid: string | undefined;
+      if (isNative) {
+        const { FirebaseAuthentication } =
+          await import("@capacitor-firebase/authentication");
+        const result = await FirebaseAuthentication.confirmVerificationCode({
+          verificationId: phoneVerificationIdRef.current!,
+          verificationCode: otp,
         });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(
-            body.error || tr("فشل حفظ الملف الشخصي", "Failed to save profile"),
-          );
-        }
-        const profile = await res.json();
-        localStorage.setItem("al_tayebat_user_id", String(profile.id));
-
-        // If the user already chose a password during signup, save it now and
-        // skip the extra "set password" screen (Tulip-style single signup form).
-        if (pendingPhonePassword && password.length >= 6) {
-          const saved = await handlePhoneSetPassword();
-          if (saved) {
-            setPendingPhonePassword(false);
-          } else {
-            // Auto-save failed (e.g. network) — the OTP code is already
-            // consumed, so drop the user on the retryable password screen
-            // instead of stranding them on the OTP step.
-            setMode("phone-set-password");
-          }
-        } else {
-          toast.success(
-            tr(
-              "تم التحقق! اختر كلمة المرور للدخول لاحقاً بدون رمز",
-              "Verified! Choose a password so you can sign in later without a code",
-            ),
-          );
-          setPassword("");
-          setPassword2("");
-          setMode("phone-set-password");
-        }
+        uid = result.user?.uid;
+      } else {
+        const result = await window.confirmationResult!.confirm(otp);
+        uid = result.user?.uid;
+      }
+      if (uid) {
+        await completePhoneAuth(uid);
       }
     } catch (err) {
       toast.error(

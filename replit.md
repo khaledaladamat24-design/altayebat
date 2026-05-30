@@ -66,6 +66,7 @@
 - `lib/db/src/schema/users.ts` has `passwordHash` column (added 2026-05).
 - Phone numbers are normalized server-side: `0791234567`, `+962791234567`, and `00962791234567` all resolve to the same account (`07XXXXXXXX` canonical form).
 - `GET /api/auth/check?phone=...` returns `{exists, hasPassword}` so the UI can decide whether to show password vs OTP.
+- **Native (Capacitor) phone OTP** uses `@capacitor-firebase/authentication`, NOT the Firebase JS `RecaptchaVerifier` web flow (that froze the Android WebView in a `setRequestedFrameRate` loop and only worked for test numbers). `auth.tsx` branches on `Capacitor.isNativePlatform()`: native = `signInWithPhoneNumber` + `phoneCodeSent`/`phoneVerificationCompleted`/`phoneVerificationFailed` listeners then `confirmVerificationCode`; web = unchanged `RecaptchaVerifier`. Both paths share `completePhoneAuth(uid)`. Requires `android/app/google-services.json`, the `FirebaseAuthentication` block in `capacitor.config.ts`, SHA-1/SHA-256 registered in Firebase, and **Android Device Verification (Play Integrity)** enabled. Real-number SMS only works in a native build, never the browser preview. `MainActivity.java` enables `WebView.setWebContentsDebuggingEnabled(true)` for debuggable builds (chrome://inspect).
 
 ## Vendor dashboard (live orders)
 
