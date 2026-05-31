@@ -754,10 +754,12 @@ export default function Auth() {
       toast.error(
         msg?.includes("invalid-phone")
           ? tr("رقم الهاتف غير صحيح", "Invalid phone number")
-          : tr(
-              "فشل إرسال الرمز. تأكد من رقم الهاتف.",
-              "Failed to send the code. Check the phone number.",
-            ),
+          : msg
+            ? tr(`فشل إرسال الرمز: ${msg}`, `Failed to send the code: ${msg}`)
+            : tr(
+                "فشل إرسال الرمز. تأكد من رقم الهاتف.",
+                "Failed to send the code. Check the phone number.",
+              ),
       );
     }
     setLoading(false);
