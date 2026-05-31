@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "742256000166-4sqnlghqmk0ebm3j3usmi4n4en1fnga2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.altayebat.app",
+            "certificate_hash": "81b1286d9733bcd5da9e4b220e3db5fede07d3b7"
+          }
+        },
+        {
           "client_id": "742256000166-67mco9jvvvq8n9d2tv3544pidtvgl3fr.apps.googleusercontent.com",
           "client_type": 3
         }
