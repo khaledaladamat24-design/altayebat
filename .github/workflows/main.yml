@@ -104,6 +104,20 @@ jobs:
           echo "$KEYSTORE_B64" | base64 -d > artifacts/al-tayebat/android/app/release.keystore
           echo "KEYSTORE_PRESENT=true" >> $GITHUB_ENV
 
+      - name: Print signing keystore fingerprints (SHA-1 / SHA-256)
+        if: env.KEYSTORE_PRESENT == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "================= KEYSTORE SIGNING FINGERPRINTS ================="
+          keytool -list -v \
+            -keystore artifacts/al-tayebat/android/app/release.keystore \
+            -alias "$KEY_ALIAS" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            | grep -E "SHA1:|SHA256:" || echo "::warning::keytool fingerprint print failed"
+          echo "================================================================"
+
       - name: Inject signing config into build.gradle
         if: env.KEYSTORE_PRESENT == 'true'
         working-directory: artifacts/al-tayebat/android/app
@@ -140,6 +154,19 @@ jobs:
         if: env.KEYSTORE_PRESENT == 'true'
         working-directory: artifacts/al-tayebat/android
         run: ./gradlew assembleRelease
+
+      - name: Print APK signing certificate (apksigner)
+        if: env.KEYSTORE_PRESENT == 'true'
+        run: |
+          echo "================= INSTALLED APK SIGNING CERT ================="
+          APKSIGNER=$(ls "$ANDROID_SDK_ROOT"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n1)
+          APK=$(ls artifacts/al-tayebat/android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -n1)
+          if [ -n "$APKSIGNER" ] && [ -n "$APK" ]; then
+            "$APKSIGNER" verify --print-certs "$APK" | grep -iE "SHA-1|SHA-256" || echo "::warning::apksigner print failed"
+          else
+            echo "::warning::apksigner or APK not found (APKSIGNER=$APKSIGNER APK=$APK)"
+          fi
+          echo "============================================================="
 
       - name: Build release AAB
         if: env.KEYSTORE_PRESENT == 'true'
