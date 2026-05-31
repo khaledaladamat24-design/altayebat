@@ -146,8 +146,7 @@ jobs:
         working-directory: artifacts/al-tayebat/android
         run: ./gradlew bundleRelease
 
-      - name: Build debug APK (fallback)
-        if: env.KEYSTORE_PRESENT != 'true'
+      - name: Build debug APK (always — for on-device chrome://inspect debugging)
         working-directory: artifacts/al-tayebat/android
         run: ./gradlew assembleDebug
 
@@ -168,7 +167,6 @@ jobs:
           if-no-files-found: error
 
       - name: Upload debug APK
-        if: env.KEYSTORE_PRESENT != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: al-tayebat-debug-apk

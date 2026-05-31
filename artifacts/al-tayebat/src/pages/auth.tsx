@@ -76,6 +76,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [pendingSignUp, setPendingSignUp] = useState(false);
   const [pendingPhonePassword, setPendingPhonePassword] = useState(false);
+  // True while the user is going through phone-OTP password RECOVERY (vs a new
+  // signup) — used to show "new password / password updated" copy.
+  const [isPhoneReset, setIsPhoneReset] = useState(false);
   const recaptchaRef = useRef<HTMLDivElement>(null);
   // On native (Capacitor) we verify via the native Firebase SDK, which returns a
   // verificationId through the `phoneCodeSent` listener instead of a web
@@ -555,8 +558,11 @@ export default function Auth() {
       localStorage.setItem("al_tayebat_user_id", String(body.id));
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
       toast.success(
-        tr("تم إنشاء حسابك بنجاح 🎉", "Your account has been created 🎉"),
+        isPhoneReset
+          ? tr("تم تحديث كلمة المرور 🎉", "Your password has been updated 🎉")
+          : tr("تم إنشاء حسابك بنجاح 🎉", "Your account has been created 🎉"),
       );
+      setIsPhoneReset(false);
       setLoading(false);
       goAfterAuth("/");
       return true;
@@ -606,10 +612,15 @@ export default function Auth() {
       }
     } else {
       toast.success(
-        tr(
-          "تم التحقق! اختر كلمة المرور للدخول لاحقاً بدون رمز",
-          "Verified! Choose a password so you can sign in later without a code",
-        ),
+        isPhoneReset
+          ? tr(
+              "تم التحقق! اختر كلمة مرور جديدة",
+              "Verified! Choose a new password",
+            )
+          : tr(
+              "تم التحقق! اختر كلمة المرور للدخول لاحقاً بدون رمز",
+              "Verified! Choose a password so you can sign in later without a code",
+            ),
       );
       setPassword("");
       setPassword2("");
@@ -823,7 +834,68 @@ export default function Auth() {
     else handlePhonePasswordLogin();
   };
 
+  /* ── Forgot password dispatcher: email → Clerk OTP, phone → Firebase OTP ── */
+  const handleForgotPassword = async () => {
+    if (!identifier.trim()) {
+      toast.error(
+        tr(
+          "أدخل رقم الهاتف أو البريد الإلكتروني أولاً",
+          "Enter your phone or email first",
+        ),
+      );
+      return;
+    }
+    if (looksLikeEmail(identifier)) {
+      handleEmailForgotPassword();
+      return;
+    }
+    // Phone recovery is RESET-only: it must target an EXISTING account. Verify
+    // the number is registered before sending an OTP, otherwise "forgot
+    // password" would silently create a brand-new account.
+    const e164 = toE164JO(phone);
+    if (!e164) {
+      toast.error(
+        tr(
+          "أدخل رقمك الأردني بالشكل 07XXXXXXXX (10 أرقام)",
+          "Enter your Jordanian number as 07XXXXXXXX (10 digits)",
+        ),
+      );
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        apiUrl(`/api/auth/check?phone=${encodeURIComponent(phone)}`),
+      );
+      const body = (await res.json().catch(() => ({}))) as { exists?: boolean };
+      if (res.ok && !body.exists) {
+        toast.error(
+          tr(
+            "لا يوجد حساب بهذا الرقم — أنشئ حساباً جديداً",
+            "No account with this number — create a new one",
+          ),
+        );
+        setLoading(false);
+        setMode("signup");
+        return;
+      }
+    } catch {
+      // Network failure on the check — fall through and let the OTP proceed
+      // rather than blocking a legitimate recovery.
+    }
+    setLoading(false);
+    // Prove ownership via OTP, then land on the "set a new password" screen.
+    setPendingPhonePassword(false);
+    setIsPhoneReset(true);
+    setPassword("");
+    setPassword2("");
+    handleSendPhoneOtp();
+  };
+
   const handleSignup = () => {
+    // A fresh signup is never a password reset — clear any stale recovery flag
+    // so the "password updated / new password" copy can't leak in.
+    setIsPhoneReset(false);
     if (!identifier.trim()) {
       toast.error(
         tr("أدخل رقم الهاتف أو البريد الإلكتروني", "Enter your phone or email"),
@@ -953,6 +1025,7 @@ export default function Auth() {
             onClick={() => {
               setMode("signup");
               setOtp("");
+              setIsPhoneReset(false);
             }}
             className="flex items-center gap-1 text-muted-foreground text-sm"
           >
@@ -1079,7 +1152,9 @@ export default function Auth() {
         <div className="flex-1 px-6 py-8 space-y-5">
           <div>
             <h2 className="text-2xl font-black">
-              {tr("اختر كلمة المرور", "Choose a password")}
+              {isPhoneReset
+                ? tr("كلمة مرور جديدة", "New password")
+                : tr("اختر كلمة المرور", "Choose a password")}
             </h2>
             <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
               {tr("سنحفظ هذه الكلمة لرقمك ", "We'll save this password for ")}
@@ -1264,7 +1339,7 @@ export default function Auth() {
           <RememberMeBox />
           <button
             type="button"
-            onClick={handleEmailForgotPassword}
+            onClick={handleForgotPassword}
             disabled={loading}
             className="text-sm text-primary font-medium disabled:opacity-40"
           >

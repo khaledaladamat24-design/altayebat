@@ -61,7 +61,8 @@
 
 ## Auth flows
 
-- **Email:** Clerk handles password + email_code OTP. Re-login uses password (no fresh OTP).
+- **Email:** Clerk handles password + email_code OTP. Re-login uses password (no fresh OTP). Email password reset uses Clerk's reset-password OTP flow.
+- **Phone password reset:** the login "نسيت كلمة المرور؟" link dispatches by identifier — email → Clerk reset OTP, phone → Firebase OTP. The phone path is **reset-only**: it first calls `GET /api/auth/check?phone=` and refuses (redirects to signup) if the number isn't registered, then verifies via OTP and lands on the "كلمة مرور جديدة" screen which `POST /api/auth/set-password`s the new bcrypt hash for the existing user. A client `isPhoneReset` flag swaps the copy ("password updated" vs "account created") and is cleared on signup/back so it can't leak into a fresh signup.
 - **Phone:** Firebase OTP is used **only for new accounts** to prove ownership. Right after OTP verify, the user is taken to a "Set Password" screen which `POST /api/auth/set-password`s a bcrypt hash into `users.password_hash`. Subsequent logins go through `POST /api/auth/phone-login` (phone + password) — **no OTP on returning logins**.
 - `lib/db/src/schema/users.ts` has `passwordHash` column (added 2026-05).
 - Phone numbers are normalized server-side: `0791234567`, `+962791234567`, and `00962791234567` all resolve to the same account (`07XXXXXXXX` canonical form).
