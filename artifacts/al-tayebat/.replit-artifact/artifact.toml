@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "الطيبات - Al-Tayebat"
+version = "1.0.0"
+id = "artifacts/al-tayebat"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26155
+
+[services.development]
+run = "pnpm --filter @workspace/al-tayebat run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/al-tayebat", "run", "build" ]
+publicDir = "artifacts/al-tayebat/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26155"
+BASE_PATH = "/"

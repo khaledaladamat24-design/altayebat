@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "742256000166",
+    "project_id": "al-tayebat",
+    "storage_bucket": "al-tayebat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742256000166:android:19aa64da0bf23d3f4c8867",
+        "android_client_info": {
+          "package_name": "com.altayebat.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "742256000166-atchkcoeke40vhc2ehgted3npk9hf7uj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.altayebat.app",
+            "certificate_hash": "387fbfe8a8b236d659f89614f7fc49ef14b97da1"
+          }
+        },
+        {
+          "client_id": "742256000166-67mco9jvvvq8n9d2tv3544pidtvgl3fr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaZIJl_SE28mthHsED40ikzxucaAU2jdw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "742256000166-67mco9jvvvq8n9d2tv3544pidtvgl3fr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

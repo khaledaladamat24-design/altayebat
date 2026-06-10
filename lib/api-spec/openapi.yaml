@@ -1,0 +1,1307 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Al-Tayebat - Healthy Food & Keto Products API for Jordan
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: categories
+    description: Product categories
+  - name: products
+    description: Products and items
+  - name: cart
+    description: Shopping cart
+  - name: orders
+    description: Customer orders
+  - name: banners
+    description: Home page banners
+  - name: summary
+    description: Store summary and stats
+  - name: delivery
+    description: Shipment tracking
+  - name: vendors
+    description: Vendor storefronts and promotional ads
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular, grocery]
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [categories]
+      summary: Get a category by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products with optional filters
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: featured
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular, grocery]
+        - name: onSale
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: subcategory
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: city
+          in: query
+          required: false
+          description: Filter products by the selling vendor's saved city/province.
+          schema:
+            type: string
+        - name: vendorId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+
+  /products/featured:
+    get:
+      operationId: listFeaturedProducts
+      tags: [products]
+      summary: Get featured/promoted products
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular, grocery]
+      responses:
+        "200":
+          description: Featured products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/bestsellers:
+    get:
+      operationId: listBestsellers
+      tags: [products]
+      summary: Get best-selling products
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular, grocery]
+      responses:
+        "200":
+          description: Bestselling products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Get current cart
+      parameters:
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    post:
+      operationId: addToCart
+      tags: [cart]
+      summary: Add item to cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemInput"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    delete:
+      operationId: clearCart
+      tags: [cart]
+      summary: Clear all cart items
+      parameters:
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Empty cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /cart/{itemId}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      summary: Update quantity of a cart item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemUpdate"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    delete:
+      operationId: removeFromCart
+      tags: [cart]
+      summary: Remove an item from cart
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders (guest or user)
+      parameters:
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+
+  /delivery/orders/{orderId}/shipment:
+    post:
+      operationId: createOrderShipment
+      tags: [delivery]
+      summary: Create a shipment for an order via the chosen (or default) provider
+      description: >-
+        Admin only. Idempotent: if a tracking number already exists, returns it
+        with `alreadyShipped: true`. Otherwise creates a fresh shipment through
+        the provider's delivery adapter.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipmentRequest"
+      responses:
+        "200":
+          description: Shipment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShipmentResult"
+        "400":
+          description: No usable provider / disabled / not configured
+        "404":
+          description: Order not found
+
+  /delivery/orders/{orderId}/shipment/cancel:
+    post:
+      operationId: cancelOrderShipment
+      tags: [delivery]
+      summary: Cancel/void an existing shipment for an order
+      description: >-
+        Admin only. Calls the provider's `cancelShipment` adapter method when
+        implemented, then clears the order's delivery tracking columns and resets
+        the order status. When the adapter does not implement `cancelShipment`,
+        the shipment is voided locally only (`notImplemented: true`).
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Shipment cancellation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShipmentCancelResult"
+        "400":
+          description: No shipment to cancel / provider not configured
+        "404":
+          description: Order not found
+
+  /delivery/orders/{orderId}/track:
+    get:
+      operationId: getOrderTracking
+      tags: [delivery]
+      summary: Get public shipment tracking info for an order
+      description: >-
+        Returns shipment tracking details for an order. `trackingNumber` is null
+        until the order has been shipped via a delivery provider.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order tracking info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderTracking"
+        "404":
+          description: Order not found
+
+  /delivery/adapter-types:
+    get:
+      operationId: listDeliveryAdapterTypes
+      tags: [delivery]
+      summary: List supported delivery provider types and their required credential keys
+      description: Public. Lets the admin UI render the correct credential form fields per provider type.
+      responses:
+        "200":
+          description: Supported provider types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdapterType"
+
+  /delivery/providers:
+    get:
+      operationId: listDeliveryProviders
+      tags: [delivery]
+      summary: List all configured delivery providers (credentials stripped)
+      description: Admin only. Returns the public shape of every provider; raw credentials are never included.
+      responses:
+        "200":
+          description: Delivery providers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryProvider"
+        "403":
+          description: Forbidden
+    post:
+      operationId: createDeliveryProvider
+      tags: [delivery]
+      summary: Create a delivery provider
+      description: Admin only. Returns the created provider in its public shape (credentials stripped).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryProviderInput"
+      responses:
+        "201":
+          description: Created provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryProvider"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+
+  /delivery/providers/{id}:
+    patch:
+      operationId: updateDeliveryProvider
+      tags: [delivery]
+      summary: Update a delivery provider
+      description: Admin only. Returns the updated provider in its public shape (credentials stripped).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryProviderInput"
+      responses:
+        "200":
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryProvider"
+        "400":
+          description: Invalid input
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /banners:
+    get:
+      operationId: listBanners
+      tags: [banners]
+      summary: Get home page promotional banners
+      responses:
+        "200":
+          description: Banners list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Banner"
+
+  /summary:
+    get:
+      operationId: getStoreSummary
+      tags: [summary]
+      summary: Get store stats summary (product count per category, total products)
+      responses:
+        "200":
+          description: Store summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSummary"
+
+  /vendors/{id}:
+    get:
+      operationId: getVendor
+      tags: [vendors]
+      summary: Get a vendor's public storefront profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorProfile"
+        "404":
+          description: Vendor not found
+    patch:
+      operationId: updateVendor
+      tags: [vendors]
+      summary: Update a vendor's editable profile fields (owner/admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorUpdate"
+      responses:
+        "200":
+          description: Updated vendor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorProfile"
+        "400":
+          description: No editable fields provided / invalid id
+        "403":
+          description: Not the vendor owner
+        "404":
+          description: Vendor not found
+
+  /vendors/{id}/ads:
+    get:
+      operationId: listVendorAds
+      tags: [vendors]
+      summary: List a vendor's promotional ads (image-only, max 10)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor ads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VendorAd"
+    post:
+      operationId: createVendorAd
+      tags: [vendors]
+      summary: Add a promotional ad (owner/admin only; image-only, capped at 10)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorAdInput"
+      responses:
+        "201":
+          description: Created ad
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorAd"
+        "400":
+          description: Missing image, video rejected, or ad limit reached
+        "403":
+          description: Not the vendor owner
+
+  /vendors/{id}/ads/{adId}:
+    delete:
+      operationId: deleteVendorAd
+      tags: [vendors]
+      summary: Delete a vendor ad (owner/admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: adId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ad deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+        "403":
+          description: Not the vendor owner
+        "404":
+          description: Ad not found
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Category:
+      type: object
+      required: [id, name, nameAr, slug, icon, productCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameAr:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        foodType:
+          type: string
+          enum: [healthy, regular, grocery]
+        productCount:
+          type: integer
+        sortOrder:
+          type: integer
+
+    Product:
+      type: object
+      required: [id, nameAr, name, price, categoryId, inStock]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameAr:
+          type: string
+        description:
+          type: ["string", "null"]
+        descriptionAr:
+          type: ["string", "null"]
+        price:
+          type: number
+        originalPrice:
+          type: ["number", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        categoryId:
+          type: integer
+        categoryName:
+          type: ["string", "null"]
+        categoryNameAr:
+          type: ["string", "null"]
+        inStock:
+          type: boolean
+        isFeatured:
+          type: boolean
+        isBestseller:
+          type: boolean
+        isKeto:
+          type: boolean
+        isOrganic:
+          type: boolean
+        weightOrVolume:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        reviewCount:
+          type: integer
+        vendorId:
+          type: ["integer", "null"]
+        vendorName:
+          type: ["string", "null"]
+        vendorNameAr:
+          type: ["string", "null"]
+        foodType:
+          type: string
+          enum: [healthy, regular, grocery]
+        isOnSale:
+          type: boolean
+        subcategory:
+          type: ["string", "null"]
+        calories:
+          type: ["integer", "null"]
+        protein:
+          type: ["number", "null"]
+        carbs:
+          type: ["number", "null"]
+        fats:
+          type: ["number", "null"]
+
+    CartItem:
+      type: object
+      required:
+        [
+          id,
+          productId,
+          quantity,
+          unitPrice,
+          totalPrice,
+          productNameAr,
+          productName,
+        ]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productNameAr:
+          type: string
+        productImageUrl:
+          type: ["string", "null"]
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+
+    Cart:
+      type: object
+      required: [sessionId, items, subtotal, deliveryFee, total, itemCount]
+      properties:
+        sessionId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        subtotal:
+          type: number
+        deliveryFee:
+          type: number
+        total:
+          type: number
+        itemCount:
+          type: integer
+
+    CartItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        sessionId:
+          type: string
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        replace:
+          type: boolean
+          description: >-
+            Single-vendor cart: when true, clear the existing cart before
+            adding so a buyer can switch to a different vendor's product.
+
+    CartItemUpdate:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+
+    Order:
+      type: object
+      required:
+        [
+          id,
+          status,
+          total,
+          deliveryFee,
+          subtotal,
+          createdAt,
+          items,
+          deliveryAddress,
+        ]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum:
+            [
+              pending,
+              confirmed,
+              preparing,
+              ready,
+              out_for_delivery,
+              on_the_way,
+              delivered,
+              cancelled,
+            ]
+        fulfillmentType:
+          type: string
+          enum: [delivery, pickup]
+        vendorId:
+          type: ["integer", "null"]
+        subtotal:
+          type: number
+        deliveryFee:
+          type: number
+        total:
+          type: number
+        deliveryAddress:
+          type: string
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        estimatedDelivery:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderItem:
+      type: object
+      required:
+        [
+          id,
+          productId,
+          productNameAr,
+          productName,
+          quantity,
+          unitPrice,
+          totalPrice,
+        ]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productNameAr:
+          type: string
+        productImageUrl:
+          type: ["string", "null"]
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+
+    OrderTracking:
+      type: object
+      required: [trackingNumber]
+      properties:
+        trackingNumber:
+          type: ["string", "null"]
+        awbUrl:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        statusAr:
+          type: ["string", "null"]
+        providerName:
+          type: ["string", "null"]
+        providerPhone:
+          type: ["string", "null"]
+        notConfigured:
+          type: boolean
+
+    ShipmentRequest:
+      type: object
+      properties:
+        providerId:
+          type: ["integer", "string", "null"]
+
+    ShipmentResult:
+      type: object
+      required: [trackingNumber]
+      properties:
+        trackingNumber:
+          type: string
+        awbUrl:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        alreadyShipped:
+          type: boolean
+
+    ShipmentCancelResult:
+      type: object
+      required: [cancelled]
+      properties:
+        cancelled:
+          type: boolean
+        status:
+          type: ["string", "null"]
+        notImplemented:
+          type: boolean
+        notConfigured:
+          type: boolean
+
+    AdapterType:
+      type: object
+      description: A supported delivery provider type and the credential fields the admin UI should render for it.
+      required:
+        - type
+        - requiredCredentials
+      properties:
+        type:
+          type: string
+        requiredCredentials:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - label
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              placeholder:
+                type: string
+
+    DeliveryProvider:
+      type: object
+      description: Public shape of a delivery provider. Raw credentials are never included; `hasCredentials` indicates whether any are configured.
+      required:
+        - id
+        - code
+        - name
+        - nameAr
+        - type
+        - enabled
+        - isDefault
+        - settings
+        - hasCredentials
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        nameAr:
+          type: string
+        type:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        isDefault:
+          type: boolean
+        contactPhone:
+          type: ["string", "null"]
+        contactWhatsapp:
+          type: ["string", "null"]
+        settings:
+          type: object
+          additionalProperties: true
+        hasCredentials:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    DeliveryProviderInput:
+      type: object
+      required: [code, name, nameAr]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        nameAr:
+          type: string
+        type:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        isDefault:
+          type: boolean
+        contactPhone:
+          type: ["string", "null"]
+        contactWhatsapp:
+          type: ["string", "null"]
+        credentials:
+          type: object
+          additionalProperties:
+            type: string
+        settings:
+          type: object
+          additionalProperties: true
+
+    OrderInput:
+      type: object
+      required: [deliveryAddress, customerName, customerPhone]
+      properties:
+        sessionId:
+          type: string
+        deliveryAddress:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        notes:
+          type: string
+        fulfillmentType:
+          type: string
+          enum: [delivery, pickup]
+        paymentMethod:
+          type: string
+        userId:
+          type: integer
+
+    Banner:
+      type: object
+      required: [id, title, titleAr, imageUrl]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleAr:
+          type: string
+        subtitle:
+          type: ["string", "null"]
+        subtitleAr:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        linkType:
+          type: ["string", "null"]
+        linkId:
+          type: ["integer", "null"]
+        badgeText:
+          type: ["string", "null"]
+        badgeTextAr:
+          type: ["string", "null"]
+
+    StoreSummary:
+      type: object
+      required: [totalProducts, totalCategories, categoryCounts]
+      properties:
+        totalProducts:
+          type: integer
+        totalCategories:
+          type: integer
+        featuredCount:
+          type: integer
+        bestsellersCount:
+          type: integer
+        ketoCount:
+          type: integer
+        categoryCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+
+    CategoryCount:
+      type: object
+      required: [categoryId, categoryNameAr, categoryName, count]
+      properties:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryNameAr:
+          type: string
+        count:
+          type: integer
+
+    VendorProfile:
+      type: object
+      required:
+        [
+          id,
+          userId,
+          storeName,
+          category,
+          isOnline,
+          pickupEnabled,
+          deliveryEnabled,
+          status,
+        ]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        storeName:
+          type: string
+        storeNameAr:
+          type: ["string", "null"]
+        category:
+          type: string
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        cliqAlias:
+          type: ["string", "null"]
+        walletNumber:
+          type: ["string", "null"]
+        bankAccount:
+          type: ["string", "null"]
+        deliveryFeeFixed:
+          type: ["string", "null"]
+        deliveryZones:
+          type: ["string", "null"]
+        freeDeliveryAbove:
+          type: ["string", "null"]
+        isOnline:
+          type: boolean
+        pickupEnabled:
+          type: boolean
+        deliveryEnabled:
+          type: boolean
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    VendorUpdate:
+      type: object
+      description: Partial update — only provided fields are changed.
+      properties:
+        storeName:
+          type: string
+        storeNameAr:
+          type: ["string", "null"]
+        category:
+          type: string
+        description:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        cliqAlias:
+          type: ["string", "null"]
+        walletNumber:
+          type: ["string", "null"]
+        bankAccount:
+          type: ["string", "null"]
+        deliveryFeeFixed:
+          type: ["string", "null"]
+        deliveryZones:
+          type: ["string", "null"]
+        freeDeliveryAbove:
+          type: ["string", "null"]
+        isOnline:
+          type: boolean
+        pickupEnabled:
+          type: boolean
+        deliveryEnabled:
+          type: boolean
+
+    VendorAd:
+      type: object
+      required: [id, vendorId, imageUrl, sortOrder, createdAt]
+      properties:
+        id:
+          type: integer
+        vendorId:
+          type: integer
+        imageUrl:
+          type: string
+        title:
+          type: ["string", "null"]
+        titleAr:
+          type: ["string", "null"]
+        linkUrl:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    VendorAdInput:
+      type: object
+      required: [imageUrl]
+      properties:
+        imageUrl:
+          type: string
+        title:
+          type: ["string", "null"]
+        titleAr:
+          type: ["string", "null"]
+        linkUrl:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer

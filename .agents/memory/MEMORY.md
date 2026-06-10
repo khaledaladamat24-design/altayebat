@@ -1,0 +1,20 @@
+# Memory Index
+
+- [Firebase phone OTP real-SMS block](firebase-phone-auth-blocked.md) — test number working proves code+wiring fine; real-SMS block is the app-verification (SHA/Play Integrity) layer, not code or API-key.
+- [Android phone-auth auto-retrieval timing](firebase-android-auto-retrieval.md) — phoneVerificationCompleted fires AFTER phoneCodeSent; keep that listener alive through the OTP screen or silent verification is dropped.
+- [Git push constraint](git-push-constraint.md) — main agent cannot git commit/push/fetch (sandbox blocks as destructive); user must push via Replit Git pane.
+- [PUSH_REJECTED masks secret-scanning](github-push-protection-secret.md) — Replit's generic "remote has commits not in local" can actually be GitHub push protection blocking a leaked secret in history; read raw `git push` output in the user's Shell.
+- [Reading the release APK signing fingerprint](apk-signing-fingerprint.md) — CI prints keystore + APK SHA-1/SHA-256 in the build log; local keytool/sisik are unreliable for v2/v3-signed APKs.
+- [Auth ownership guards (IDOR)](auth-ownership-guards.md) — per-user write routes must resolve acting user via getActingDbUserId + match id; gate-flags must clear on every logout path.
+- [Capacitor lifecycle override visibility](capacitor-lifecycle-override-visibility.md) — overrides of onResume/onPause in MainActivity(BridgeActivity) must be public not protected; only fails in Android CI, never TS gates.
+- [Android looping new-order alarm](android-notification-channel.md) — a notification sound plays once; looping-until-manual needs DATA-ONLY FCM + a native foreground service (MediaPlayer loop), not channel sound.
+- [useSession cart-session reactivity](usesession-reactivity.md) — keep sessionId hook event-driven (login/logout events), never lazy-once (stale carts on account switch) nor per-render (Android React #185 crash).
+- [Drizzle onConflict partial index + idempotency races](drizzle-onconflict-partial-index.md) — onConflictDoNothing uses `where` (not `targetWhere`) for partial-index inference; SELECT-then-INSERT idempotency double-charges under concurrency, needs unique index + refund-on-conflict.
+- [Path-less router.use guard leak](express-pathless-guard-leak.md) — a path-less `router.use(requireAdmin)` in a router mounted path-less in routes/index.ts 403s sibling public routes (auth/check, profile, wallet); scope guards to a prefix; per-router tests miss it.
+- [Order placement gate](order-placement-gate.md) — POST /api/orders 403s any order (incl COD) whose phone isn't already a users row; policy choice = registered-phone-in-DB, not login/OTP.
+- [Delivery fee mirror](delivery-fee-mirror.md) — vendor-driven delivery fee is computed in BOTH cart.ts buildCart() and orders.ts POST; change them in lockstep or displayed vs charged total drifts.
+- [Header-trust auth weak point](header-trust-auth.md) — admin/vendor guards trust spoofable x-admin-email / x-firebase-uid headers, so no public endpoint may ever return firebaseUid or passwordHash.
+- [Dual category seed lists](dual-category-seed-lists.md) — TWO seed lists exist; the api-server startup one is prod's source of truth. Category changes must edit BOTH or they never reach production.
+- [Delivery confirmation policy](delivery-confirmation-policy.md) — customer self-confirms receipt (sessionId) to reach delivered; vendor close-shift CANCELS leftovers (not delivers) to avoid inflating sales.
+- [Checkpoint commits bypass husky format hook](checkpoint-bypasses-husky-format.md) — CI format:check ❌ on commits that pass locally; Replit checkpoint skips pre-commit prettier. Run format:check after edits; not a flake.
+- [FCM disabled by corrupted secret](fcm-secret-corruption.md) — vendor bg push dead = FIREBASE_SERVICE_ACCOUNT not valid JSON (pasted from online viewer); bash/sandbox env is stale, verify via /proc/<pid>/environ.
