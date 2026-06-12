@@ -140,7 +140,8 @@ afterEach(() => {
 describe("Auth success paths honour the stashed return-to path", () => {
   it("email login navigates to the stashed path instead of home", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
-    h.attemptFirstFactor.mockResolvedValue({
+    // Email login is now a single password create call (strategy:"password").
+    h.signInCreate.mockResolvedValue({
       status: "complete",
       createdSessionId: "sess_email",
     });
@@ -268,7 +269,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
   });
 
   it("falls back to home when no return path is stashed", async () => {
-    h.attemptFirstFactor.mockResolvedValue({
+    h.signInCreate.mockResolvedValue({
       status: "complete",
       createdSessionId: "sess_home",
     });
@@ -283,7 +284,7 @@ describe("Auth success paths honour the stashed return-to path", () => {
 
   it("consumes the stored path so a later unrelated sign-in goes home", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
-    h.attemptFirstFactor.mockResolvedValue({
+    h.signInCreate.mockResolvedValue({
       status: "complete",
       createdSessionId: "sess_1",
     });
