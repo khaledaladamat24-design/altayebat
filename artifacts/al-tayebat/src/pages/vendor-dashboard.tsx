@@ -79,6 +79,16 @@ interface VendorAd {
 const ACTIVE_ORDER_STATUSES =
   "pending,preparing,ready,out_for_delivery,delivered";
 
+// Amman (UTC+3) calendar date as YYYY-MM-DD — used for the orders date filter so
+// "today" and the day boundaries line up with the restaurant's local day.
+const ammanDateStr = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Amman",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+
 interface VendorProduct {
   id: number;
   nameAr: string;
@@ -151,6 +161,14 @@ export default function VendorDashboard() {
   const [adImageUrl, setAdImageUrl] = useState("");
   const [adTitleAr, setAdTitleAr] = useState("");
   const [savingAd, setSavingAd] = useState(false);
+  // Orders date filter. "" = today / live current shift (polled + audio alarm).
+  // A YYYY-MM-DD string = read-only history view of that Amman day.
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const isHistory = selectedDate !== "";
+  // Build the dropdown: today first, then the previous 13 days (Amman calendar).
+  const dateOptions = Array.from({ length: 14 }, (_, i) =>
+    ammanDateStr(new Date(Date.now() - i * 86400000)),
+  );
 
   const openNameEditor = () => {
     if (!vendor) return;
@@ -252,6 +270,30 @@ export default function VendorDashboard() {
   useEffect(() => {
     if (!vendor || vendor.status !== "approved") return;
     let cancelled = false;
+
+    // History mode: one-shot, read-only fetch of every order placed on the
+    // selected past day (any status). No polling, no alarm.
+    if (isHistory) {
+      (async () => {
+        try {
+          const r = await fetch(
+            apiUrl(
+              `/api/vendors/${vendor.id}/orders?date=${encodeURIComponent(selectedDate)}`,
+            ),
+            { headers: authHeaders() },
+          );
+          if (!r.ok || cancelled) return;
+          const data: VendorOrder[] = await r.json();
+          if (!cancelled) setOrders(data);
+        } catch {
+          /* ignore transient network errors */
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const tick = async () => {
       try {
         const r = await fetch(
@@ -273,9 +315,12 @@ export default function VendorDashboard() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [vendor]);
+  }, [vendor, isHistory, selectedDate]);
 
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
+  // No alarm/pending banner while reviewing a past day.
+  const pendingCount = isHistory
+    ? 0
+    : orders.filter((o) => o.status === "pending").length;
 
   // ──────────────────────────────────────────────────────────────────────────
   // Looping audio alert. Uses Web Audio API to synthesise a short beep so we
@@ -471,17 +516,16 @@ export default function VendorDashboard() {
     }
   };
 
-  // End-of-shift cleanup: force-cancel every order that's still active so the
-  // board starts the next shift empty. Unfinished orders (customer never
-  // confirmed receipt, etc.) become "cancelled" rather than "delivered" so they
-  // don't inflate sales totals. This is irreversible, hence the confirm dialog.
+  // End-of-shift reset: stamp the vendor's shiftResetAt so the live board starts
+  // the next shift empty. Nothing is cancelled or deleted — every past order
+  // stays in the DB for the sales record and is reachable via the date filter.
   const closeShift = async () => {
     if (!vendor || closingShift) return;
     if (
       !confirm(
         tr(
-          "سيتم إلغاء كل الطلبات غير المكتملة وتصفير الشاشة. هل أنت متأكد؟",
-          "All unfinished orders will be cancelled and the screen cleared. Are you sure?",
+          "سيتم تصفير الشاشة لبدء وردية جديدة. تبقى كل الطلبات محفوظة ويمكنك مراجعتها لاحقاً عبر فلتر التاريخ. هل تريد المتابعة؟",
+          "The screen will be cleared to start a new shift. All orders stay saved and can be reviewed later via the date filter. Continue?",
         ),
       )
     )
@@ -493,12 +537,13 @@ export default function VendorDashboard() {
         { method: "POST", headers: authHeaders() },
       );
       if (!r.ok) throw new Error(String(r.status));
-      const data = await r.json().catch(() => ({ cancelled: 0 }));
+      await r.json().catch(() => ({}));
+      setSelectedDate("");
       setOrders([]);
       toast.success(
         tr(
-          `تم تصفير الوردية (${data.cancelled ?? 0} طلب)`,
-          `Shift cleared (${data.cancelled ?? 0} orders)`,
+          "تم تصفير الوردية — بدأت وردية جديدة",
+          "Shift cleared — new shift started",
         ),
       );
     } catch {
@@ -961,8 +1006,30 @@ export default function VendorDashboard() {
       <div className="px-4 py-5">
         {tab === "orders" && (
           <div className="space-y-3">
-            {orders.length > 0 && (
-              <div className="flex justify-end">
+            <div className="flex items-center justify-between gap-2">
+              <select
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="select-orders-date"
+              >
+                <option value="">{tr("اليوم", "Today")}</option>
+                {dateOptions.slice(1).map((d) => {
+                  const isYesterday = d === dateOptions[1];
+                  const label = isYesterday
+                    ? tr("أمس", "Yesterday")
+                    : new Date(`${d}T12:00:00`).toLocaleDateString(
+                        lang === "ar" ? "ar-JO" : "en-JO",
+                        { weekday: "long", day: "2-digit", month: "2-digit" },
+                      );
+                  return (
+                    <option key={d} value={d}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+              {!isHistory && orders.length > 0 && (
                 <Button
                   onClick={closeShift}
                   disabled={closingShift}
@@ -976,6 +1043,14 @@ export default function VendorDashboard() {
                     ? tr("جارٍ التصفير...", "Clearing...")
                     : tr("تصفير الوردية", "Close shift")}
                 </Button>
+              )}
+            </div>
+            {isHistory && (
+              <div className="bg-muted/60 border border-border rounded-xl px-3 py-2 text-xs text-muted-foreground text-center">
+                {tr(
+                  "عرض الطلبات السابقة (للقراءة فقط)",
+                  "Viewing past orders (read-only)",
+                )}
               </div>
             )}
             {orders.length === 0 ? (
@@ -1094,7 +1169,7 @@ export default function VendorDashboard() {
                   </div>
 
                   <div className="flex gap-2">
-                    {o.status === "pending" && (
+                    {!isHistory && o.status === "pending" && (
                       <>
                         <Button
                           onClick={() => acceptOrder(o.id)}
@@ -1114,7 +1189,7 @@ export default function VendorDashboard() {
                         </Button>
                       </>
                     )}
-                    {o.status === "preparing" && (
+                    {!isHistory && o.status === "preparing" && (
                       <Button
                         onClick={() => advanceOrder(o, "ready")}
                         disabled={advancingId === o.id}
@@ -1126,7 +1201,8 @@ export default function VendorDashboard() {
                           : tr("جاهز للتوصيل", "Ready for delivery")}
                       </Button>
                     )}
-                    {o.status === "ready" &&
+                    {!isHistory &&
+                      o.status === "ready" &&
                       (o.fulfillmentType === "pickup" ? (
                         <Button
                           onClick={() => advanceOrder(o, "delivered")}
@@ -1146,7 +1222,7 @@ export default function VendorDashboard() {
                           {tr("خرج للتوصيل", "Out for delivery")}
                         </Button>
                       ))}
-                    {o.status === "out_for_delivery" && (
+                    {!isHistory && o.status === "out_for_delivery" && (
                       <Button
                         onClick={() => advanceOrder(o, "delivered")}
                         disabled={advancingId === o.id}
@@ -1156,19 +1232,20 @@ export default function VendorDashboard() {
                         {tr("تم التسليم", "Delivered")}
                       </Button>
                     )}
-                    {(o.status === "preparing" ||
-                      o.status === "ready" ||
-                      o.status === "out_for_delivery") && (
-                      <Button
-                        onClick={() => cancelOrder(o)}
-                        disabled={advancingId === o.id}
-                        variant="outline"
-                        data-testid={`button-cancel-order-${o.id}`}
-                        className="rounded-xl gap-1.5 border-destructive text-destructive hover:bg-destructive/10"
-                      >
-                        <X className="w-4 h-4" /> {tr("إلغاء", "Cancel")}
-                      </Button>
-                    )}
+                    {!isHistory &&
+                      (o.status === "preparing" ||
+                        o.status === "ready" ||
+                        o.status === "out_for_delivery") && (
+                        <Button
+                          onClick={() => cancelOrder(o)}
+                          disabled={advancingId === o.id}
+                          variant="outline"
+                          data-testid={`button-cancel-order-${o.id}`}
+                          className="rounded-xl gap-1.5 border-destructive text-destructive hover:bg-destructive/10"
+                        >
+                          <X className="w-4 h-4" /> {tr("إلغاء", "Cancel")}
+                        </Button>
+                      )}
                   </div>
                 </div>
               ))

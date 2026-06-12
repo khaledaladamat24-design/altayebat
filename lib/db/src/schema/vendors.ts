@@ -30,6 +30,12 @@ export const vendorProfilesTable = pgTable("vendor_profiles", {
   pickupEnabled: boolean("pickup_enabled").notNull().default(true),
   deliveryEnabled: boolean("delivery_enabled").notNull().default(true),
   status: text("status").notNull().default("pending"),
+  // Marks when the vendor last tapped "تصفير الوردية" (close shift). The vendor
+  // dashboard's live view shows only orders created at/after this instant, so a
+  // reset starts the new shift with an empty screen WITHOUT deleting or
+  // cancelling any past order — all history stays in the DB and is reachable via
+  // the dashboard's date filter. Null = never reset (show all).
+  shiftResetAt: timestamp("shift_reset_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

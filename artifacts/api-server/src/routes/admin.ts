@@ -215,11 +215,27 @@ router.delete("/admin/products/:id", async (req, res) => {
 
 router.get("/admin/orders", async (req, res) => {
   try {
-    const orders = await db
-      .select()
+    // Left-join the vendor profile so each order card in the super-admin panel
+    // can show which restaurant it belongs to (and be filtered per-vendor).
+    const rows = await db
+      .select({
+        order: ordersTable,
+        vendorName: vendorProfilesTable.storeName,
+        vendorNameAr: vendorProfilesTable.storeNameAr,
+      })
       .from(ordersTable)
+      .leftJoin(
+        vendorProfilesTable,
+        eq(ordersTable.vendorId, vendorProfilesTable.id),
+      )
       .orderBy(desc(ordersTable.createdAt));
-    res.json(orders);
+    res.json(
+      rows.map((r) => ({
+        ...r.order,
+        vendorName: r.vendorName ?? null,
+        vendorNameAr: r.vendorNameAr ?? null,
+      })),
+    );
   } catch (err) {
     req.log.error({ err }, "Failed to list orders");
     res.status(500).json({ error: "Internal server error" });

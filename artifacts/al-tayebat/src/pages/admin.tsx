@@ -39,6 +39,9 @@ type Tab = "products-add" | "products-list" | "orders" | "users" | "vendors";
 interface AdminOrder {
   id: number;
   sessionId: string | null;
+  vendorId: number | null;
+  vendorName: string | null;
+  vendorNameAr: string | null;
   status: string;
   paymentMethod: string;
   paymentStatus: string;
@@ -100,6 +103,7 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>("products-list");
 
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [vendors, setVendors] = useState<AdminVendor[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -984,127 +988,169 @@ export default function Admin() {
         {/* ── Orders ── */}
         {tab === "orders" && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {tr(
-                  `${orders.length} طلب إجمالي`,
-                  `${orders.length} total orders`,
-                )}
-              </p>
-              <button
-                onClick={fetchTabData}
-                className="text-xs text-primary font-bold"
-              >
-                {tr("تحديث", "Refresh")}
-              </button>
-            </div>
-            {loadingData ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {tr("جاري التحميل...", "Loading...")}
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {tr("لا توجد طلبات بعد", "No orders yet")}
-              </div>
-            ) : (
-              orders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-card rounded-xl border border-border p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-black text-sm">
-                        {tr(`طلب #${order.id}`, `Order #${order.id}`)}
-                      </span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {order.customerName} · {order.customerPhone}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {statusBadge(order.status)}
-                      {statusBadge(
-                        order.paymentStatus === "confirmed"
-                          ? "confirmed"
-                          : order.paymentMethod === "cod"
-                            ? "pending"
-                            : order.paymentStatus,
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {tr("الإجمالي", "Total")}
-                    </span>
-                    <span className="font-bold">
-                      {Number(order.total).toFixed(3)} {tr("د.أ", "JOD")}
-                    </span>
-                  </div>
-                  {order.paymentScreenshotUrl && (
-                    <button
-                      onClick={() =>
-                        setPreviewScreenshot(order.paymentScreenshotUrl)
-                      }
-                      className="w-full flex items-center gap-2 bg-muted/50 rounded-xl p-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
+            {(() => {
+              const vendorMap = new Map<number, string>();
+              for (const o of orders) {
+                if (o.vendorId != null && !vendorMap.has(o.vendorId)) {
+                  vendorMap.set(
+                    o.vendorId,
+                    o.vendorNameAr || o.vendorName || `#${o.vendorId}`,
+                  );
+                }
+              }
+              const vendorChoices = Array.from(vendorMap.entries());
+              const filteredOrders =
+                selectedVendorId === ""
+                  ? orders
+                  : orders.filter(
+                      (o) => String(o.vendorId ?? "") === selectedVendorId,
+                    );
+              return (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <select
+                      value={selectedVendorId}
+                      onChange={(e) => setSelectedVendorId(e.target.value)}
+                      className="rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      data-testid="select-vendor-filter"
                     >
-                      <Eye className="w-4 h-4" />{" "}
-                      {tr("عرض إيصال الدفع", "View payment receipt")}
+                      <option value="">
+                        {tr("كل المطاعم", "All vendors")}
+                      </option>
+                      {vendorChoices.map(([id, name]) => (
+                        <option key={id} value={String(id)}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={fetchTabData}
+                      className="text-xs text-primary font-bold shrink-0"
+                    >
+                      {tr("تحديث", "Refresh")}
                     </button>
-                  )}
-                  {order.deliveryTrackingNumber && (
-                    <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 text-sm text-indigo-700">
-                      <Truck className="w-4 h-4 shrink-0" />
-                      <span className="font-medium">
-                        {tr("رقم التتبع", "Tracking")}:
-                      </span>
-                      <span className="font-bold break-all">
-                        {order.deliveryTrackingNumber}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex gap-2 flex-wrap">
-                    {order.status === "pending" && (
-                      <button
-                        onClick={() =>
-                          handleUpdateOrderStatus(order.id, "processing")
-                        }
-                        className="flex-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-xl py-2 font-bold"
-                      >
-                        {tr("قيد التجهيز", "Preparing")}
-                      </button>
-                    )}
-                    {order.status === "processing" && (
-                      <button
-                        onClick={() =>
-                          handleUpdateOrderStatus(order.id, "delivered")
-                        }
-                        className="flex-1 text-xs bg-green-50 text-green-600 border border-green-200 rounded-xl py-2 font-bold"
-                      >
-                        {tr("تم التوصيل", "Delivered")}
-                      </button>
-                    )}
-                    {order.paymentScreenshotUrl &&
-                      order.paymentStatus !== "confirmed" && (
-                        <button
-                          onClick={() => handleConfirmPayment(order.id)}
-                          className="flex-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-xl py-2 font-bold flex items-center justify-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3 h-3" />{" "}
-                          {tr("تأكيد الدفع", "Confirm payment")}
-                        </button>
-                      )}
-                    {isSuperAdmin && (
-                      <button
-                        onClick={() => handleDeleteOrder(order.id)}
-                        className="text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-3 py-2"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
                   </div>
-                </div>
-              ))
-            )}
+                  <p className="text-xs text-muted-foreground">
+                    {tr(
+                      `${filteredOrders.length} طلب`,
+                      `${filteredOrders.length} orders`,
+                    )}
+                  </p>
+                  {loadingData ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {tr("جاري التحميل...", "Loading...")}
+                    </div>
+                  ) : filteredOrders.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      {tr("لا توجد طلبات بعد", "No orders yet")}
+                    </div>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="bg-card rounded-xl border border-border p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-black text-sm">
+                              {tr(`طلب #${order.id}`, `Order #${order.id}`)}
+                            </span>
+                            {(order.vendorNameAr || order.vendorName) && (
+                              <p className="text-xs font-bold text-primary mt-0.5">
+                                {order.vendorNameAr || order.vendorName}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {order.customerName} · {order.customerPhone}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {statusBadge(order.status)}
+                            {statusBadge(
+                              order.paymentStatus === "confirmed"
+                                ? "confirmed"
+                                : order.paymentMethod === "cod"
+                                  ? "pending"
+                                  : order.paymentStatus,
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {tr("الإجمالي", "Total")}
+                          </span>
+                          <span className="font-bold">
+                            {Number(order.total).toFixed(3)} {tr("د.أ", "JOD")}
+                          </span>
+                        </div>
+                        {order.paymentScreenshotUrl && (
+                          <button
+                            onClick={() =>
+                              setPreviewScreenshot(order.paymentScreenshotUrl)
+                            }
+                            className="w-full flex items-center gap-2 bg-muted/50 rounded-xl p-2.5 text-sm font-medium text-primary hover:bg-muted transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />{" "}
+                            {tr("عرض إيصال الدفع", "View payment receipt")}
+                          </button>
+                        )}
+                        {order.deliveryTrackingNumber && (
+                          <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 text-sm text-indigo-700">
+                            <Truck className="w-4 h-4 shrink-0" />
+                            <span className="font-medium">
+                              {tr("رقم التتبع", "Tracking")}:
+                            </span>
+                            <span className="font-bold break-all">
+                              {order.deliveryTrackingNumber}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          {order.status === "pending" && (
+                            <button
+                              onClick={() =>
+                                handleUpdateOrderStatus(order.id, "processing")
+                              }
+                              className="flex-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-xl py-2 font-bold"
+                            >
+                              {tr("قيد التجهيز", "Preparing")}
+                            </button>
+                          )}
+                          {order.status === "processing" && (
+                            <button
+                              onClick={() =>
+                                handleUpdateOrderStatus(order.id, "delivered")
+                              }
+                              className="flex-1 text-xs bg-green-50 text-green-600 border border-green-200 rounded-xl py-2 font-bold"
+                            >
+                              {tr("تم التوصيل", "Delivered")}
+                            </button>
+                          )}
+                          {order.paymentScreenshotUrl &&
+                            order.paymentStatus !== "confirmed" && (
+                              <button
+                                onClick={() => handleConfirmPayment(order.id)}
+                                className="flex-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-xl py-2 font-bold flex items-center justify-center gap-1"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />{" "}
+                                {tr("تأكيد الدفع", "Confirm payment")}
+                              </button>
+                            )}
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-3 py-2"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 

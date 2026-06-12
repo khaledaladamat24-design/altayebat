@@ -213,15 +213,18 @@ export default function Auth() {
     type CreateResult = { status: string; createdSessionId?: string | null };
 
     try {
-      await signIn.create({ identifier: email });
-      const r = await (
-        signIn as unknown as {
-          attemptFirstFactor: (p: {
-            strategy: string;
-            password: string;
-          }) => Promise<CreateResult>;
-        }
-      ).attemptFirstFactor({ strategy: "password", password });
+      // Sign in with the password in a SINGLE create call (strategy:"password").
+      // Calling signIn.create({ identifier }) alone makes Clerk auto-prepare the
+      // account's DEFAULT first factor — which on this instance is email_code —
+      // so it would email a fresh OTP on every login (the "forced to enter a new
+      // code each time" bug). Passing strategy+password attempts the password
+      // directly and never prepares an OTP, so returning email users (incl. the
+      // super-admin) log in straight away.
+      const r = (await signIn.create({
+        identifier: email,
+        strategy: "password",
+        password,
+      } as Parameters<typeof signIn.create>[0])) as unknown as CreateResult;
 
       if (r.status === "complete" && r.createdSessionId && setActiveSignIn) {
         await setActiveSignIn({ session: r.createdSessionId });

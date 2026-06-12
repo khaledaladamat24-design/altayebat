@@ -7,7 +7,7 @@ import {
   orderItemsTable,
   vendorAdsTable,
 } from "@workspace/db";
-import { eq, desc, and, inArray, sql } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gte, lt } from "drizzle-orm";
 import { requireVendorOwner } from "../lib/vendor-auth";
 import { requireAdmin } from "../lib/admin-auth";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
@@ -596,6 +596,17 @@ router.get(
     try {
       const vendorId = parseInt(String(req.params.id));
       if (isNaN(vendorId)) return res.status(400).json({ error: "Invalid id" });
+
+      // Optional `date=YYYY-MM-DD` switches to read-only history mode: return
+      // EVERY order placed on that calendar day in Amman (UTC+3, no DST), of any
+      // status, ignoring the shift boundary and status filter. Used by the
+      // dashboard's date dropdown to review a past day.
+      const dateParam =
+        typeof req.query.date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+          ? req.query.date
+          : null;
+
       // `status` accepts a single status or a comma-separated list so the
       // dashboard can fetch all active orders (pending,preparing,ready,…) in one call.
       const statuses =
@@ -607,10 +618,29 @@ router.get(
           : [];
 
       const conditions = [eq(ordersTable.vendorId, vendorId)];
-      if (statuses.length === 1)
-        conditions.push(eq(ordersTable.status, statuses[0]));
-      else if (statuses.length > 1)
-        conditions.push(inArray(ordersTable.status, statuses));
+
+      if (dateParam) {
+        // Amman day boundaries → UTC instants (UTC+3 fixed offset).
+        const dayStart = new Date(`${dateParam}T00:00:00+03:00`);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        conditions.push(gte(ordersTable.createdAt, dayStart));
+        conditions.push(lt(ordersTable.createdAt, dayEnd));
+      } else {
+        // Live "current shift" view: only orders since the last "تصفير الوردية".
+        // close-shift stamps vendor_profiles.shiftResetAt = now(), so past
+        // shifts vanish from the screen WITHOUT being deleted/cancelled.
+        const [vendor] = await db
+          .select({ shiftResetAt: vendorProfilesTable.shiftResetAt })
+          .from(vendorProfilesTable)
+          .where(eq(vendorProfilesTable.id, vendorId))
+          .limit(1);
+        if (vendor?.shiftResetAt)
+          conditions.push(gte(ordersTable.createdAt, vendor.shiftResetAt));
+        if (statuses.length === 1)
+          conditions.push(eq(ordersTable.status, statuses[0]));
+        else if (statuses.length > 1)
+          conditions.push(inArray(ordersTable.status, statuses));
+      }
 
       const orders = await db
         .select()
@@ -665,19 +695,13 @@ router.get(
   },
 );
 
-// End-of-shift cleanup. The restaurant taps this to clear any orders that were
-// never completed (customer never confirmed receipt, courier never reported
-// back, etc.). Per product decision, every still-active order is force-cancelled
-// — keeping unfinished orders out of the sales totals — rather than marked
-// delivered. Delivered/cancelled orders are already final and untouched.
-const ACTIVE_ORDER_STATES = [
-  "pending",
-  "confirmed",
-  "preparing",
-  "ready",
-  "out_for_delivery",
-];
-
+// End-of-shift reset ("تصفير الوردية"). The restaurant taps this to start a
+// fresh, empty screen for the next shift. Per the accounting requirement we NO
+// LONGER cancel or delete anything — every past order stays in the DB forever so
+// the sales record can't be lost or tampered with. Instead we stamp
+// shiftResetAt = now() on the vendor; the live dashboard query only returns
+// orders created at/after that instant, so the finished shift simply disappears
+// from the screen while remaining reachable through the date dropdown.
 router.post(
   "/vendors/:id/orders/close-shift",
   requireVendorOwner("id"),
@@ -685,17 +709,12 @@ router.post(
     try {
       const vendorId = parseInt(String(req.params.id));
       if (isNaN(vendorId)) return res.status(400).json({ error: "Invalid id" });
-      const cancelled = await db
-        .update(ordersTable)
-        .set({ status: "cancelled" })
-        .where(
-          and(
-            eq(ordersTable.vendorId, vendorId),
-            inArray(ordersTable.status, ACTIVE_ORDER_STATES),
-          ),
-        )
-        .returning({ id: ordersTable.id });
-      return res.json({ cancelled: cancelled.length });
+      const now = new Date();
+      await db
+        .update(vendorProfilesTable)
+        .set({ shiftResetAt: now })
+        .where(eq(vendorProfilesTable.id, vendorId));
+      return res.json({ shiftResetAt: now.toISOString() });
     } catch (err) {
       req.log.error({ err }, "Failed to close vendor shift");
       return res.status(500).json({ error: "Internal server error" });

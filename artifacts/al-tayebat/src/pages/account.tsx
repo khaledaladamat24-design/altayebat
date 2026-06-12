@@ -61,6 +61,18 @@ export default function Account() {
   }, []);
   const isSignedIn = clerkSignedIn || firebaseSignedIn;
 
+  // Role-based gating of sensitive admin buttons. The global "لوحة إدارة
+  // المنتجات" (/admin) panel belongs to the app owner only; vendors manage their
+  // own catalogue through "إدارة متجري". Regular customers see neither.
+  const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+  const currentEmail = (
+    user?.primaryEmailAddress?.emailAddress ||
+    localStorage.getItem("al_tayebat_email") ||
+    ""
+  ).toLowerCase();
+  const isSuperAdmin = currentEmail === SUPER_ADMIN_EMAIL;
+  const isVendor = !!vendorId;
+
   // Auto-detect vendor profile for signed-in users (and cache vendorId)
   useEffect(() => {
     if (!isSignedIn || vendorId) return;
@@ -399,8 +411,8 @@ export default function Account() {
           })}
         </div>
 
-        {/* Vendor dashboard link (only for signed-in users with a vendor profile) */}
-        {isSignedIn && vendorId && (
+        {/* Vendor dashboard link — vendors and the app owner only */}
+        {isSignedIn && (isVendor || isSuperAdmin) && (
           <Link href="/vendor-dashboard">
             <div className="bg-background rounded-2xl border border-primary/30 overflow-hidden shadow-sm px-4 py-4 flex items-center gap-3 hover:bg-primary/5 transition-colors cursor-pointer">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -422,18 +434,20 @@ export default function Account() {
           </Link>
         )}
 
-        {/* Admin link */}
-        <Link href="/admin">
-          <div className="bg-background rounded-2xl border border-rose/30 overflow-hidden shadow-sm px-4 py-4 flex items-center gap-3 hover:bg-rose/5 transition-colors cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-rose/10 flex items-center justify-center shrink-0">
-              <Settings className="w-5 h-5 text-rose" />
+        {/* Admin link — app owner (super-admin) only */}
+        {isSuperAdmin && (
+          <Link href="/admin">
+            <div className="bg-background rounded-2xl border border-rose/30 overflow-hidden shadow-sm px-4 py-4 flex items-center gap-3 hover:bg-rose/5 transition-colors cursor-pointer">
+              <div className="w-9 h-9 rounded-xl bg-rose/10 flex items-center justify-center shrink-0">
+                <Settings className="w-5 h-5 text-rose" />
+              </div>
+              <span className="flex-1 font-bold text-sm">
+                {tr("لوحة إدارة المنتجات", "Product admin dashboard")}
+              </span>
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </div>
-            <span className="flex-1 font-bold text-sm">
-              {tr("لوحة إدارة المنتجات", "Product admin dashboard")}
-            </span>
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </Link>
+          </Link>
+        )}
 
         <p className="text-center text-xs text-muted-foreground pb-4">
           {tr(

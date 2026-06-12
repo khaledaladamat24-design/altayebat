@@ -15,6 +15,6 @@
 - [Delivery fee mirror](delivery-fee-mirror.md) — vendor-driven delivery fee is computed in BOTH cart.ts buildCart() and orders.ts POST; change them in lockstep or displayed vs charged total drifts.
 - [Header-trust auth weak point](header-trust-auth.md) — admin/vendor guards trust spoofable x-admin-email / x-firebase-uid headers, so no public endpoint may ever return firebaseUid or passwordHash.
 - [Dual category seed lists](dual-category-seed-lists.md) — TWO seed lists exist; the api-server startup one is prod's source of truth. Category changes must edit BOTH or they never reach production.
-- [Delivery confirmation policy](delivery-confirmation-policy.md) — customer self-confirms receipt (sessionId) to reach delivered; vendor close-shift CANCELS leftovers (not delivers) to avoid inflating sales.
+- [Delivery confirmation policy + shift reset](delivery-confirmation-policy.md) — customer self-confirms receipt (sessionId) to reach delivered; close-shift is NON-destructive (stamps shiftResetAt, hides live board, keeps all orders; history via ?date= Amman day).
 - [Checkpoint commits bypass husky format hook](checkpoint-bypasses-husky-format.md) — CI format:check ❌ on commits that pass locally; Replit checkpoint skips pre-commit prettier. Run format:check after edits; not a flake.
 - [FCM disabled by corrupted secret](fcm-secret-corruption.md) — vendor bg push dead = FIREBASE_SERVICE_ACCOUNT not valid JSON (pasted from online viewer); bash/sandbox env is stale, verify via /proc/<pid>/environ.
