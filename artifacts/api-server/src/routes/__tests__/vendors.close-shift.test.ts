@@ -11,11 +11,11 @@ import vendorsRouter from "../vendors";
 
 // POST /vendors/:id/orders/close-shift is gated by requireVendorOwner, which
 // lets a super-admin email bypass ownership. We send that header so the test
-// exercises the bulk-cancel logic itself, not the auth layer.
+// exercises the shift-reset logic itself, not the auth layer.
 const ADMIN_HEADER = { "x-admin-email": "khaledaladamat24@gmail.com" };
 
 // A vendor id unlikely to collide with seeded data; the admin bypass means the
-// vendor row need not exist for the bulk update to run against its orders.
+// vendor row need not exist for the request to succeed.
 const TEST_VENDOR_ID = 990001;
 
 function makeApp() {
@@ -71,7 +71,11 @@ afterAll(async () => {
 });
 
 describe("POST /api/vendors/:id/orders/close-shift", () => {
-  it("cancels every active order and leaves final ones untouched", async () => {
+  // Closing a shift is NON-destructive: it only stamps the vendor's
+  // shiftResetAt so the live board starts empty. Every order — active or
+  // finished — stays in the DB permanently for the sales record and is
+  // reachable later via the date-history filter.
+  it("keeps every order untouched and returns the new shiftResetAt", async () => {
     const pending = await makeOrder("pending");
     const confirmed = await makeOrder("confirmed");
     const preparing = await makeOrder("preparing");
@@ -85,24 +89,25 @@ describe("POST /api/vendors/:id/orders/close-shift", () => {
       .set(ADMIN_HEADER)
       .send({});
     expect(res.status).toBe(200);
-    expect(res.body.cancelled).toBe(5);
+    expect(typeof res.body.shiftResetAt).toBe("string");
+    expect(Number.isNaN(Date.parse(res.body.shiftResetAt))).toBe(false);
 
-    expect(await statusOf(pending)).toBe("cancelled");
-    expect(await statusOf(confirmed)).toBe("cancelled");
-    expect(await statusOf(preparing)).toBe("cancelled");
-    expect(await statusOf(ready)).toBe("cancelled");
-    expect(await statusOf(outForDelivery)).toBe("cancelled");
-    // Final states are never reopened or recategorized.
+    // Nothing is cancelled or recategorized — statuses are preserved as-is.
+    expect(await statusOf(pending)).toBe("pending");
+    expect(await statusOf(confirmed)).toBe("confirmed");
+    expect(await statusOf(preparing)).toBe("preparing");
+    expect(await statusOf(ready)).toBe("ready");
+    expect(await statusOf(outForDelivery)).toBe("out_for_delivery");
     expect(await statusOf(delivered)).toBe("delivered");
     expect(await statusOf(alreadyCancelled)).toBe("cancelled");
   });
 
-  it("returns 0 when there are no active orders to clear", async () => {
+  it("succeeds even when there are no active orders", async () => {
     const res = await request(app)
       .post(`/api/vendors/${TEST_VENDOR_ID}/orders/close-shift`)
       .set(ADMIN_HEADER)
       .send({});
     expect(res.status).toBe(200);
-    expect(res.body.cancelled).toBe(0);
+    expect(typeof res.body.shiftResetAt).toBe("string");
   });
 });
