@@ -105,6 +105,8 @@ public class OrderMessagingService extends MessagingService {
             Intent openIntent = new Intent(this, MainActivity.class);
             openIntent.setFlags(
                     Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            // Tapping the fallback notification opens the vendor's orders list.
+            openIntent.putExtra("navigateTo", "/vendor-dashboard");
             PendingIntent pi = PendingIntent.getActivity(
                     this, 2, openIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

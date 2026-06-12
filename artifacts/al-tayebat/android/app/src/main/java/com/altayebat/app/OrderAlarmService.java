@@ -92,6 +92,8 @@ public class OrderAlarmService extends Service {
         Intent openIntent = new Intent(this, MainActivity.class);
         openIntent.setFlags(
                 Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        // Tapping the alarm notification opens the vendor's live orders list.
+        openIntent.putExtra("navigateTo", "/vendor-dashboard");
         PendingIntent contentPi = PendingIntent.getActivity(
                 this, 0, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

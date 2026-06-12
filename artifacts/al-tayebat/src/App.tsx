@@ -10,6 +10,7 @@ import {
   setDefaultHeadersGetter,
 } from "@workspace/api-client-react";
 import { checkForAppUpdate } from "@/lib/app-update";
+import { consumePendingRoute } from "@/lib/app-nav";
 
 // In Capacitor/Android builds, the web bundle is served from the local
 // filesystem so relative `/api` URLs do not reach the Replit backend.
@@ -291,6 +292,7 @@ function App() {
                     isNative ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")
                   }
                 >
+                  <NotificationNav />
                   <Router />
                 </WouterRouter>
               </CartActionsProvider>
@@ -307,6 +309,35 @@ function App() {
 function AppToaster() {
   const { dir } = useLanguage();
   return <Toaster position="top-center" dir={dir} />;
+}
+
+// When the vendor taps a new-order notification, navigate straight to the live
+// orders list. Native only: reads the pending route on app start and on every
+// resume (tapping a notification while backgrounded/killed brings the app to
+// the foreground, firing the Capacitor "resume" event). No-op on web.
+function NotificationNav() {
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    void consumePendingRoute(navigate);
+    let remove: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { App: CapApp } = await import("@capacitor/app");
+        const handle = await CapApp.addListener("resume", () => {
+          void consumePendingRoute(navigate);
+        });
+        remove = () => void handle.remove();
+      } catch {
+        // @capacitor/app unavailable (web preview) — nothing to listen for.
+      }
+    })();
+    return () => {
+      remove?.();
+    };
+    // navigate identity may change across renders; we only want this wired once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
 }
 
 // Fire a Google Play in-app update check once on native app start. No-op on web.
