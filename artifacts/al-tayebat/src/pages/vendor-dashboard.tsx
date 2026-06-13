@@ -683,7 +683,7 @@ export default function VendorDashboard() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vendor) return;
-    if (!form.nameAr || !form.name || !form.price || !form.categoryId) {
+    if (!form.nameAr || !form.price || !form.categoryId) {
       toast.error(
         tr("يرجى تعبئة الحقول المطلوبة", "Please fill out the required fields"),
       );
@@ -1397,7 +1397,10 @@ export default function VendorDashboard() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">
-                    {tr("الاسم بالإنجليزي *", "English name *")}
+                    {tr(
+                      "الاسم بالإنجليزي (اختياري)",
+                      "English name (optional)",
+                    )}
                   </label>
                   <Input
                     value={form.name}
@@ -1406,7 +1409,6 @@ export default function VendorDashboard() {
                     }
                     className="h-11 bg-muted border-none text-sm"
                     dir="ltr"
-                    required
                   />
                 </div>
               </div>

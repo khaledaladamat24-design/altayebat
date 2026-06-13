@@ -11,6 +11,8 @@ import {
 } from "@workspace/api-client-react";
 import { checkForAppUpdate } from "@/lib/app-update";
 import { consumePendingRoute } from "@/lib/app-nav";
+import { setClerkToken, withClerkAuth } from "@/lib/clerk-token";
+import { useAuth } from "@clerk/react";
 
 // In Capacitor/Android builds, the web bundle is served from the local
 // filesystem so relative `/api` URLs do not reach the Replit backend.
@@ -30,12 +32,16 @@ if (rawApiBase) {
 // session cookie and are unaffected.
 setDefaultHeadersGetter((): Record<string, string> => {
   if (typeof window === "undefined") return {};
+  const headers: Record<string, string> = {};
   try {
     const fbUid = window.localStorage.getItem("al_tayebat_firebase_uid");
-    return fbUid ? { "x-firebase-uid": fbUid } : {};
+    if (fbUid) headers["x-firebase-uid"] = fbUid;
   } catch {
-    return {};
+    // ignore storage access errors
   }
+  // Native: cross-origin requests don't carry the Clerk cookie, so attach the
+  // cached Clerk bearer token (kept fresh by <ClerkTokenSync/>). No-op on web.
+  return withClerkAuth(headers);
 });
 
 // Detect Capacitor native shell — affects router base and Clerk proxy config.
@@ -254,6 +260,33 @@ class ErrorBoundary extends Component<
   }
 }
 
+// Keeps the cached Clerk session JWT fresh for native bearer-token auth.
+// Clerk JWTs are short-lived (~60s), so we refresh on mount, on auth-state
+// change, and on an interval. On the web this is effectively a no-op because
+// withClerkAuth only attaches the token in the native shell.
+function ClerkTokenSync() {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  useEffect(() => {
+    if (!isLoaded) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const token = isSignedIn ? await getToken() : null;
+        if (!cancelled) setClerkToken(token ?? null);
+      } catch {
+        if (!cancelled) setClerkToken(null);
+      }
+    };
+    refresh();
+    const id = window.setInterval(refresh, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [isLoaded, isSignedIn, getToken]);
+  return null;
+}
+
 function App() {
   if (!clerkPubKey) {
     return (
@@ -284,6 +317,7 @@ function App() {
             },
           }}
         >
+          <ClerkTokenSync />
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
               <CartActionsProvider>

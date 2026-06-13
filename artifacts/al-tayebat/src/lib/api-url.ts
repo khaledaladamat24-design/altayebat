@@ -1,3 +1,5 @@
+import { withClerkAuth } from "./clerk-token";
+
 const RAW = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
   /\/+$/,
   "",
@@ -12,9 +14,11 @@ export function apiUrl(path: string): string {
   return `${RAW}${p}`;
 }
 
-// Build request headers carrying the caller's identity. Clerk's session cookie
-// is sent automatically, but phone-authenticated users have no Clerk session,
-// so we also forward their Firebase uid so the server can resolve them.
+// Build request headers carrying the caller's identity. On the web Clerk's
+// session cookie is sent automatically; phone-authenticated users have no Clerk
+// session, so we also forward their Firebase uid. In the native app the cookie
+// is cross-origin (never sent), so withClerkAuth attaches the Clerk bearer token
+// so email/Clerk users (incl. the super-admin) can still be resolved server-side.
 export function authHeaders(
   extra?: Record<string, string>,
 ): Record<string, string> {
@@ -27,5 +31,5 @@ export function authHeaders(
       // ignore storage access errors
     }
   }
-  return headers;
+  return withClerkAuth(headers);
 }

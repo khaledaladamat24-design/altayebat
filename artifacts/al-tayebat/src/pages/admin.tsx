@@ -333,7 +333,7 @@ export default function Admin() {
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nameAr || !form.name || !form.price || !form.categoryId) {
+    if (!form.nameAr || !form.price || !form.categoryId) {
       toast.error(
         tr("يرجى تعبئة الحقول المطلوبة", "Please fill in the required fields"),
       );
@@ -927,7 +927,10 @@ export default function Admin() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">
-                    {tr("الاسم بالإنجليزي *", "English name *")}
+                    {tr(
+                      "الاسم بالإنجليزي (اختياري)",
+                      "English name (optional)",
+                    )}
                   </label>
                   <Input
                     placeholder="Olive Oil"
@@ -937,7 +940,6 @@ export default function Admin() {
                     }
                     className="h-11 bg-muted border-none text-sm"
                     dir="ltr"
-                    required
                   />
                 </div>
               </div>

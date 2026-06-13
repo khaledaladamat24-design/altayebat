@@ -49,7 +49,7 @@ router.post("/admin/products", async (req, res) => {
       subcategory,
     } = req.body;
 
-    if (!nameAr || !name || !price || !categoryId) {
+    if (!nameAr || !price || !categoryId) {
       return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
     }
 
@@ -61,11 +61,16 @@ router.post("/admin/products", async (req, res) => {
     const num = (v: unknown) =>
       v === undefined || v === null || v === "" ? null : v;
 
+    // English name is optional — the column is NOT NULL, so fall back to the
+    // Arabic name when the caller leaves it blank.
+    const englishName =
+      typeof name === "string" && name.trim() ? name.trim() : nameAr;
+
     const [product] = await db
       .insert(productsTable)
       .values({
         nameAr,
-        name,
+        name: englishName,
         descriptionAr: descriptionAr || null,
         description: description || null,
         price: String(price),

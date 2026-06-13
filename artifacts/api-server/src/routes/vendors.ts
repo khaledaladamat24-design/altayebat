@@ -96,18 +96,22 @@ router.post(
         subcategory,
         foodType,
       } = req.body;
-      if (!nameAr || !name || !price || !categoryId) {
+      if (!nameAr || !price || !categoryId) {
         return res.status(400).json({ error: "الاسم والسعر والقسم مطلوبة" });
       }
       const saleCheck = checkSaleIntegrity({ isOnSale, price, originalPrice });
       if (!saleCheck.ok)
         return res.status(400).json({ error: saleCheck.error });
+      // English name is optional — the column is NOT NULL, so fall back to the
+      // Arabic name when the caller leaves it blank.
+      const englishName =
+        typeof name === "string" && name.trim() ? name.trim() : nameAr;
       const [product] = await db
         .insert(productsTable)
         .values({
           vendorId,
           nameAr,
-          name,
+          name: englishName,
           descriptionAr: descriptionAr || null,
           description: description || null,
           price: String(price),
