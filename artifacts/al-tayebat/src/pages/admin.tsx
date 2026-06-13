@@ -206,12 +206,12 @@ export default function Admin() {
     setForm(emptyForm);
   };
 
+  // The super-admin is verified server-side via the Clerk session cookie (sent
+  // automatically), so we no longer send a spoofable x-admin-email header. Other
+  // admins authenticate with the admin password (x-admin-key).
   const adminHeaders: Record<string, string> = {
     "Content-Type": "application/json",
     ...(adminKey ? { "x-admin-key": adminKey } : {}),
-    ...(isSuperAdmin && user?.primaryEmailAddress?.emailAddress
-      ? { "x-admin-email": user.primaryEmailAddress.emailAddress }
-      : {}),
   };
 
   useEffect(() => {

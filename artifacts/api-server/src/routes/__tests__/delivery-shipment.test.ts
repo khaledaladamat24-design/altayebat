@@ -8,7 +8,7 @@ import request from "supertest";
 import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { DeliveryNotConfiguredError } from "../../delivery/types";
-import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
+import { getAdminPassword } from "../../lib/admin-auth";
 
 // Inject a fake delivery adapter so we control exactly what createShipment
 // returns (a valid ShipmentResult, or a thrown DeliveryNotConfiguredError).
@@ -58,7 +58,7 @@ function makeApp() {
 
 const app = makeApp();
 // Authenticate every request as the super-admin so requireAdmin passes.
-const asAdmin = (r: request.Test) => r.set("x-admin-email", SUPER_ADMIN_EMAIL);
+const asAdmin = (r: request.Test) => r.set("x-admin-key", getAdminPassword());
 const tag = Date.now();
 const providerIds: number[] = [];
 const orderIds: number[] = [];

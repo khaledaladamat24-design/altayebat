@@ -8,7 +8,7 @@ import request from "supertest";
 import { db, productsTable, categoriesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import adminRouter from "../admin";
-import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
+import { getAdminPassword } from "../../lib/admin-auth";
 
 function makeApp() {
   const app = express();
@@ -21,7 +21,7 @@ function makeApp() {
     };
     // These tests exercise sale-integrity validation, not admin auth — present
     // the super-admin identity so the requireAdmin guard lets them through.
-    req.headers["x-admin-email"] = SUPER_ADMIN_EMAIL;
+    req.headers["x-admin-key"] = getAdminPassword();
     next();
   });
   app.use("/api", adminRouter);

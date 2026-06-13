@@ -5,7 +5,7 @@ import express, {
   type NextFunction,
 } from "express";
 import request from "supertest";
-import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
+import { getAdminPassword } from "../../lib/admin-auth";
 
 // Drive exactly what the provider routes read from the DB so we can assert the
 // response is validated/serialized against the OpenAPI `DeliveryProvider`
@@ -74,7 +74,7 @@ describe("GET /api/delivery/providers — response contract validation", () => {
     selectRows.value = [validRow()];
     const res = await request(app)
       .get("/api/delivery/providers")
-      .set("x-admin-email", SUPER_ADMIN_EMAIL);
+      .set("x-admin-key", getAdminPassword());
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -93,7 +93,7 @@ describe("GET /api/delivery/providers — response contract validation", () => {
     selectRows.value = [validRow({ credentials: {} })];
     const res = await request(app)
       .get("/api/delivery/providers")
-      .set("x-admin-email", SUPER_ADMIN_EMAIL);
+      .set("x-admin-key", getAdminPassword());
 
     expect(res.status).toBe(200);
     expect(res.body[0].hasCredentials).toBe(false);
@@ -108,7 +108,7 @@ describe("GET /api/delivery/providers — response contract validation", () => {
     ];
     const res = await request(app)
       .get("/api/delivery/providers")
-      .set("x-admin-email", SUPER_ADMIN_EMAIL);
+      .set("x-admin-key", getAdminPassword());
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: "Internal server error" });

@@ -10,9 +10,11 @@ import { eq, inArray } from "drizzle-orm";
 import ordersRouter from "../orders";
 
 // The PATCH /orders/:id/status route is gated by requireOrderVendorOwner, which
-// lets a super-admin email bypass ownership checks. We send that header so the
-// tests exercise the transition logic itself, not the auth layer.
-const ADMIN_HEADER = { "x-admin-email": "khaledaladamat24@gmail.com" };
+// lets an admin bypass ownership checks. We authenticate with the admin-key
+// secret so the tests exercise the transition logic itself, not the auth layer.
+const ADMIN_HEADER = {
+  "x-admin-key": process.env.ADMIN_PASSWORD || "tayebat2024",
+};
 
 function makeApp() {
   const app = express();

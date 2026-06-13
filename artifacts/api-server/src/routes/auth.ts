@@ -226,7 +226,7 @@ router.post("/auth/location", async (req, res) => {
     // x-firebase-uid header for phone accounts) and require it to match the
     // target row. Without this anyone could overwrite a stranger's saved address
     // by guessing the numeric id (IDOR). Admins may write any row.
-    if (!isAdminReq(req)) {
+    if (!(await isAdminReq(req))) {
       const actingId = await getActingDbUserId(req);
       if (!actingId || actingId !== id) {
         res.status(403).json({ error: "Not authorized" });

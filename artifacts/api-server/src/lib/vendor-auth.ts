@@ -3,16 +3,64 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable, vendorProfilesTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { isAdminReq } from "./admin-auth";
+import { SUPER_ADMIN_EMAIL, getAdminPassword } from "./admin-auth";
 
-export { isAdminReq };
+/**
+ * Single source of truth for admin access. Two legitimate paths:
+ *  1. `x-admin-key` matching the admin password secret (proof of the secret).
+ *  2. A VERIFIED identity — the acting user resolved from the Clerk session
+ *     cookie (or the `x-firebase-uid` header for phone accounts) — whose DB row
+ *     is a super-admin (role `admin`, or the canonical super-admin email).
+ *
+ * The previously trusted `x-admin-email` header is intentionally NOT consulted:
+ * it was client-supplied and spoofable, so anyone could forge admin access.
+ */
+export async function isAdminReq(req: Request): Promise<boolean> {
+  const adminKey = req.headers["x-admin-key"] as string | undefined;
+  if (adminKey && adminKey === getAdminPassword()) return true;
+
+  const dbUserId = await getActingDbUserId(req);
+  if (!dbUserId) return false;
+  const [u] = await db
+    .select({ email: usersTable.email, role: usersTable.role })
+    .from(usersTable)
+    .where(eq(usersTable.id, dbUserId))
+    .limit(1);
+  if (!u) return false;
+  return u.role === "admin" || u.email === SUPER_ADMIN_EMAIL;
+}
+
+/** Express guard that rejects non-admin requests with 403. */
+export async function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!(await isAdminReq(req))) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  } catch (err) {
+    req.log.error({ err }, "Admin check failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
 
 /** Resolve the signed-in Clerk user → DB user id, or null. */
 export async function getDbUserIdFromClerk(
   req: Request,
 ): Promise<number | null> {
-  const clerk = getAuth(req);
-  const clerkUserId = clerk?.userId;
+  // getAuth throws when the Clerk middleware isn't mounted on the request. Treat
+  // that (and any Clerk resolution failure) as "no Clerk user" rather than an
+  // error, so callers fall back to other identity sources / deny access.
+  let clerkUserId: string | null | undefined;
+  try {
+    clerkUserId = getAuth(req)?.userId;
+  } catch {
+    clerkUserId = null;
+  }
   if (!clerkUserId) return null;
   const [u] = await db
     .select({ id: usersTable.id })
@@ -59,7 +107,7 @@ export function requireVendorOwner(paramName: string = "id") {
         res.status(400).json({ error: "Invalid vendor id" });
         return;
       }
-      if (isAdminReq(req)) {
+      if (await isAdminReq(req)) {
         next();
         return;
       }
@@ -106,7 +154,7 @@ export function requireOrderVendorOwner(paramName: string = "id") {
         res.status(400).json({ error: "Invalid order id" });
         return;
       }
-      if (isAdminReq(req)) {
+      if (await isAdminReq(req)) {
         next();
         return;
       }

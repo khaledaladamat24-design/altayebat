@@ -18,7 +18,7 @@ const { db, usersTable, vendorProfilesTable } = await import("@workspace/db");
 const { inArray } = await import("drizzle-orm");
 const vendorsRouter = (await import("../vendors")).default;
 
-const ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+const ADMIN_KEY = process.env.ADMIN_PASSWORD || "tayebat2024";
 
 function makeApp() {
   const app = express();
@@ -141,7 +141,7 @@ describe("vendor mutation endpoints reject unauthorized callers", () => {
   it("PATCH /vendors/:id/status — allows the super-admin", async () => {
     const res = await request(app)
       .patch(`/api/vendors/${vendorAId}/status`)
-      .set("x-admin-email", ADMIN_EMAIL)
+      .set("x-admin-key", ADMIN_KEY)
       .send({ status: "approved" });
     expect(res.status).toBe(200);
   });

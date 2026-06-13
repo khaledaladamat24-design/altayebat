@@ -8,10 +8,14 @@ description: The app authorizes some privileged routes from spoofable request he
 The app's privilege checks partly rely on **raw, unverified request headers**, which
 is the known weak point of its auth model:
 
-- **Admin** (`requireAdmin` / `isAdminReq` in `lib/admin-auth.ts`): passes if the
-  request carries the admin password (`x-admin-key`, a real secret) **or**
-  `x-admin-email === SUPER_ADMIN_EMAIL`. The email bypass is trivially spoofable
-  because the super-admin email is public. The password path is secure.
+- **Admin** (`requireAdmin` / `isAdminReq`, now in `lib/vendor-auth.ts`;
+  `admin-auth.ts` keeps only `SUPER_ADMIN_EMAIL` + `getAdminPassword`): passes if
+  the request carries the admin password (`x-admin-key`, a real secret) **or** a
+  **verified** acting user (Clerk session, else `x-firebase-uid`) whose DB row is a
+  super-admin (`role === "admin"` or email === `SUPER_ADMIN_EMAIL`). The old
+  spoofable `x-admin-email` header bypass was **removed** — it is no longer read
+  server-side, and the admin frontend no longer sends it (super-admin relies on the
+  Clerk session cookie). `isAdminReq`/`requireAdmin` are now **async**.
 - **Vendor / order / wallet** (`requireVendorOwner` / `requireOrderVendorOwner` /
   `requireWalletOwner`, plus the order balance-payment user resolution, all via
   `getActingDbUserId` in `lib/vendor-auth.ts`): resolves identity from the Clerk

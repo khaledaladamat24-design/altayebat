@@ -10,7 +10,8 @@ import {
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
-import { SUPER_ADMIN_EMAIL, requireAdmin } from "../lib/admin-auth";
+import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
+import { requireAdmin } from "../lib/vendor-auth";
 
 const router = Router();
 

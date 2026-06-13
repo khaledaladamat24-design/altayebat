@@ -16,7 +16,7 @@ vi.mock("@clerk/express", () => ({
 // Import the REAL composed router (all sub-routers mounted in order).
 const router = (await import("../index")).default;
 
-const ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+const ADMIN_KEY = process.env.ADMIN_PASSWORD || "tayebat2024";
 
 function makeApp() {
   const app = express();
@@ -61,7 +61,7 @@ describe("router composition — admin guard must not leak onto public routes", 
   it("allows /api/admin/* with the super-admin email", async () => {
     const res = await request(app)
       .get("/api/admin/orders")
-      .set("x-admin-email", ADMIN_EMAIL);
+      .set("x-admin-key", ADMIN_KEY);
     expect(res.status).toBe(200);
   });
 });

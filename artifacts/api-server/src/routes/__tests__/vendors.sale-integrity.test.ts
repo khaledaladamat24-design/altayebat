@@ -13,7 +13,7 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import vendorsRouter from "../vendors";
-import { SUPER_ADMIN_EMAIL } from "../../lib/admin-auth";
+import { getAdminPassword } from "../../lib/admin-auth";
 
 function makeApp() {
   const app = express();
@@ -26,7 +26,7 @@ function makeApp() {
     };
     // These tests exercise sale-integrity validation, not vendor-owner authz —
     // present the super-admin identity so the ownership guards let them through.
-    req.headers["x-admin-email"] = SUPER_ADMIN_EMAIL;
+    req.headers["x-admin-key"] = getAdminPassword();
     next();
   });
   app.use("/api", vendorsRouter);

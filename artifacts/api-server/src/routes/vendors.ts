@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, inArray, sql, gte, lt } from "drizzle-orm";
 import { requireVendorOwner } from "../lib/vendor-auth";
-import { requireAdmin } from "../lib/admin-auth";
+import { requireAdmin } from "../lib/vendor-auth";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
 
 const router = Router();

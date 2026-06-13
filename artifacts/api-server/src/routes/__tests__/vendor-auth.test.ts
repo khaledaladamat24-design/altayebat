@@ -20,7 +20,10 @@ const { inArray } = await import("drizzle-orm");
 const { requireVendorOwner, requireOrderVendorOwner } =
   await import("../../lib/vendor-auth");
 
-const ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+const ADMIN_KEY = process.env.ADMIN_PASSWORD || "tayebat2024";
+// The canonical super-admin email — used to prove that forging it as a header
+// grants nothing without a verified session.
+const ADMIN_EMAIL_SPOOF = "khaledaladamat24@gmail.com";
 
 function makeApp() {
   const app = express();
@@ -165,18 +168,27 @@ describe("requireVendorOwner — GET /api/vendors/:id/orders", () => {
     expect(res.status).toBe(401);
   });
 
-  it("lets the super-admin email bypass ownership", async () => {
-    const res = await request(app)
-      .get(`/api/vendors/${vendorAId}/orders`)
-      .set("x-admin-email", ADMIN_EMAIL);
-    expect(res.status).toBe(200);
-  });
-
   it("lets the admin key bypass ownership", async () => {
     const res = await request(app)
       .get(`/api/vendors/${vendorAId}/orders`)
-      .set("x-admin-key", process.env.ADMIN_PASSWORD || "tayebat2024");
+      .set("x-admin-key", ADMIN_KEY);
     expect(res.status).toBe(200);
+  });
+
+  it("does NOT trust a forged x-admin-email header (401)", async () => {
+    // Regression: the spoofable email header must grant nothing on its own —
+    // no valid session, no admin key → treated as a signed-out caller.
+    const res = await request(app)
+      .get(`/api/vendors/${vendorAId}/orders`)
+      .set("x-admin-email", ADMIN_EMAIL_SPOOF);
+    expect(res.status).toBe(401);
+  });
+
+  it("does NOT accept a wrong admin key (401)", async () => {
+    const res = await request(app)
+      .get(`/api/vendors/${vendorAId}/orders`)
+      .set("x-admin-key", "definitely-not-the-password");
+    expect(res.status).toBe(401);
   });
 
   it("returns 404 for a non-existent vendor", async () => {
@@ -221,7 +233,7 @@ describe("requireOrderVendorOwner — PATCH /api/orders/:id/status", () => {
   it("lets the super-admin email bypass ownership", async () => {
     const res = await request(app)
       .patch(`/api/orders/${orderOwnedId}/status`)
-      .set("x-admin-email", ADMIN_EMAIL)
+      .set("x-admin-key", ADMIN_KEY)
       .send({});
     expect(res.status).toBe(200);
   });
@@ -237,7 +249,7 @@ describe("requireOrderVendorOwner — PATCH /api/orders/:id/status", () => {
   it("lets an admin act on a NULL-vendor order", async () => {
     const res = await request(app)
       .patch(`/api/orders/${orderNullVendorId}/status`)
-      .set("x-admin-email", ADMIN_EMAIL)
+      .set("x-admin-key", ADMIN_KEY)
       .send({});
     expect(res.status).toBe(200);
   });

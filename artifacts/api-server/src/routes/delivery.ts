@@ -10,7 +10,7 @@ import {
   ListDeliveryProvidersResponseItem,
   ListDeliveryAdapterTypesResponse,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../lib/admin-auth";
+import { requireAdmin } from "../lib/vendor-auth";
 import { getAdapter, listAdapterTypes } from "../delivery/registry";
 import { DeliveryNotConfiguredError } from "../delivery/types";
 

@@ -10,9 +10,11 @@ import { eq, inArray } from "drizzle-orm";
 import vendorsRouter from "../vendors";
 
 // POST /vendors/:id/orders/close-shift is gated by requireVendorOwner, which
-// lets a super-admin email bypass ownership. We send that header so the test
-// exercises the shift-reset logic itself, not the auth layer.
-const ADMIN_HEADER = { "x-admin-email": "khaledaladamat24@gmail.com" };
+// lets an admin bypass ownership. We authenticate with the admin-key secret so
+// the test exercises the shift-reset logic itself, not the auth layer.
+const ADMIN_HEADER = {
+  "x-admin-key": process.env.ADMIN_PASSWORD || "tayebat2024",
+};
 
 // A vendor id unlikely to collide with seeded data; the admin bypass means the
 // vendor row need not exist for the request to succeed.

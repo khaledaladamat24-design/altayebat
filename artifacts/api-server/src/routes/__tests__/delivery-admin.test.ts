@@ -9,9 +9,9 @@ import { db, deliveryProvidersTable, ordersTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import deliveryRouter from "../delivery";
 
-// The delivery-provider endpoints gate access via isAdminReq (x-admin-email
-// super-admin OR x-admin-key === ADMIN_PASSWORD). No Clerk involved.
-const ADMIN_EMAIL = "khaledaladamat24@gmail.com";
+// The delivery-provider endpoints gate access via isAdminReq. We authenticate
+// with the admin-key secret path (x-admin-key === ADMIN_PASSWORD); no Clerk
+// session involved.
 const ADMIN_KEY = process.env.ADMIN_PASSWORD || "tayebat2024";
 
 function makeApp() {
@@ -96,7 +96,7 @@ describe("GET /api/delivery/providers — admin authz", () => {
     await createProvider();
     const res = await request(app)
       .get("/api/delivery/providers")
-      .set("x-admin-email", ADMIN_EMAIL);
+      .set("x-admin-key", ADMIN_KEY);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     for (const row of res.body) {
@@ -185,7 +185,7 @@ describe("PATCH /api/delivery/providers/:id — admin authz", () => {
     const p = await createProvider({ isDefault: false });
     const res = await request(app)
       .patch(`/api/delivery/providers/${p.id}`)
-      .set("x-admin-email", ADMIN_EMAIL)
+      .set("x-admin-key", ADMIN_KEY)
       .send({ name: "Updated Name" });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe("Updated Name");
@@ -250,7 +250,7 @@ describe("POST /api/delivery/orders/:orderId/shipment — admin authz", () => {
     await createProvider({ type: "manual", enabled: true, isDefault: true });
     const res = await request(app)
       .post(`/api/delivery/orders/${orderIds[0]}/shipment`)
-      .set("x-admin-email", ADMIN_EMAIL)
+      .set("x-admin-key", ADMIN_KEY)
       .send({});
     expect(res.status).toBe(200);
     expect(res.body.trackingNumber).toBeTruthy();
