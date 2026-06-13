@@ -17,6 +17,7 @@ in native — even though everything works in the browser preview.
 
 **Fix (the durable rule):** forward the Clerk session JWT as
 `Authorization: Bearer <token>` **only when native** (`Capacitor.isNativePlatform()`).
+
 - The token is cached in memory (never localStorage) and kept fresh by a sync
   component refreshing on mount, on auth-state change, and on a short interval —
   Clerk JWTs are short-lived (~60s).
