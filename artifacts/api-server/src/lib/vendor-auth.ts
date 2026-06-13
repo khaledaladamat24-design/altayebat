@@ -81,13 +81,28 @@ export async function getActingDbUserId(req: Request): Promise<number | null> {
   const clerkUserId = await getDbUserIdFromClerk(req);
   if (clerkUserId) return clerkUserId;
   const firebaseUid = req.headers["x-firebase-uid"] as string | undefined;
-  if (!firebaseUid) return null;
-  const [u] = await db
+  if (firebaseUid) {
+    const [u] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.firebaseUid, firebaseUid))
+      .limit(1);
+    if (u) return u.id;
+  }
+  // Native fallback: the Clerk session cookie isn't sent and the bearer token
+  // doesn't verify inside the WebView, so email/Clerk users (incl. the
+  // super-admin) forward their Clerk user id as an opaque x-clerk-user-id
+  // header. Same trust model as x-firebase-uid: the id is unguessable and is
+  // never exposed on any cross-user/public response (stripUser only returns the
+  // caller's own row), so it can't be used to impersonate someone else.
+  const clerkHeaderId = req.headers["x-clerk-user-id"] as string | undefined;
+  if (!clerkHeaderId) return null;
+  const [c] = await db
     .select({ id: usersTable.id })
     .from(usersTable)
-    .where(eq(usersTable.firebaseUid, firebaseUid))
+    .where(eq(usersTable.clerkId, clerkHeaderId))
     .limit(1);
-  return u?.id ?? null;
+  return c?.id ?? null;
 }
 
 /**

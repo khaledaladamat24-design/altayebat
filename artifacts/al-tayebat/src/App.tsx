@@ -36,6 +36,10 @@ setDefaultHeadersGetter((): Record<string, string> => {
   try {
     const fbUid = window.localStorage.getItem("al_tayebat_firebase_uid");
     if (fbUid) headers["x-firebase-uid"] = fbUid;
+    // Native fallback: forward the cached Clerk user id as an opaque identity
+    // header (the cookie/bearer don't work in the WebView). See authHeaders().
+    const clerkId = window.localStorage.getItem("al_tayebat_clerk_id");
+    if (clerkId) headers["x-clerk-user-id"] = clerkId;
   } catch {
     // ignore storage access errors
   }
@@ -265,7 +269,21 @@ class ErrorBoundary extends Component<
 // change, and on an interval. On the web this is effectively a no-op because
 // withClerkAuth only attaches the token in the native shell.
 function ClerkTokenSync() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
+  // Persist the Clerk user id so native requests can forward it as an opaque
+  // x-clerk-user-id identity header (getToken() returns null in the WebView, so
+  // the bearer alone can't resolve the user). Cleared on sign-out so a stale id
+  // never leaks across account switches.
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      if (isSignedIn && userId)
+        window.localStorage.setItem("al_tayebat_clerk_id", userId);
+      else window.localStorage.removeItem("al_tayebat_clerk_id");
+    } catch {
+      // ignore storage access errors
+    }
+  }, [isLoaded, isSignedIn, userId]);
   useEffect(() => {
     if (!isLoaded) return;
     let cancelled = false;

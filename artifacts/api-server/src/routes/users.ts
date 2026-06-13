@@ -9,13 +9,15 @@ const router = Router();
 type UserRow = typeof usersTable.$inferSelect;
 
 // Strip sensitive identity fields before sending a user to the client.
-// `passwordHash` must never leave the server, and `firebaseUid` must not be
-// exposed: it is trusted as a fallback identity header by the vendor/order
-// guards, so leaking it would enable impersonation.
+// `passwordHash` must never leave the server. Neither `firebaseUid` nor
+// `clerkId` may be exposed here: both are trusted as fallback identity headers
+// (x-firebase-uid / x-clerk-user-id) by the vendor/order/admin guards, so
+// leaking either on a public/enumerable endpoint would let anyone impersonate
+// that user (incl. the super-admin). They are only ever returned to the owner's
+// own row via stripUser on the authenticated auth routes.
 function publicUser(u: UserRow) {
   return {
     id: u.id,
-    clerkId: u.clerkId,
     email: u.email,
     phone: u.phone,
     name: u.name,

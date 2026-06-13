@@ -288,11 +288,19 @@ router.get("/admin/users", async (req, res) => {
       .select()
       .from(usersTable)
       .orderBy(desc(usersTable.createdAt));
+    // Never return the trusted identity headers (clerkId / firebaseUid) or the
+    // password hash to the client — even an admin client doesn't need them, and
+    // they are impersonation credentials if they ever leak.
     res.json(
-      users.map((u) => ({
-        ...u,
-        isAdmin: u.email === SUPER_ADMIN_EMAIL || u.role === "admin",
-      })),
+      users.map(({ passwordHash, clerkId, firebaseUid, ...u }) => {
+        void passwordHash;
+        void clerkId;
+        void firebaseUid;
+        return {
+          ...u,
+          isAdmin: u.email === SUPER_ADMIN_EMAIL || u.role === "admin",
+        };
+      }),
     );
   } catch (err) {
     req.log.error({ err }, "Failed to list users");

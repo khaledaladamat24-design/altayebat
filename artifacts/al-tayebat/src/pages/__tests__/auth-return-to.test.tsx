@@ -239,6 +239,9 @@ describe("Auth success paths honour the stashed return-to path", () => {
       status: "complete",
       createdSessionId: "sess_otp",
     });
+    // This account already has a password (forgot-password reset), so the
+    // post-OTP branch must honour the stashed path, not the set-password screen.
+    h.clerkUser.value = { passwordEnabled: true };
 
     const user = userEvent.setup();
     renderAuth();
@@ -256,6 +259,40 @@ describe("Auth success paths honour the stashed return-to path", () => {
       expect(h.mockSetLocation).toHaveBeenCalledWith("/checkout"),
     );
     expect(localStorage.getItem(RETURN_KEY)).toBeNull();
+  });
+
+  it("email-OTP login of a passwordless account opens the set-password screen", async () => {
+    // A passwordless account (only ever signed in via OTP, incl. the
+    // super-admin) must be routed to set a password so future logins skip OTP —
+    // it must NOT be dropped onto the stashed path yet.
+    localStorage.setItem(RETURN_KEY, "/checkout");
+    h.signInCreate.mockResolvedValue({
+      supportedFirstFactors: [
+        { strategy: "email_code", emailAddressId: "eml_1" },
+      ],
+    });
+    h.attemptFirstFactor.mockResolvedValue({
+      status: "complete",
+      createdSessionId: "sess_otp",
+    });
+    h.clerkUser.value = { passwordEnabled: false };
+
+    const user = userEvent.setup();
+    renderAuth();
+
+    await user.type(
+      screen.getByPlaceholderText(IDENTIFIER_PLACEHOLDER),
+      "a@b.com",
+    );
+    await user.click(screen.getByRole("button", { name: /نسيت كلمة المرور؟/ }));
+
+    await user.type(screen.getByPlaceholderText(OTP_PLACEHOLDER), "123456");
+    await user.click(screen.getByRole("button", { name: /^تأكيد$/ }));
+
+    // Lands on the set-password screen ("اختر كلمة المرور") and does NOT
+    // navigate to the stashed path.
+    await screen.findByText("اختر كلمة المرور");
+    expect(h.mockSetLocation).not.toHaveBeenCalledWith("/checkout");
   });
 
   it("choosing 'browse as guest' discards the stashed return path", async () => {

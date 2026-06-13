@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { openSupport, SUPPORT_PHONE } from "@/lib/support";
+import { apiUrl, authHeaders } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
 import { getErrorMessage } from "@/lib/errors";
 import { resetGuestSession, notifySessionChange } from "@/hooks/use-session";
@@ -245,12 +246,16 @@ export default function Settings() {
       const userId = localStorage.getItem("al_tayebat_user_id");
       const vendorId = localStorage.getItem("al_tayebat_vendor_id");
       if (vendorId) {
-        await fetch(`/api/vendors/${vendorId}`, { method: "DELETE" }).catch(
-          () => {},
-        );
+        await fetch(apiUrl(`/api/vendors/${vendorId}`), {
+          method: "DELETE",
+          headers: authHeaders(),
+        }).catch(() => {});
       }
       if (userId) {
-        const r = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+        const r = await fetch(apiUrl(`/api/users/${userId}`), {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
         if (!r.ok)
           throw new Error(
             tr(

@@ -27,6 +27,12 @@ export function authHeaders(
     try {
       const fbUid = window.localStorage.getItem("al_tayebat_firebase_uid");
       if (fbUid) headers["x-firebase-uid"] = fbUid;
+      // Native: the Clerk cookie is never sent and getToken() returns null in
+      // the WebView, so forward the cached Clerk user id (kept by
+      // <ClerkTokenSync/>) as an opaque identity header — same trust model as
+      // x-firebase-uid. Lets the super-admin/email user be resolved server-side.
+      const clerkId = window.localStorage.getItem("al_tayebat_clerk_id");
+      if (clerkId) headers["x-clerk-user-id"] = clerkId;
     } catch {
       // ignore storage access errors
     }

@@ -567,7 +567,15 @@ export default function Auth() {
           await upsertEmailProfile(email);
           // If this account has no Clerk password (it only ever signed in via
           // OTP), send it to the set-password screen so future logins skip OTP.
-          if (clerk.user && clerk.user.passwordEnabled === false) {
+          // `clerk.user` is hydrated reactively and is usually still null right
+          // after setActive, so poll briefly — otherwise we'd always fall to the
+          // else branch and the user (incl. the super-admin) keeps getting OTP.
+          let activeUser = clerk.user;
+          for (let i = 0; i < 15 && !activeUser; i++) {
+            await new Promise((r) => setTimeout(r, 100));
+            activeUser = clerk.user;
+          }
+          if (activeUser && activeUser.passwordEnabled === false) {
             setPassword("");
             setPassword2("");
             setMode("email-set-password");

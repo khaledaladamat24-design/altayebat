@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useListCategories, type Product } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/react";
-import { apiUrl } from "@/lib/api-url";
+import { apiUrl, authHeaders } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
 
 const SUPER_ADMIN_EMAIL = "khaledaladamat24@gmail.com";
@@ -209,8 +209,13 @@ export default function Admin() {
   // The super-admin is verified server-side via the Clerk session cookie (sent
   // automatically), so we no longer send a spoofable x-admin-email header. Other
   // admins authenticate with the admin password (x-admin-key).
+  // Merge the caller's identity headers (Clerk bearer / x-clerk-user-id /
+  // x-firebase-uid) so the super-admin is resolved server-side even when they
+  // entered the panel without typing the admin password (e.g. native, where the
+  // Clerk cookie is never sent). The x-admin-key path still works for others.
   const adminHeaders: Record<string, string> = {
     "Content-Type": "application/json",
+    ...authHeaders(),
     ...(adminKey ? { "x-admin-key": adminKey } : {}),
   };
 
@@ -234,21 +239,33 @@ export default function Admin() {
   const fetchTabData = async () => {
     setLoadingData(true);
     try {
+      // Defensive: an unauthorized/errored response is an object ({error}), not
+      // an array. Coercing to [] keeps the `.map` renders from crashing the
+      // whole admin page (the "map is not a function" bug) when a request 403s.
+      const readArray = async (res: Response): Promise<unknown[]> => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !Array.isArray(data)) {
+          if (!res.ok)
+            toast.error(tr("فشل تحميل البيانات", "Failed to load data"));
+          return [];
+        }
+        return data;
+      };
       if (tab === "orders") {
         const res = await fetch(apiUrl("/api/admin/orders"), {
           headers: adminHeaders,
         });
-        setOrders(await res.json());
+        setOrders((await readArray(res)) as AdminOrder[]);
       } else if (tab === "users") {
         const res = await fetch(apiUrl("/api/admin/users"), {
           headers: adminHeaders,
         });
-        setUsers(await res.json());
+        setUsers((await readArray(res)) as typeof users);
       } else if (tab === "vendors") {
         const res = await fetch(apiUrl("/api/admin/vendors"), {
           headers: adminHeaders,
         });
-        setVendors(await res.json());
+        setVendors((await readArray(res)) as typeof vendors);
       } else if (tab === "products-list") {
         // Grouped product dashboard needs ALL products (incl. suspended/offline
         // vendors) plus the vendor list for names + status badges.
@@ -256,8 +273,8 @@ export default function Admin() {
           fetch(apiUrl("/api/admin/products"), { headers: adminHeaders }),
           fetch(apiUrl("/api/admin/vendors"), { headers: adminHeaders }),
         ]);
-        setAdminProducts(await pRes.json());
-        setVendors(await vRes.json());
+        setAdminProducts((await readArray(pRes)) as typeof adminProducts);
+        setVendors((await readArray(vRes)) as typeof vendors);
       }
     } catch {
       toast.error(tr("فشل تحميل البيانات", "Failed to load data"));
@@ -401,7 +418,7 @@ export default function Admin() {
       !confirm(tr(`هل تريد حذف "${displayName}"؟`, `Delete "${displayName}"?`))
     )
       return;
-    const res = await fetch(`/api/admin/products/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/products/${id}`), {
       method: "DELETE",
       headers: adminHeaders,
     });
@@ -412,7 +429,7 @@ export default function Admin() {
   };
 
   const handleUpdateOrderStatus = async (id: number, status: string) => {
-    const res = await fetch(`/api/admin/orders/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/orders/${id}`), {
       method: "PATCH",
       headers: adminHeaders,
       body: JSON.stringify({ status }),
@@ -420,11 +437,11 @@ export default function Admin() {
     if (res.ok) {
       toast.success(tr("تم تحديث حالة الطلب", "Order status updated"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل تحديث الحالة", "Failed to update status"));
   };
 
   const handleConfirmPayment = async (id: number) => {
-    const res = await fetch(`/api/admin/orders/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/orders/${id}`), {
       method: "PATCH",
       headers: adminHeaders,
       body: JSON.stringify({ paymentStatus: "confirmed" }),
@@ -432,7 +449,7 @@ export default function Admin() {
     if (res.ok) {
       toast.success(tr("تم تأكيد الدفع", "Payment confirmed"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل تأكيد الدفع", "Failed to confirm payment"));
   };
 
   const handleDeleteOrder = async (id: number) => {
@@ -442,14 +459,14 @@ export default function Admin() {
       )
     )
       return;
-    const res = await fetch(`/api/admin/orders/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/orders/${id}`), {
       method: "DELETE",
       headers: adminHeaders,
     });
     if (res.ok) {
       toast.success(tr("تم حذف الطلب", "Order deleted"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل حذف الطلب", "Failed to delete order"));
   };
 
   const handleDeleteUser = async (id: number) => {
@@ -462,18 +479,18 @@ export default function Admin() {
       )
     )
       return;
-    const res = await fetch(`/api/admin/users/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/users/${id}`), {
       method: "DELETE",
       headers: adminHeaders,
     });
     if (res.ok) {
       toast.success(tr("تم حذف المستخدم", "User deleted"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل حذف المستخدم", "Failed to delete user"));
   };
 
   const handleVendorStatus = async (id: number, status: string) => {
-    const res = await fetch(`/api/admin/vendors/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/vendors/${id}`), {
       method: "PATCH",
       headers: adminHeaders,
       body: JSON.stringify({ status }),
@@ -481,7 +498,7 @@ export default function Admin() {
     if (res.ok) {
       toast.success(tr("تم تحديث حالة المورد", "Vendor status updated"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل تحديث حالة المورد", "Failed to update vendor"));
   };
 
   const handleDeleteVendor = async (id: number) => {
@@ -494,14 +511,14 @@ export default function Admin() {
       )
     )
       return;
-    const res = await fetch(`/api/admin/vendors/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/vendors/${id}`), {
       method: "DELETE",
       headers: adminHeaders,
     });
     if (res.ok) {
       toast.success(tr("تم حذف المورد", "Vendor deleted"));
       fetchTabData();
-    }
+    } else toast.error(tr("فشل حذف المورد", "Failed to delete vendor"));
   };
 
   const statusBadge = (status: string) => {
