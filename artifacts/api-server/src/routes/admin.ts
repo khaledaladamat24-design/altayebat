@@ -6,6 +6,7 @@ import {
   orderItemsTable,
   usersTable,
   vendorProfilesTable,
+  categoriesTable,
 } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
@@ -314,6 +315,60 @@ router.get("/admin/vendors", async (req, res) => {
     res.json(vendors);
   } catch (err) {
     req.log.error({ err }, "Failed to list vendors");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin product management dashboard: returns EVERY product (including those
+// from suspended/offline vendors, which the public /products endpoint hides) so
+// the super-admin can manage and group them by vendor.
+router.get("/admin/products", async (req, res) => {
+  try {
+    const rows = await db
+      .select({ p: productsTable, c: categoriesTable, v: vendorProfilesTable })
+      .from(productsTable)
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
+      )
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
+      .orderBy(desc(productsTable.id));
+    res.json(
+      rows.map((r) => ({
+        id: r.p.id,
+        name: r.p.name,
+        nameAr: r.p.nameAr,
+        description: r.p.description ?? null,
+        descriptionAr: r.p.descriptionAr ?? null,
+        price: Number(r.p.price),
+        originalPrice: r.p.originalPrice ? Number(r.p.originalPrice) : null,
+        imageUrl: r.p.imageUrl ?? null,
+        categoryId: r.p.categoryId,
+        categoryName: r.c?.name ?? null,
+        categoryNameAr: r.c?.nameAr ?? null,
+        inStock: r.p.inStock,
+        isFeatured: r.p.isFeatured,
+        isBestseller: r.p.isBestseller,
+        isKeto: r.p.isKeto,
+        isOrganic: r.p.isOrganic,
+        isOnSale: r.p.isOnSale,
+        weightOrVolume: r.p.weightOrVolume ?? null,
+        calories: r.p.calories ?? null,
+        protein: r.p.protein ? Number(r.p.protein) : null,
+        carbs: r.p.carbs ? Number(r.p.carbs) : null,
+        fats: r.p.fats ? Number(r.p.fats) : null,
+        foodType: r.p.foodType,
+        vendorId: r.p.vendorId ?? null,
+        vendorName: r.v?.storeName ?? null,
+        vendorNameAr: r.v?.storeNameAr ?? null,
+        vendorStatus: r.v?.status ?? null,
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to list admin products");
     res.status(500).json({ error: "Internal server error" });
   }
 });

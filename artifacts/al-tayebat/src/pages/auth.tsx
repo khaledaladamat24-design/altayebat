@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useSignIn, useSignUp } from "@clerk/react/legacy";
 import {
   Phone,
@@ -33,7 +33,8 @@ type Mode =
   | "signup"
   | "otp-email"
   | "otp-phone"
-  | "phone-set-password";
+  | "phone-set-password"
+  | "email-set-password";
 
 declare global {
   interface Window {
@@ -55,6 +56,7 @@ export default function Auth() {
     isLoaded: signUpLoaded,
     setActive: setActiveSignUp,
   } = useSignUp();
+  const clerk = useClerk();
   const { dir, tr } = useLanguage();
 
   const [mode, setMode] = useState<Mode>("landing");
@@ -193,6 +195,67 @@ export default function Auth() {
     setLocation(takeReturnTo() || fallback);
   };
 
+  /* ── Upsert the local DB profile for an EMAIL (Clerk) user ──
+   * Email login/verify flows previously never wrote `al_tayebat_user_id`, so
+   * profile edits (e.g. saving a username) had no row id to PATCH. Upserting by
+   * email here gives every email user a DB row + cached id, matching what the
+   * phone flows already do. Best-effort: never blocks sign-in. */
+  const upsertEmailProfile = async (emailAddr: string) => {
+    try {
+      const res = await fetch(apiUrl("/api/users/profile"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailAddr, role: "consumer" }),
+      });
+      if (!res.ok) return;
+      const profile = await res.json();
+      if (profile?.id != null)
+        localStorage.setItem("al_tayebat_user_id", String(profile.id));
+      if (profile?.name) localStorage.setItem("al_tayebat_name", profile.name);
+      syncLocationFlagFromProfile(profile);
+    } catch {
+      // Non-fatal — the account.tsx saveName fallback will retry the upsert.
+    }
+  };
+
+  /* ── After an email OTP sign-in, persist a password so future logins skip OTP ──
+   * The "forgot password" / OTP path signs the user in WITHOUT a password, so an
+   * account that never set one (e.g. the super-admin) is forced through OTP every
+   * time. Setting a Clerk password here makes `handleEmailLogin` (strategy:
+   * "password") work on the next visit — no code needed. */
+  const handleEmailSetPassword = async () => {
+    if (password.length < 6) {
+      toast.error(
+        tr(
+          "كلمة المرور 6 أحرف على الأقل",
+          "Password must be at least 6 characters",
+        ),
+      );
+      return;
+    }
+    if (password !== password2) {
+      toast.error(tr("كلمتا المرور غير متطابقتين", "Passwords don't match"));
+      return;
+    }
+    setLoading(true);
+    try {
+      if (!clerk.user) throw new Error("no-session");
+      await clerk.user.updatePassword({ newPassword: password });
+      toast.success(
+        tr(
+          "تم حفظ كلمة المرور — استخدمها في المرة القادمة 🎉",
+          "Password saved — use it next time 🎉",
+        ),
+      );
+      goAfterAuth("/");
+    } catch (err: unknown) {
+      const msg = (err as { errors?: { message: string }[] })?.errors?.[0]
+        ?.message;
+      toast.error(msg || tr("فشل حفظ كلمة المرور", "Failed to save password"));
+    }
+    setLoading(false);
+  };
+
   /* ── Email Login: password ONLY. OTP is a separate "forgot password" flow. ──
    * Re-login should NEVER trigger an OTP email — that was the user's explicit
    * requirement. If the password is wrong, we surface a clear error instead of
@@ -231,6 +294,7 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_email", email);
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
         persistRemembered("email", email);
+        await upsertEmailProfile(email);
         toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
         goAfterAuth("/");
       } else {
@@ -478,6 +542,7 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           persistRemembered("email", email);
+          await upsertEmailProfile(email);
           toast.success(
             tr("تم إنشاء حسابك بنجاح 🎉", "Your account has been created 🎉"),
           );
@@ -499,8 +564,19 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           persistRemembered("email", email);
-          toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-          goAfterAuth("/");
+          await upsertEmailProfile(email);
+          // If this account has no Clerk password (it only ever signed in via
+          // OTP), send it to the set-password screen so future logins skip OTP.
+          if (clerk.user && clerk.user.passwordEnabled === false) {
+            setPassword("");
+            setPassword2("");
+            setMode("email-set-password");
+          } else {
+            toast.success(
+              tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"),
+            );
+            goAfterAuth("/");
+          }
         }
       }
     } catch (err: unknown) {
@@ -1335,6 +1411,86 @@ export default function Auth() {
             className="w-full text-center text-sm text-muted-foreground py-2"
           >
             {tr("تخطّى — تصفح كضيف", "Skip — browse as guest")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Set Password after email OTP sign-in (so future logins skip OTP) ── */
+  if (mode === "email-set-password") {
+    return (
+      <div
+        className="min-h-screen bg-background flex flex-col max-w-md mx-auto"
+        dir={dir}
+      >
+        {headerImg}
+        <div className="flex-1 px-6 py-8 space-y-5">
+          <div>
+            <h2 className="text-2xl font-black">
+              {tr("اختر كلمة المرور", "Choose a password")}
+            </h2>
+            <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
+              {tr("سنحفظ هذه الكلمة لبريدك ", "We'll save this password for ")}
+              <span className="font-bold text-foreground" dir="ltr">
+                {email}
+              </span>
+              {tr(
+                " — في المرات القادمة تدخل بالبريد وكلمة المرور فقط بدون رمز.",
+                " — next time you'll only need the email and password, no code.",
+              )}
+            </p>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowPassword((p) => !p)}
+              className="absolute left-4 top-1/2 -translate-y-1/2"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <Eye className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={tr(
+                "كلمة المرور (6 أحرف على الأقل)",
+                "Password (at least 6 characters)",
+              )}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-13 rounded-2xl border border-border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary"
+              dir="ltr"
+            />
+          </div>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={tr("تأكيد كلمة المرور", "Confirm password")}
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              className={`w-full h-13 rounded-2xl border bg-muted/30 pr-4 pl-12 text-sm outline-none focus:border-primary ${password2 && password2 !== password ? "border-red-400" : "border-border"}`}
+              dir="ltr"
+            />
+            {password2 && password2 !== password && (
+              <p className="text-xs text-red-500 mt-1 pr-1">
+                {tr("كلمتا المرور غير متطابقتين", "Passwords don't match")}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleEmailSetPassword}
+            disabled={loading || password.length < 6 || password !== password2}
+            className="w-full h-14 bg-primary hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 text-primary-foreground text-lg font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5" />
+            )}
+            {tr("حفظ والمتابعة", "Save and continue")}
           </button>
         </div>
       </div>

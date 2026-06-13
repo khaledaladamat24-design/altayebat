@@ -18,6 +18,7 @@ import {
   Megaphone,
   Truck,
   ShoppingBag,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -803,23 +804,50 @@ export default function VendorDashboard() {
         dir={dir}
       >
         <div className="bg-card rounded-2xl border border-border p-8 w-full max-w-sm shadow-sm text-center">
-          <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Clock className="w-7 h-7 text-amber-600" />
+          <div
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 ${
+              vendor.status === "suspended" ? "bg-red-100" : "bg-amber-100"
+            }`}
+          >
+            {vendor.status === "suspended" ? (
+              <Ban className="w-7 h-7 text-red-600" />
+            ) : (
+              <Clock className="w-7 h-7 text-amber-600" />
+            )}
           </div>
           <h1 className="text-xl font-bold mb-2">{storeDisplayName}</h1>
+          <span
+            className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-3 border ${
+              vendor.status === "suspended"
+                ? "text-red-600 bg-red-50 border-red-200"
+                : "text-amber-600 bg-amber-50 border-amber-200"
+            }`}
+          >
+            {vendor.status === "suspended"
+              ? tr("معلّق", "Suspended")
+              : tr("قيد المراجعة", "Under review")}
+          </span>
           <p className="text-muted-foreground text-sm mb-2">
             {vendor.status === "pending"
               ? tr(
                   "متجرك قيد المراجعة من قبل الإدارة",
                   "Your store is under review by the admin team",
                 )
-              : tr("متجرك موقوف حالياً", "Your store is currently suspended")}
+              : tr(
+                  "تم تعليق متجرك من قبل الإدارة، ومنتجاتك مخفية حالياً عن الزبائن.",
+                  "Your store has been suspended by the admin, and your products are currently hidden from customers.",
+                )}
           </p>
           <p className="text-xs text-muted-foreground">
-            {tr(
-              "سيتم تفعيل صلاحيات إدارة المنتجات بعد الموافقة.",
-              "Product management will be enabled once approved.",
-            )}
+            {vendor.status === "suspended"
+              ? tr(
+                  "سيعود متجرك للعمل بمجرد إعادة تفعيله من قبل الإدارة.",
+                  "Your store will resume once the admin reactivates it.",
+                )
+              : tr(
+                  "سيتم تفعيل صلاحيات إدارة المنتجات بعد الموافقة.",
+                  "Product management will be enabled once approved.",
+                )}
           </p>
           <button
             onClick={() => setLocation("/account")}

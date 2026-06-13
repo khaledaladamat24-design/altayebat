@@ -168,13 +168,40 @@ export default function Account() {
       toast.error(tr("الرجاء إدخال اسم", "Please enter a name"));
       return;
     }
-    const userId = localStorage.getItem("al_tayebat_user_id");
-    if (!userId) {
-      toast.error(tr("الحساب غير معروف", "Account not recognized"));
-      return;
-    }
     setSavingName(true);
     try {
+      // Email (Clerk) users created before the email-profile upsert may have no
+      // cached `al_tayebat_user_id`. Recover it by upserting the profile by email
+      // so the username PATCH below has a row to target.
+      let userId = localStorage.getItem("al_tayebat_user_id");
+      if (!userId) {
+        const emailAddr =
+          user?.primaryEmailAddress?.emailAddress ||
+          localStorage.getItem("al_tayebat_email");
+        if (emailAddr) {
+          const up = await fetch(apiUrl("/api/users/profile"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: emailAddr,
+              name: trimmed,
+              role: "consumer",
+            }),
+          });
+          if (up.ok) {
+            const profile = await up.json();
+            if (profile?.id != null) {
+              userId = String(profile.id);
+              localStorage.setItem("al_tayebat_user_id", userId);
+            }
+          }
+        }
+      }
+      if (!userId) {
+        toast.error(tr("الحساب غير معروف", "Account not recognized"));
+        setSavingName(false);
+        return;
+      }
       const r = await fetch(apiUrl(`/api/users/${userId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

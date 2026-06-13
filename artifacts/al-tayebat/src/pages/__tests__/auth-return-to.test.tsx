@@ -22,6 +22,9 @@ const h = vi.hoisted(() => ({
   isConfigured: vi.fn(() => false),
   // Clerk session state used by the on-mount redirect effect
   isSignedIn: { value: false },
+  // Clerk user resource exposed via useClerk() — drives the email
+  // set-password branch (passwordEnabled) after an OTP sign-in.
+  clerkUser: { value: null as { passwordEnabled?: boolean } | null },
 }));
 
 vi.mock("wouter", () => ({
@@ -36,6 +39,7 @@ vi.mock("sonner", () => {
 vi.mock("@clerk/react", () => ({
   useAuth: () => ({ isSignedIn: h.isSignedIn.value, isLoaded: true }),
   useUser: () => ({ user: null }),
+  useClerk: () => ({ user: h.clerkUser.value }),
 }));
 
 vi.mock("@clerk/react/legacy", () => ({
@@ -128,6 +132,7 @@ beforeEach(() => {
   h.signInWithPhoneNumber.mockReset();
   h.isConfigured.mockReset().mockReturnValue(false);
   h.isSignedIn.value = false;
+  h.clerkUser.value = null;
   // Firebase stashes its recaptcha/confirmation on window across renders.
   delete (window as { recaptchaVerifier?: unknown }).recaptchaVerifier;
   delete (window as { confirmationResult?: unknown }).confirmationResult;

@@ -5,14 +5,18 @@ import {
   categoriesTable,
   vendorProfilesTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, ne, sql } from "drizzle-orm";
 
 // Products without a vendor (admin-uploaded) stay visible. Products linked to
-// a vendor only appear when that vendor is marked online — this lets vendors
-// pause incoming orders by flipping their "Online" switch off.
-const vendorOnlineCondition = or(
+// a vendor only appear when that vendor is marked online AND not suspended by
+// the admin — flipping "Online" off lets a vendor pause orders, while an admin
+// "suspend" hides the whole store regardless of its online switch.
+const vendorVisibleCondition = or(
   isNull(productsTable.vendorId),
-  eq(vendorProfilesTable.isOnline, true),
+  and(
+    eq(vendorProfilesTable.isOnline, true),
+    ne(vendorProfilesTable.status, "suspended"),
+  ),
 );
 
 const router = Router();
@@ -82,7 +86,7 @@ router.get("/products/featured", async (req, res) => {
         eq(productsTable.vendorId, vendorProfilesTable.id),
       )
       .where(
-        and(eq(productsTable.isFeatured, true), vendorOnlineCondition, ft),
+        and(eq(productsTable.isFeatured, true), vendorVisibleCondition, ft),
       );
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
@@ -106,7 +110,7 @@ router.get("/products/bestsellers", async (req, res) => {
         eq(productsTable.vendorId, vendorProfilesTable.id),
       )
       .where(
-        and(eq(productsTable.isBestseller, true), vendorOnlineCondition, ft),
+        and(eq(productsTable.isBestseller, true), vendorVisibleCondition, ft),
       );
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
@@ -159,7 +163,7 @@ router.get("/products", async (req, res) => {
     }
     const ft = foodTypeCondition(foodType);
     if (ft) conditions.push(ft);
-    if (vendorOnlineCondition) conditions.push(vendorOnlineCondition);
+    if (vendorVisibleCondition) conditions.push(vendorVisibleCondition);
     // Search across product name AND vendor store name so a user can find
     // "خبز كيتو" (product) or "أم علي" (restaurant) with the same input.
     if (search) {

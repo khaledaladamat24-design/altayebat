@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ChevronRight,
@@ -21,11 +21,7 @@ import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  useListCategories,
-  useListProducts,
-  type Product,
-} from "@workspace/api-client-react";
+import { useListCategories, type Product } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/react";
 import { apiUrl } from "@/lib/api-url";
@@ -83,6 +79,22 @@ interface AdminVendor {
   createdAt: string;
 }
 
+// Admin product-management row. Shaped like the generated `Product` (so the
+// edit form can consume it) plus `vendorStatus` for the grouped dashboard.
+type AdminProduct = Product & {
+  vendorId: number | null;
+  vendorName: string | null;
+  vendorNameAr: string | null;
+  vendorStatus: string | null;
+};
+
+interface VendorSale {
+  id: number;
+  total: string;
+  status: string;
+  createdAt: string;
+}
+
 export default function Admin() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
@@ -106,13 +118,32 @@ export default function Admin() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [vendors, setVendors] = useState<AdminVendor[]>([]);
+  const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
+  const [openVendorKey, setOpenVendorKey] = useState<string | null>(null);
+  const [salesDate, setSalesDate] = useState<string>("");
+  const [vendorSales, setVendorSales] = useState<VendorSale[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(
     null,
   );
 
   const { data: categories } = useListCategories();
-  const { data: products, refetch } = useListProducts({});
+
+  // Refresh the grouped product dashboard after add/edit/delete. Reuses the
+  // admin endpoints so suspended/offline vendors' products stay visible here.
+  const refreshAdminProducts = async () => {
+    try {
+      const [pRes, vRes] = await Promise.all([
+        fetch(apiUrl("/api/admin/products"), { headers: adminHeaders }),
+        fetch(apiUrl("/api/admin/vendors"), { headers: adminHeaders }),
+      ]);
+      if (pRes.ok) setAdminProducts(await pRes.json());
+      if (vRes.ok) setVendors(await vRes.json());
+    } catch {
+      /* non-fatal — the tab refetch will recover on next open */
+    }
+  };
 
   const emptyForm = {
     nameAr: "",
@@ -184,7 +215,13 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    if (authed && (tab === "orders" || tab === "users" || tab === "vendors")) {
+    if (
+      authed &&
+      (tab === "orders" ||
+        tab === "users" ||
+        tab === "vendors" ||
+        tab === "products-list")
+    ) {
       fetchTabData();
     }
     // `fetchTabData` reads `tab`/`authed` (already deps) and closes over
@@ -212,11 +249,54 @@ export default function Admin() {
           headers: adminHeaders,
         });
         setVendors(await res.json());
+      } else if (tab === "products-list") {
+        // Grouped product dashboard needs ALL products (incl. suspended/offline
+        // vendors) plus the vendor list for names + status badges.
+        const [pRes, vRes] = await Promise.all([
+          fetch(apiUrl("/api/admin/products"), { headers: adminHeaders }),
+          fetch(apiUrl("/api/admin/vendors"), { headers: adminHeaders }),
+        ]);
+        setAdminProducts(await pRes.json());
+        setVendors(await vRes.json());
       }
     } catch {
       toast.error(tr("فشل تحميل البيانات", "Failed to load data"));
     }
     setLoadingData(false);
+  };
+
+  // Fetch a vendor's orders for the sales summary panel (super-admin only).
+  // Reuses the owner-gated vendor orders route (admin headers bypass ownership).
+  // Increments on every sales request so a slow earlier response can never
+  // overwrite a newer one when the admin switches vendors/dates quickly.
+  const salesReqRef = useRef(0);
+  const loadVendorSales = async (vendorId: number, date: string) => {
+    const reqId = ++salesReqRef.current;
+    setSalesLoading(true);
+    setVendorSales([]);
+    try {
+      const qs = date ? `?date=${encodeURIComponent(date)}` : "";
+      const res = await fetch(apiUrl(`/api/vendors/${vendorId}/orders${qs}`), {
+        headers: adminHeaders,
+      });
+      const data = res.ok ? await res.json() : null;
+      if (reqId !== salesReqRef.current) return;
+      if (data) setVendorSales(data);
+    } catch {
+      if (reqId !== salesReqRef.current) return;
+      toast.error(tr("فشل تحميل المبيعات", "Failed to load sales"));
+    }
+    if (reqId === salesReqRef.current) setSalesLoading(false);
+  };
+
+  // Open/close a vendor group. Opening loads its sales for the chosen day.
+  const toggleVendorGroup = (key: string, vendorId: number | null) => {
+    if (openVendorKey === key) {
+      setOpenVendorKey(null);
+      return;
+    }
+    setOpenVendorKey(key);
+    if (vendorId != null) loadVendorSales(vendorId, salesDate);
   };
 
   const handleLogin = async () => {
@@ -295,7 +375,7 @@ export default function Admin() {
       );
       setForm(emptyForm);
       setEditingId(null);
-      refetch();
+      refreshAdminProducts();
       if (isEdit) setTab("products-list");
       setTimeout(() => setSuccess(false), 2500);
     } catch {
@@ -327,7 +407,7 @@ export default function Admin() {
     });
     if (res.ok) {
       toast.success(tr("تم الحذف", "Deleted"));
-      refetch();
+      refreshAdminProducts();
     } else toast.error(tr("فشل الحذف", "Failed to delete"));
   };
 
@@ -495,6 +575,37 @@ export default function Admin() {
     );
   }
 
+  // Group admin products under each vendor for the grouped dashboard. Vendors
+  // are listed even with zero products; null-vendor products fall into a
+  // "بدون مورد" group so nothing is hidden.
+  const productGroups: {
+    key: string;
+    vendorId: number | null;
+    name: string;
+    status: string | null;
+    products: AdminProduct[];
+  }[] = [
+    ...vendors.map((v) => ({
+      key: `v-${v.id}`,
+      vendorId: v.id,
+      name: lang === "en" ? v.storeName : v.storeNameAr || v.storeName,
+      status: v.status,
+      products: adminProducts.filter((p) => p.vendorId === v.id),
+    })),
+  ];
+  const orphanProducts = adminProducts.filter(
+    (p) => p.vendorId == null || !vendors.some((v) => v.id === p.vendorId),
+  );
+  if (orphanProducts.length > 0) {
+    productGroups.push({
+      key: "no-vendor",
+      vendorId: null,
+      name: tr("بدون مورد", "No vendor"),
+      status: null,
+      products: orphanProducts,
+    });
+  }
+
   const tabs = [
     { id: "products-list", icon: Package, label: tr("المنتجات", "Products") },
     {
@@ -571,76 +682,204 @@ export default function Admin() {
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
               {tr(
-                `${products?.length || 0} منتج في المتجر`,
-                `${products?.length || 0} products in store`,
+                `${vendors.length} مورد · ${adminProducts.length} منتج`,
+                `${vendors.length} vendors · ${adminProducts.length} products`,
               )}
             </p>
-            {products?.map((p) => {
-              const displayName = lang === "en" ? p.name || p.nameAr : p.nameAr;
-              const displayCategory =
-                lang === "en"
-                  ? p.categoryName || p.categoryNameAr
-                  : p.categoryNameAr;
+            {loadingData && (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {tr("جاري التحميل…", "Loading…")}
+              </p>
+            )}
+            {productGroups.map((group) => {
+              const isOpen = openVendorKey === group.key;
+              const salesTotal = vendorSales
+                .filter((o) => o.status !== "cancelled")
+                .reduce((sum, o) => sum + Number(o.total || 0), 0);
+              const salesCount = vendorSales.filter(
+                (o) => o.status !== "cancelled",
+              ).length;
               return (
                 <div
-                  key={p.id}
-                  className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
+                  key={group.key}
+                  className="bg-card rounded-2xl border border-border overflow-hidden"
                 >
-                  {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={displayName}
-                      className="w-14 h-14 rounded-lg object-cover shrink-0"
+                  {/* Vendor header — click to expand its products + sales */}
+                  <button
+                    onClick={() => toggleVendorGroup(group.key, group.vendorId)}
+                    className="w-full flex items-center gap-3 p-3 text-start"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Store className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-sm truncate">
+                        {group.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {tr(
+                          `${group.products.length} منتج`,
+                          `${group.products.length} products`,
+                        )}
+                      </p>
+                    </div>
+                    {group.status && statusBadge(group.status)}
+                    <ChevronRight
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${
+                        isOpen ? "rotate-90" : ""
+                      }`}
                     />
-                  ) : (
-                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Package className="w-6 h-6 text-muted-foreground" />
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-border p-3 space-y-3 bg-muted/30">
+                      {/* Sales summary by date (vendors only, not the no-vendor group) */}
+                      {group.vendorId != null && (
+                        <div className="bg-card rounded-xl border border-border p-3 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-bold flex items-center gap-1">
+                              <ShoppingBag className="w-3.5 h-3.5 text-primary" />
+                              {tr("المبيعات", "Sales")}
+                            </p>
+                            <input
+                              type="date"
+                              value={salesDate}
+                              onChange={(e) => {
+                                setSalesDate(e.target.value);
+                                if (group.vendorId != null)
+                                  loadVendorSales(
+                                    group.vendorId,
+                                    e.target.value,
+                                  );
+                              }}
+                              className="text-xs border border-border rounded-lg px-2 py-1 bg-background"
+                            />
+                          </div>
+                          {salesLoading ? (
+                            <p className="text-xs text-muted-foreground">
+                              {tr("جاري التحميل…", "Loading…")}
+                            </p>
+                          ) : (
+                            <div className="flex gap-4">
+                              <div>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {tr("عدد الطلبات", "Orders")}
+                                </p>
+                                <p className="font-black text-sm">
+                                  {salesCount}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {tr("إجمالي المبيعات", "Total sales")}
+                                </p>
+                                <p className="font-black text-sm text-primary">
+                                  {salesTotal.toFixed(2)} {tr("د.أ", "JOD")}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-[10px] text-muted-foreground">
+                            {salesDate
+                              ? tr(
+                                  "طلبات هذا اليوم",
+                                  "Orders for the selected day",
+                                )
+                              : tr(
+                                  "طلبات الوردية الحالية",
+                                  "Current shift orders",
+                                )}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Products under this vendor */}
+                      {group.products.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          {tr("لا منتجات", "No products")}
+                        </p>
+                      ) : (
+                        group.products.map((p) => {
+                          const displayName =
+                            lang === "en" ? p.name || p.nameAr : p.nameAr;
+                          const displayCategory =
+                            lang === "en"
+                              ? p.categoryName || p.categoryNameAr
+                              : p.categoryNameAr;
+                          return (
+                            <div
+                              key={p.id}
+                              className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
+                            >
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={displayName}
+                                  className="w-14 h-14 rounded-lg object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                  <Package className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-sm truncate">
+                                  {displayName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {displayCategory} · {p.price}{" "}
+                                  {tr("د.أ", "JOD")}
+                                </p>
+                                <div className="flex gap-1 mt-1 flex-wrap">
+                                  {p.isKeto && (
+                                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                                      {tr("كيتو", "Keto")}
+                                    </span>
+                                  )}
+                                  {p.isOrganic && (
+                                    <span className="text-[10px] bg-rose/10 text-rose px-1.5 py-0.5 rounded-full">
+                                      {tr("عضوي", "Organic")}
+                                    </span>
+                                  )}
+                                  {!p.inStock && (
+                                    <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
+                                      {tr("نفد", "Out of stock")}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => startEditProduct(p)}
+                                  className="text-primary p-2 hover:bg-primary/10 rounded-lg"
+                                  title={tr("تعديل", "Edit")}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteProduct(p.id, p.nameAr, p.name)
+                                  }
+                                  className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
+                                  title={tr("حذف", "Delete")}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate">{displayName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {displayCategory} · {p.price} {tr("د.أ", "JOD")}
-                    </p>
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {p.isKeto && (
-                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-                          {tr("كيتو", "Keto")}
-                        </span>
-                      )}
-                      {p.isOrganic && (
-                        <span className="text-[10px] bg-rose/10 text-rose px-1.5 py-0.5 rounded-full">
-                          {tr("عضوي", "Organic")}
-                        </span>
-                      )}
-                      {!p.inStock && (
-                        <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">
-                          {tr("نفد", "Out of stock")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => startEditProduct(p)}
-                      className="text-primary p-2 hover:bg-primary/10 rounded-lg"
-                      title={tr("تعديل", "Edit")}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDeleteProduct(p.id, p.nameAr, p.name)
-                      }
-                      className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
-                      title={tr("حذف", "Delete")}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
               );
             })}
+            {!loadingData && productGroups.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {tr("لا يوجد موردون بعد", "No vendors yet")}
+              </p>
+            )}
           </div>
         )}
 
