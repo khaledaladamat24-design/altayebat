@@ -26,6 +26,7 @@ but the full sales history must survive. Cancelling leftovers (the old behavior)
 record and risked losing real orders.
 
 **How to apply:**
+
 - Live board = `GET /api/vendors/:id/orders` filtered to `createdAt >= shiftResetAt` (current
   shift only). This is what hides finished-shift orders.
 - History = `GET /api/vendors/:id/orders?date=YYYY-MM-DD` returns ALL statuses for that **Amman
