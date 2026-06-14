@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
 
 const router = Router();
@@ -80,25 +80,33 @@ router.post("/users/profile", async (req, res) => {
     const resolvedRole =
       email === SUPER_ADMIN_EMAIL ? "admin" : role || "consumer";
 
-    let existing = null;
+    // Resolve an existing row by ANY supplied identifier (not exclusively): an
+    // email account created before clerkId existed must still be found by email
+    // so we can backfill its clerkId, instead of inserting a duplicate row.
+    let existing: UserRow | null = null;
     if (clerkId) {
-      [existing] = await db
+      const [row] = await db
         .select()
         .from(usersTable)
         .where(eq(usersTable.clerkId, clerkId))
         .limit(1);
-    } else if (firebaseUid) {
-      [existing] = await db
+      existing = row ?? null;
+    }
+    if (!existing && firebaseUid) {
+      const [row] = await db
         .select()
         .from(usersTable)
         .where(eq(usersTable.firebaseUid, firebaseUid))
         .limit(1);
-    } else if (email) {
-      [existing] = await db
+      existing = row ?? null;
+    }
+    if (!existing && email) {
+      const [row] = await db
         .select()
         .from(usersTable)
         .where(eq(usersTable.email, email))
         .limit(1);
+      existing = row ?? null;
     }
 
     if (existing) {
@@ -112,6 +120,21 @@ router.post("/users/profile", async (req, res) => {
         })
         .where(eq(usersTable.id, existing.id))
         .returning();
+      // Backfill clerkId ONLY while the row still has none — never overwrite an
+      // existing one. clerkId is trusted as an opaque identity header
+      // (x-clerk-user-id) by the vendor/order/admin guards, so letting this
+      // public endpoint reassign a populated clerkId would allow account
+      // takeover. The `isNull` guard in the WHERE makes "first write wins"
+      // atomic, so two concurrent claims can't both succeed (publicUser strips
+      // clerkId anyway, so the stale `updated` value here is never returned).
+      if (clerkId && !existing.clerkId) {
+        await db
+          .update(usersTable)
+          .set({ clerkId })
+          .where(
+            and(eq(usersTable.id, existing.id), isNull(usersTable.clerkId)),
+          );
+      }
       return res.json(publicUser(updated));
     }
 

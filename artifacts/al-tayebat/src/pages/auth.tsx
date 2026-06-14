@@ -200,12 +200,26 @@ export default function Auth() {
    * profile edits (e.g. saving a username) had no row id to PATCH. Upserting by
    * email here gives every email user a DB row + cached id, matching what the
    * phone flows already do. Best-effort: never blocks sign-in. */
-  const upsertEmailProfile = async (emailAddr: string) => {
+  const upsertEmailProfile = async (
+    emailAddr: string,
+    clerkUserId?: string,
+  ) => {
     try {
+      // The vendor/admin guards resolve identity by matching the DB row's
+      // `clerkId` (via the Clerk session OR the forwarded x-clerk-user-id
+      // header). If we never store clerkId, the row stays null and every
+      // owner/admin call 403s ("Not authorized") — including the super-admin's
+      // location save. Callers pass the hydrated Clerk user id when they have
+      // it (the OTP-verify branch already polls for it) so the server can
+      // backfill clerkId on the row.
       const res = await fetch(apiUrl("/api/users/profile"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailAddr, role: "consumer" }),
+        body: JSON.stringify({
+          email: emailAddr,
+          role: "consumer",
+          ...(clerkUserId ? { clerkId: clerkUserId } : {}),
+        }),
       });
       if (!res.ok) return;
       const profile = await res.json();
@@ -294,7 +308,7 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_email", email);
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
         persistRemembered("email", email);
-        await upsertEmailProfile(email);
+        await upsertEmailProfile(email, clerk.user?.id);
         toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
         goAfterAuth("/");
       } else {
@@ -542,7 +556,7 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           persistRemembered("email", email);
-          await upsertEmailProfile(email);
+          await upsertEmailProfile(email, clerk.user?.id);
           toast.success(
             tr("تم إنشاء حسابك بنجاح 🎉", "Your account has been created 🎉"),
           );
@@ -564,7 +578,6 @@ export default function Auth() {
           localStorage.setItem("al_tayebat_email", email);
           localStorage.setItem("al_tayebat_onboarded_v2", "1");
           persistRemembered("email", email);
-          await upsertEmailProfile(email);
           // If this account has no Clerk password (it only ever signed in via
           // OTP), send it to the set-password screen so future logins skip OTP.
           // `clerk.user` is hydrated reactively and is usually still null right
@@ -575,6 +588,9 @@ export default function Auth() {
             await new Promise((r) => setTimeout(r, 100));
             activeUser = clerk.user;
           }
+          // Pass the now-hydrated Clerk id so the server backfills clerkId on
+          // the row (identity resolution depends on it — see upsertEmailProfile).
+          await upsertEmailProfile(email, activeUser?.id);
           if (activeUser && activeUser.passwordEnabled === false) {
             setPassword("");
             setPassword2("");
