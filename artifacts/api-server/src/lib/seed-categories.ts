@@ -112,6 +112,14 @@ const CATEGORIES = [
     foodType: "regular",
     sortOrder: 5,
   },
+  {
+    slug: "drinks-juices",
+    nameAr: "عصائر ومشروبات",
+    name: "Juices & Drinks",
+    icon: "🧃",
+    foodType: "regular",
+    sortOrder: 6,
+  },
   // Grocery (بقالة) zone — "عروض" is the virtual Offers pill, not a DB category
   {
     slug: "grocery-supplies",

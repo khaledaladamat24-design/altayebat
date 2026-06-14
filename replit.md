@@ -76,7 +76,7 @@
 ## Categories + seed
 
 - Categories carry `name` (EN) + `nameAr` (AR); UI renders EN when `lang==="en"`, else AR.
-- Canonical list — Healthy: keto, vegetables, pantry, drinks, dairy, nuts, sweets, meat. Regular: feasts, fastfood, pastries, sweets-cakes, appetizers.
+- Canonical list — Healthy: keto, vegetables, pantry, drinks, dairy, nuts, sweets, meat. Regular: feasts, fastfood, pastries, sweets-cakes, appetizers, drinks-juices.
 - **Startup seed** (`seed-categories.ts`, run after `app.listen`) idempotently inserts-if-missing (by slug). **Why:** Replit publish copies schema but NOT rows, so prod was missing the regular categories. Failures are logged, never block startup. Use the manual `seed:categories` script to force-correct drifted metadata.
 
 ## Vendor dashboard (live orders)
