@@ -25,6 +25,7 @@ the timing-sensitive auth-return-to tests (and the test's mock `clerk.user` has
 no `id`, so an id-keyed poll never resolves).
 
 **How to apply (server, public `POST /api/users/profile`):**
+
 - Look up the existing row by clerkId → firebaseUid → email **sequentially**
   (not `else if`), so a pre-clerkId email row is found by email and updated, not
   duplicated.
