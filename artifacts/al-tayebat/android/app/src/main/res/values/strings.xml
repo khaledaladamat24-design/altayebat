@@ -4,4 +4,6 @@
     <string name="title_activity_main">الطيبات</string>
     <string name="package_name">com.altayebat.app</string>
     <string name="custom_url_scheme">com.altayebat.app</string>
+    <string name="facebook_app_id">4429119010658334</string>
+    <string name="facebook_client_token">6b2246d93b2f73e3c4c668c8c5807768</string>
 </resources>
