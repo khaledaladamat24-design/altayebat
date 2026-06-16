@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import logoImg from '@assets/1779750955962_1781639454518.png';
 
 export function Scene5Outro() {
   const [phase, setPhase] = useState(0);
@@ -30,11 +31,11 @@ export function Scene5Outro() {
       <div className="relative z-10 text-center px-6 flex flex-col items-center" dir="rtl">
         
         <motion.div
-          className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-8"
+          className="w-32 h-32 bg-white rounded-3xl overflow-hidden shadow-2xl mb-8"
           initial={{ y: -50, opacity: 0, rotate: -15 }}
           animate={phase >= 1 ? { y: 0, opacity: 1, rotate: 0 } : { y: -50, opacity: 0, rotate: -15 }}
           transition={{ type: 'spring', damping: 15, stiffness: 200 }}>
-          <span className="text-primary font-black text-4xl">ط</span>
+          <img src={logoImg} alt="الطيبات" className="w-full h-full object-contain p-1" />
         </motion.div>
 
         <motion.h1 

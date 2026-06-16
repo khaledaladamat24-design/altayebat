@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneMockup } from '../PhoneMockup';
 import categoriesImg from '@assets/app-screens/categories.jpg';
-import offersImg from '@assets/app-screens/offers.jpg';
-import productImg from '@assets/app-screens/product.jpg';
+import offersImg from '@assets/app-screens/offers-filled.jpg';
+import productImg from '@assets/app-screens/product-filled.jpg';
 import { useEffect, useState } from 'react';
 
 export function Scene3Features() {
@@ -88,7 +88,7 @@ export function Scene3Features() {
               <FeatureCard key="f2" title="عروض يومية وخصومات" align="left" y="0vh" />
             )}
             {phase >= 3 && (
-              <FeatureCard key="f3" title="بدون عمولة إضافية" align="right" y="20vh" />
+              <FeatureCard key="f3" title="مجاني للمطاعم بدون عمولات أو تعقيدات" align="right" y="20vh" />
             )}
           </AnimatePresence>
         </div>
@@ -106,7 +106,7 @@ function FeatureCard({ title, align, y }: { title: string, align: 'left'|'right'
       animate={{ opacity: 1, scale: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.8, x: align === 'right' ? 50 : -50 }}
       transition={{ type: 'spring', damping: 15 }}>
-      <p className="text-primary font-bold text-lg m-0 whitespace-nowrap">{title}</p>
+      <p className="text-primary font-bold text-lg m-0 text-center max-w-[44vw] leading-snug">{title}</p>
     </motion.div>
   );
 }

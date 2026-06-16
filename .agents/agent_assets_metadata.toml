@@ -30,6 +30,18 @@ uri = "file://artifacts/al-tayebat/public/images/drinks.png"
 type = "image"
 title = "healthy drinks category"
 
+[[generated]]
+id = "WmY00Dmhgex9hOGWsypZ9"
+uri = "file://attached_assets/food-src/honey.png"
+type = "image"
+title = "honey jar product"
+
+[[generated]]
+id = "Cji_XDICDl4NXf_Gg_NSr"
+uri = "file://attached_assets/food-src/keto.png"
+type = "image"
+title = "keto meal bowl"
+
 [[outputs]]
 id = "a03_K246Ovs9zmF0ZBe4X"
 uri = "file://.local/keystore/al-tayebat-keystore-bundle.tar.gz"

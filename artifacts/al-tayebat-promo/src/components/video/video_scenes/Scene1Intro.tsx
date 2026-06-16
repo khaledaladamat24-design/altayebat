@@ -42,7 +42,7 @@ export function Scene1Intro() {
           animate={phase >= 2 ? { y: 0, opacity: 1, scale: 1 } : { y: 20, opacity: 0, scale: 0.9 }}
           transition={{ type: 'spring', damping: 15 }}>
           <p className="text-[5vw] font-bold m-0 leading-none">
-            أكل صحي، كيتو، ومؤونة بلدية
+            أكل صحي، كيتو، متنوع، وبقالة
           </p>
         </motion.div>
       </div>
