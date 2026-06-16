@@ -95,3 +95,9 @@ id = "X-2Drzk6iQkckVvhjruYS"
 uri = "file://artifacts/al-tayebat/android/app/src/main/res/raw/order_alert.mp3"
 type = "audio"
 title = "صوت تنبيه وصول الطلب (order_alert.mp3)"
+
+[[outputs]]
+id = "l8uVUmDHtbsfOw9_lHME9"
+uri = "file://artifacts/al-tayebat-promo/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music"

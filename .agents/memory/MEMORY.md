@@ -18,5 +18,6 @@
 - [Delivery confirmation policy + shift reset](delivery-confirmation-policy.md) — customer self-confirms receipt (sessionId) to reach delivered; close-shift is NON-destructive (stamps shiftResetAt, hides live board, keeps all orders; history via ?date= Amman day).
 - [Checkpoint commits bypass husky format hook](checkpoint-bypasses-husky-format.md) — CI format:check ❌ on commits that pass locally; Replit checkpoint skips pre-commit prettier. Run format:check after edits; not a flake.
 - [FCM disabled by corrupted secret](fcm-secret-corruption.md) — vendor bg push dead = FIREBASE_SERVICE_ACCOUNT not valid JSON (pasted from online viewer); bash/sandbox env is stale, verify via /proc/<pid>/environ.
+- [Video artifact needs DOM lib](video-artifact-dom-lib.md) — video-js scaffold tsconfig omits DOM lib; breaks root typecheck (window/document + misleading framer-motion "not assignable to undefined"). Add lib DOM/DOM.Iterable.
 - [Orval path+query param clash](orval-path-query-param-clash.md) — an op with BOTH a path AND query param breaks api-zod barrel (TS2308 on `<Op>Params`); fix = zod generate.param:false.
 - [clerkId persistence](clerk-id-persistence.md) — email/Clerk rows MUST store clerkId or identity guards 403; public profile upsert backfills it atomically (isNull-guarded), never overwrites; reuse the OTP poll, don't add a blocking one.
