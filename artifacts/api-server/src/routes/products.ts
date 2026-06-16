@@ -17,6 +17,7 @@ import {
   isNull,
   ne,
   sql,
+  desc,
   inArray,
   count,
   avg,
@@ -88,6 +89,27 @@ function foodTypeCondition(raw: unknown) {
   return undefined;
 }
 
+// Smart "fair" product ranking used by every product listing. A Bayesian-
+// weighted rating so a product must collect enough ratings before it can top
+// the list — one lone 5-star can't outrank a well-reviewed 4.7. Rated products
+// always sort ahead of unrated ones, so brand-new items still appear (lower
+// down) instead of vanishing forever. Tiebreak: more ratings, then the featured
+// flag, then newest. Applied to category/zone lists, offers, search, and the
+// bestsellers + featured rails so ordering is consistent everywhere.
+const RATING_PRIOR_COUNT = 5; // m: how many prior votes the score is pulled toward
+const RATING_PRIOR_MEAN = 4.0; // C: the mean those prior votes assume
+const ratingRankOrder = [
+  // Rated products first (boolean true sorts ahead under DESC).
+  sql`(${productsTable.reviewCount} > 0) desc`,
+  // Bayesian weighted score: (n*R + m*C) / (n + m), highest first. The prior
+  // constants are cast to numeric so Postgres can resolve the operator (two
+  // untyped bound params would be ambiguous: "operator is not unique").
+  sql`((${productsTable.reviewCount}::numeric * coalesce(${productsTable.rating}, 0) + ${RATING_PRIOR_COUNT}::numeric * ${RATING_PRIOR_MEAN}::numeric) / (${productsTable.reviewCount} + ${RATING_PRIOR_COUNT}::numeric)) desc`,
+  desc(productsTable.reviewCount),
+  desc(productsTable.isFeatured),
+  desc(productsTable.createdAt),
+];
+
 router.get("/products/featured", async (req, res) => {
   try {
     const ft = foodTypeCondition(req.query.foodType);
@@ -104,7 +126,8 @@ router.get("/products/featured", async (req, res) => {
       )
       .where(
         and(eq(productsTable.isFeatured, true), vendorVisibleCondition, ft),
-      );
+      )
+      .orderBy(...ratingRankOrder);
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list featured products");
@@ -128,7 +151,8 @@ router.get("/products/bestsellers", async (req, res) => {
       )
       .where(
         and(eq(productsTable.isBestseller, true), vendorVisibleCondition, ft),
-      );
+      )
+      .orderBy(...ratingRankOrder);
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
@@ -380,7 +404,8 @@ router.get("/products", async (req, res) => {
         vendorProfilesTable,
         eq(productsTable.vendorId, vendorProfilesTable.id),
       )
-      .where(conditions.length ? and(...conditions) : undefined);
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(...ratingRankOrder);
 
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
