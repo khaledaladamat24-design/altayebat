@@ -31,18 +31,30 @@ import { StarRating } from "@/components/star-rating";
 // Per-item star rating shown on a delivered order. The server only lets a
 // customer who actually received this product rate it, so the widget hides
 // itself when the caller is not eligible (canRate === false).
-function RateOrderItem({ productId }: { productId: number }) {
+function RateOrderItem({
+  productId,
+  sessionId,
+}: {
+  productId: number;
+  sessionId: string;
+}) {
   const { tr } = useLanguage();
   const queryClient = useQueryClient();
-  const { data } = useGetMyProductRating(productId, {
-    query: { queryKey: getGetMyProductRatingQueryKey(productId) },
-  });
+  const { data } = useGetMyProductRating(
+    productId,
+    { sessionId },
+    {
+      query: {
+        queryKey: getGetMyProductRatingQueryKey(productId, { sessionId }),
+      },
+    },
+  );
   const { mutate, isPending } = useRateProduct({
     mutation: {
       onSuccess: () => {
         toast.success(tr("شكراً لتقييمك!", "Thanks for your rating!"));
         queryClient.invalidateQueries({
-          queryKey: getGetMyProductRatingQueryKey(productId),
+          queryKey: getGetMyProductRatingQueryKey(productId, { sessionId }),
         });
         queryClient.invalidateQueries({
           queryKey: getGetProductQueryKey(productId),
@@ -64,7 +76,9 @@ function RateOrderItem({ productId }: { productId: number }) {
         value={data.myStars ?? 0}
         disabled={isPending}
         size="md"
-        onRate={(stars) => mutate({ id: productId, data: { stars } })}
+        onRate={(stars) =>
+          mutate({ id: productId, data: { stars, sessionId } })
+        }
       />
     </div>
   );
@@ -301,7 +315,10 @@ export default function OrderDetail() {
                   </span>
                 </div>
                 {order.status === "delivered" && (
-                  <RateOrderItem productId={item.productId} />
+                  <RateOrderItem
+                    productId={item.productId}
+                    sessionId={sessionId}
+                  />
                 )}
               </div>
             ))}

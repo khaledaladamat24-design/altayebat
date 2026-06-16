@@ -22,7 +22,7 @@ import {
   avg,
 } from "drizzle-orm";
 import { getActingDbUserId } from "../lib/vendor-auth";
-import { phoneVariants } from "../lib/phone";
+import { phoneVariants, normalizePhone } from "../lib/phone";
 
 // Products without a vendor (admin-uploaded) stay visible. Products linked to
 // a vendor only appear when that vendor is marked online AND not suspended by
@@ -171,29 +171,80 @@ async function hasDeliveredOrder(
   return !!row;
 }
 
+// Resolve the registered user a guest session may rate as. Customers browse and
+// order as guests (sessionId in localStorage), so eligibility can't rely on a
+// login. The checkout gate guarantees every order's customerPhone maps to a
+// users row, so we find a delivered order for this session containing the
+// product and resolve its owning user (order.userId, else by canonical phone).
+async function deliveredOrderUserIdBySession(
+  sessionId: string,
+  productId: number,
+): Promise<number | null> {
+  const [row] = await db
+    .select({
+      userId: ordersTable.userId,
+      phone: ordersTable.customerPhone,
+    })
+    .from(ordersTable)
+    .innerJoin(orderItemsTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .where(
+      and(
+        eq(ordersTable.status, "delivered"),
+        eq(orderItemsTable.productId, productId),
+        eq(ordersTable.sessionId, sessionId),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  if (row.userId) return row.userId;
+  const canonical = normalizePhone(row.phone);
+  if (!canonical) return null;
+  const [u] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(inArray(usersTable.phone, phoneVariants(canonical)))
+    .limit(1);
+  return u?.id ?? null;
+}
+
+// The registered user the caller is allowed to rate as for this product, or
+// null. Prefers an authenticated identity, then falls back to the guest session.
+async function resolveRaterUserId(
+  req: Parameters<typeof getActingDbUserId>[0],
+  productId: number,
+  sessionId: string | undefined,
+): Promise<number | null> {
+  const authUserId = await getActingDbUserId(req);
+  if (authUserId && (await hasDeliveredOrder(authUserId, productId))) {
+    return authUserId;
+  }
+  if (sessionId) {
+    const sid = await deliveredOrderUserIdBySession(sessionId, productId);
+    if (sid) return sid;
+  }
+  return null;
+}
+
 // Whether the caller may rate this product, plus their current rating (if any).
 router.get("/products/:id/rating/me", async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
     if (isNaN(productId)) return res.status(400).json({ error: "Invalid id" });
-    const userId = await getActingDbUserId(req);
+    const sessionId =
+      typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;
+    const userId = await resolveRaterUserId(req, productId, sessionId);
     if (!userId) return res.json({ canRate: false, myStars: null });
-    const eligible = await hasDeliveredOrder(userId, productId);
-    let myStars: number | null = null;
-    if (eligible) {
-      const [r] = await db
-        .select({ stars: productRatingsTable.stars })
-        .from(productRatingsTable)
-        .where(
-          and(
-            eq(productRatingsTable.productId, productId),
-            eq(productRatingsTable.userId, userId),
-          ),
-        )
-        .limit(1);
-      myStars = r?.stars ?? null;
-    }
-    return res.json({ canRate: eligible, myStars });
+    const [r] = await db
+      .select({ stars: productRatingsTable.stars })
+      .from(productRatingsTable)
+      .where(
+        and(
+          eq(productRatingsTable.productId, productId),
+          eq(productRatingsTable.userId, userId),
+        ),
+      )
+      .limit(1);
+    return res.json({ canRate: true, myStars: r?.stars ?? null });
   } catch (err) {
     req.log.error({ err }, "Failed to get my product rating");
     return res.status(500).json({ error: "Internal server error" });
@@ -214,14 +265,10 @@ router.post("/products/:id/rating", async (req, res) => {
         code: "INVALID_STARS",
       });
     }
-    const userId = await getActingDbUserId(req);
+    const sessionId =
+      typeof req.body?.sessionId === "string" ? req.body.sessionId : undefined;
+    const userId = await resolveRaterUserId(req, productId, sessionId);
     if (!userId) {
-      return res.status(401).json({
-        error: "يجب تسجيل الدخول لتقييم المنتج",
-        code: "UNAUTHORIZED",
-      });
-    }
-    if (!(await hasDeliveredOrder(userId, productId))) {
       return res.status(403).json({
         error: "يمكنك تقييم المنتج فقط بعد استلام طلب يحتوي عليه",
         code: "NOT_ELIGIBLE",

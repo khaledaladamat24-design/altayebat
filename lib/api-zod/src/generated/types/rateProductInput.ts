@@ -12,4 +12,7 @@ export interface RateProductInput {
      * @maximum 5
      */
   stars: number;
+  /** Guest session id, used to verify the caller received an order containing this product when they are not logged in.
+   */
+  sessionId?: string;
 }

@@ -94,6 +94,9 @@ export interface RateProductInput {
      * @maximum 5
      */
   stars: number;
+  /** Guest session id, used to verify the caller received an order containing this product when they are not logged in.
+   */
+  sessionId?: string;
 }
 
 export interface ProductRatingResult {
@@ -501,6 +504,14 @@ export const ListBestsellersFoodType = {
   regular: 'regular',
   grocery: 'grocery',
 } as const;
+
+export type GetMyProductRatingParams = {
+/**
+ * Guest session id. Lets a guest who placed (and received) the order rate it without being logged in, matching the rest of the order flow.
+
+ */
+sessionId?: string;
+};
 
 export type GetCartParams = {
 sessionId?: string;

@@ -24,6 +24,7 @@ export * from './deliveryProviderInputCredentials';
 export * from './deliveryProviderInputSettings';
 export * from './deliveryProviderSettings';
 export * from './getCartParams';
+export * from './getMyProductRatingParams';
 export * from './healthStatus';
 export * from './listBestsellersFoodType';
 export * from './listBestsellersParams';

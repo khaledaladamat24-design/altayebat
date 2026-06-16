@@ -40,10 +40,6 @@ export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem)
 /**
  * @summary Get a category by ID
  */
-export const GetCategoryParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const GetCategoryResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -108,10 +104,6 @@ export const ListProductsResponse = zod.array(ListProductsResponseItem)
 /**
  * @summary Get product by ID
  */
-export const GetProductParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const GetProductResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -228,20 +220,17 @@ export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 
 
 /**
- * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it.
+ * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it — either an authenticated user or a guest passing their order's sessionId.
 
  * @summary Rate a product (1-5 stars)
  */
-export const RateProductParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const rateProductBodyStarsMax = 5;
 
 
 
 export const RateProductBody = zod.object({
-  "stars": zod.number().min(1).max(rateProductBodyStarsMax)
+  "stars": zod.number().min(1).max(rateProductBodyStarsMax),
+  "sessionId": zod.string().optional().describe('Guest session id, used to verify the caller received an order containing this product when they are not logged in.\n')
 })
 
 export const RateProductResponse = zod.object({
@@ -254,8 +243,8 @@ export const RateProductResponse = zod.object({
 /**
  * @summary Whether the caller may rate this product and their current rating
  */
-export const GetMyProductRatingParams = zod.object({
-  "id": zod.coerce.number()
+export const GetMyProductRatingQueryParams = zod.object({
+  "sessionId": zod.coerce.string().optional().describe('Guest session id. Lets a guest who placed (and received) the order rate it without being logged in, matching the rest of the order flow.\n')
 })
 
 export const GetMyProductRatingResponse = zod.object({
@@ -348,10 +337,6 @@ export const ClearCartResponse = zod.object({
 /**
  * @summary Update quantity of a cart item
  */
-export const UpdateCartItemParams = zod.object({
-  "itemId": zod.coerce.number()
-})
-
 export const UpdateCartItemBody = zod.object({
   "quantity": zod.number()
 })
@@ -378,10 +363,6 @@ export const UpdateCartItemResponse = zod.object({
 /**
  * @summary Remove an item from cart
  */
-export const RemoveFromCartParams = zod.object({
-  "itemId": zod.coerce.number()
-})
-
 export const RemoveFromCartResponse = zod.object({
   "sessionId": zod.string(),
   "items": zod.array(zod.object({
@@ -455,10 +436,6 @@ export const CreateOrderBody = zod.object({
 /**
  * @summary Get order by ID
  */
-export const GetOrderParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const GetOrderResponse = zod.object({
   "id": zod.number(),
   "sessionId": zod.string().nullish(),
@@ -491,10 +468,6 @@ export const GetOrderResponse = zod.object({
  * Admin only. Idempotent: if a tracking number already exists, returns it with `alreadyShipped: true`. Otherwise creates a fresh shipment through the provider's delivery adapter.
  * @summary Create a shipment for an order via the chosen (or default) provider
  */
-export const CreateOrderShipmentParams = zod.object({
-  "orderId": zod.coerce.number()
-})
-
 export const CreateOrderShipmentBody = zod.object({
   "providerId": zod.union([zod.number(),zod.string()]).nullish()
 })
@@ -511,10 +484,6 @@ export const CreateOrderShipmentResponse = zod.object({
  * Admin only. Calls the provider's `cancelShipment` adapter method when implemented, then clears the order's delivery tracking columns and resets the order status. When the adapter does not implement `cancelShipment`, the shipment is voided locally only (`notImplemented: true`).
  * @summary Cancel/void an existing shipment for an order
  */
-export const CancelOrderShipmentParams = zod.object({
-  "orderId": zod.coerce.number()
-})
-
 export const CancelOrderShipmentResponse = zod.object({
   "cancelled": zod.boolean(),
   "status": zod.string().nullish(),
@@ -527,10 +496,6 @@ export const CancelOrderShipmentResponse = zod.object({
  * Returns shipment tracking details for an order. `trackingNumber` is null until the order has been shipped via a delivery provider.
  * @summary Get public shipment tracking info for an order
  */
-export const GetOrderTrackingParams = zod.object({
-  "orderId": zod.coerce.number()
-})
-
 export const GetOrderTrackingResponse = zod.object({
   "trackingNumber": zod.string().nullable(),
   "awbUrl": zod.string().nullish(),
@@ -603,10 +568,6 @@ export const CreateDeliveryProviderBody = zod.object({
  * Admin only. Returns the updated provider in its public shape (credentials stripped).
  * @summary Update a delivery provider
  */
-export const UpdateDeliveryProviderParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const UpdateDeliveryProviderBody = zod.object({
   "code": zod.string(),
   "name": zod.string(),
@@ -678,10 +639,6 @@ export const GetStoreSummaryResponse = zod.object({
 /**
  * @summary Get a vendor's public storefront profile
  */
-export const GetVendorParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const GetVendorResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
@@ -708,10 +665,6 @@ export const GetVendorResponse = zod.object({
 /**
  * @summary Update a vendor's editable profile fields (owner/admin only)
  */
-export const UpdateVendorParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const UpdateVendorBody = zod.object({
   "storeName": zod.string().optional(),
   "storeNameAr": zod.string().nullish(),
@@ -756,10 +709,6 @@ export const UpdateVendorResponse = zod.object({
 /**
  * @summary List a vendor's promotional ads (image-only, max 10)
  */
-export const ListVendorAdsParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const ListVendorAdsResponseItem = zod.object({
   "id": zod.number(),
   "vendorId": zod.number(),
@@ -776,10 +725,6 @@ export const ListVendorAdsResponse = zod.array(ListVendorAdsResponseItem)
 /**
  * @summary Add a promotional ad (owner/admin only; image-only, capped at 10)
  */
-export const CreateVendorAdParams = zod.object({
-  "id": zod.coerce.number()
-})
-
 export const CreateVendorAdBody = zod.object({
   "imageUrl": zod.string(),
   "title": zod.string().nullish(),
@@ -792,11 +737,6 @@ export const CreateVendorAdBody = zod.object({
 /**
  * @summary Delete a vendor ad (owner/admin only)
  */
-export const DeleteVendorAdParams = zod.object({
-  "id": zod.coerce.number(),
-  "adId": zod.coerce.number()
-})
-
 export const DeleteVendorAdResponse = zod.object({
   "success": zod.boolean()
 })

@@ -31,6 +31,7 @@ import type {
   DeliveryProvider,
   DeliveryProviderInput,
   GetCartParams,
+  GetMyProductRatingParams,
   HealthStatus,
   ListBestsellersParams,
   ListCategoriesParams,
@@ -642,7 +643,7 @@ export const getRateProductUrl = (id: number,) => {
 }
 
 /**
- * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it.
+ * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it — either an authenticated user or a guest passing their order's sessionId.
 
  * @summary Rate a product (1-5 stars)
  */
@@ -707,20 +708,29 @@ export const useRateProduct = <TError = ErrorType<void>,
       return useMutation(getRateProductMutationOptions(options));
     }
 
-export const getGetMyProductRatingUrl = (id: number,) => {
+export const getGetMyProductRatingUrl = (id: number,
+    params?: GetMyProductRatingParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/products/${id}/rating/me`
+  return stringifiedParams.length > 0 ? `/api/products/${id}/rating/me?${stringifiedParams}` : `/api/products/${id}/rating/me`
 }
 
 /**
  * @summary Whether the caller may rate this product and their current rating
  */
-export const getMyProductRating = async (id: number, options?: RequestInit): Promise<MyProductRating> => {
+export const getMyProductRating = async (id: number,
+    params?: GetMyProductRatingParams, options?: RequestInit): Promise<MyProductRating> => {
 
-  return customFetch<MyProductRating>(getGetMyProductRatingUrl(id),
+  return customFetch<MyProductRating>(getGetMyProductRatingUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -733,23 +743,25 @@ export const getMyProductRating = async (id: number, options?: RequestInit): Pro
 
 
 
-export const getGetMyProductRatingQueryKey = (id: number,) => {
+export const getGetMyProductRatingQueryKey = (id: number,
+    params?: GetMyProductRatingParams,) => {
     return [
-    `/api/products/${id}/rating/me`
+    `/api/products/${id}/rating/me`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetMyProductRatingQueryOptions = <TData = Awaited<ReturnType<typeof getMyProductRating>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMyProductRatingQueryOptions = <TData = Awaited<ReturnType<typeof getMyProductRating>>, TError = ErrorType<unknown>>(id: number,
+    params?: GetMyProductRatingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyProductRatingQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetMyProductRatingQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProductRating>>> = ({ signal }) => getMyProductRating(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProductRating>>> = ({ signal }) => getMyProductRating(id,params, { signal, ...requestOptions });
 
 
 
@@ -767,11 +779,12 @@ export type GetMyProductRatingQueryError = ErrorType<unknown>
  */
 
 export function useGetMyProductRating<TData = Awaited<ReturnType<typeof getMyProductRating>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number,
+    params?: GetMyProductRatingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetMyProductRatingQueryOptions(id,options)
+  const queryOptions = getGetMyProductRatingQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

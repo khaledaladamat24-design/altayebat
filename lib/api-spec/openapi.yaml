@@ -213,7 +213,8 @@ paths:
       summary: Rate a product (1-5 stars)
       description: >
         Submit or replace the caller's star rating. Only customers with a
-        delivered order containing the product may rate it.
+        delivered order containing the product may rate it — either an
+        authenticated user or a guest passing their order's sessionId.
       parameters:
         - name: id
           in: path
@@ -235,10 +236,8 @@ paths:
                 $ref: "#/components/schemas/ProductRatingResult"
         "400":
           description: Invalid stars
-        "401":
-          description: Not authenticated
         "403":
-          description: Not eligible to rate
+          description: Not eligible to rate (no delivered order containing the product)
 
   /products/{id}/rating/me:
     get:
@@ -251,6 +250,14 @@ paths:
           required: true
           schema:
             type: integer
+        - name: sessionId
+          in: query
+          required: false
+          description: >
+            Guest session id. Lets a guest who placed (and received) the order
+            rate it without being logged in, matching the rest of the order flow.
+          schema:
+            type: string
       responses:
         "200":
           description: Eligibility plus the caller's current rating
@@ -850,6 +857,11 @@ components:
           type: integer
           minimum: 1
           maximum: 5
+        sessionId:
+          type: string
+          description: >
+            Guest session id, used to verify the caller received an order
+            containing this product when they are not logged in.
 
     ProductRatingResult:
       type: object

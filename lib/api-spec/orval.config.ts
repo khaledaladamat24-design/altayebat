@@ -57,6 +57,17 @@ export default defineConfig({
       prettier: true,
       override: {
         zod: {
+          // Don't emit path-param zod schemas. The server doesn't consume them,
+          // and they name-clash with the TypeScript query-param types (both
+          // become `<Op>Params`) for any operation that has both a path and a
+          // query param (e.g. GET /products/{id}/rating/me?sessionId=).
+          generate: {
+            param: false,
+            body: true,
+            response: true,
+            query: true,
+            header: true,
+          },
           coerce: {
             query: ["boolean", "number", "string"],
             param: ["boolean", "number", "string"],
