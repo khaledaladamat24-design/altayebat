@@ -60,7 +60,12 @@ export function Scene5Outro() {
           animate={phase >= 2 ? { y: 0, opacity: 1 } : { y: 30, opacity: 0 }}
           transition={{ type: 'spring', damping: 20 }}>
           <div className="bg-black text-white rounded-xl py-3 px-6 flex items-center justify-center gap-3 shadow-xl border border-gray-800">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M3.609 1.814L13.792 12 3.61 22.186c-.147-.184-.235-.42-.235-.686V2.5c0-.266.088-.502.234-.686zM14.887 13.094l2.585 2.585a1.5 1.5 0 010 2.122l-1.077 1.076-4.524-4.524 3.016-1.259zM15.421 11.5L5.138 1.218l4.49-4.49 1.066 1.065a1.5 1.5 0 010 2.122l-2.613 2.614 7.34 8.971z"/></svg>
+            <svg viewBox="0 0 512 512" className="w-7 h-7">
+              <path fill="#00D2FF" d="M48 59.5v393c0 4.3 2.3 8.1 5.8 10.2L276 256 53.8 49.3C50.3 51.4 48 55.2 48 59.5z"/>
+              <path fill="#00E676" d="M345 174L91.7 33.7C84 29.4 75 30 68.4 34.3L276 256 345 174z"/>
+              <path fill="#FFC400" d="M464 256c0-9.6-5.1-18.5-13.4-23.3L385.5 196 304 256l81.5 60 65.1-36.7C458.9 274.5 464 265.6 464 256z"/>
+              <path fill="#FF3D00" d="M68.4 477.7C75 482 84 482.6 91.7 478.3L345 338l-69-82L68.4 477.7z"/>
+            </svg>
             <div className="text-right">
               <div className="text-[10px] text-gray-300">GET IT ON</div>
               <div className="font-bold text-sm">Google Play</div>

@@ -42,6 +42,30 @@ uri = "file://attached_assets/food-src/keto.png"
 type = "image"
 title = "keto meal bowl"
 
+[[generated]]
+id = "Tl9pbsnYchn8Myma3XTJ7"
+uri = "file://attached_assets/food-src/nuts.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "BSTKDchdttuzvs0vAnA8L"
+uri = "file://attached_assets/food-src/juice.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "H_IbIkMKyod7nU3w0uuO4"
+uri = "file://attached_assets/food-src/peanut.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "6a2HzjVzuyFiyCGgvCpVk"
+uri = "file://attached_assets/food-src/dates.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "a03_K246Ovs9zmF0ZBe4X"
 uri = "file://.local/keystore/al-tayebat-keystore-bundle.tar.gz"

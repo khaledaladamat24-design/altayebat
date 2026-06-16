@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneMockup } from '../PhoneMockup';
+import { OffersScreen } from '../screens/OffersScreen';
 import categoriesImg from '@assets/app-screens/categories.jpg';
-import offersImg from '@assets/app-screens/offers-filled.jpg';
 import productImg from '@assets/app-screens/product-filled.jpg';
 import { useEffect, useState } from 'react';
 
@@ -55,15 +55,15 @@ export function Scene3Features() {
                   />
                 )}
                 {phase >= 2 && phase < 3 && (
-                  <motion.img 
+                  <motion.div
                     key="off"
-                    src={offersImg} alt="Offers" 
-                    className="w-full h-full object-cover absolute inset-0"
+                    className="w-full h-full absolute inset-0"
                     initial={{ opacity: 0, x: 100 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -100 }}
-                    transition={{ duration: 0.5 }}
-                  />
+                    transition={{ duration: 0.5 }}>
+                    <OffersScreen />
+                  </motion.div>
                 )}
                 {phase >= 3 && (
                   <motion.img 
