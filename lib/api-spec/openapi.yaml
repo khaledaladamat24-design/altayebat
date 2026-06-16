@@ -206,6 +206,59 @@ paths:
                 items:
                   $ref: "#/components/schemas/Product"
 
+  /products/{id}/rating:
+    post:
+      operationId: rateProduct
+      tags: [products]
+      summary: Rate a product (1-5 stars)
+      description: >
+        Submit or replace the caller's star rating. Only customers with a
+        delivered order containing the product may rate it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RateProductInput"
+      responses:
+        "200":
+          description: Updated aggregate plus the caller's rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductRatingResult"
+        "400":
+          description: Invalid stars
+        "401":
+          description: Not authenticated
+        "403":
+          description: Not eligible to rate
+
+  /products/{id}/rating/me:
+    get:
+      operationId: getMyProductRating
+      tags: [products]
+      summary: Whether the caller may rate this product and their current rating
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eligibility plus the caller's current rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProductRating"
+
   /cart:
     get:
       operationId: getCart
@@ -788,6 +841,35 @@ components:
           type: ["number", "null"]
         fats:
           type: ["number", "null"]
+
+    RateProductInput:
+      type: object
+      required: [stars]
+      properties:
+        stars:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    ProductRatingResult:
+      type: object
+      required: [average, count, myStars]
+      properties:
+        average:
+          type: ["number", "null"]
+        count:
+          type: integer
+        myStars:
+          type: integer
+
+    MyProductRating:
+      type: object
+      required: [canRate, myStars]
+      properties:
+        canRate:
+          type: boolean
+        myStars:
+          type: ["integer", "null"]
 
     CartItem:
       type: object

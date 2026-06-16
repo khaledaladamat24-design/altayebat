@@ -228,6 +228,43 @@ export const ListBestsellersResponse = zod.array(ListBestsellersResponseItem)
 
 
 /**
+ * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it.
+
+ * @summary Rate a product (1-5 stars)
+ */
+export const RateProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const rateProductBodyStarsMax = 5;
+
+
+
+export const RateProductBody = zod.object({
+  "stars": zod.number().min(1).max(rateProductBodyStarsMax)
+})
+
+export const RateProductResponse = zod.object({
+  "average": zod.number().nullable(),
+  "count": zod.number(),
+  "myStars": zod.number()
+})
+
+
+/**
+ * @summary Whether the caller may rate this product and their current rating
+ */
+export const GetMyProductRatingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMyProductRatingResponse = zod.object({
+  "canRate": zod.boolean(),
+  "myStars": zod.number().nullable()
+})
+
+
+/**
  * @summary Get current cart
  */
 export const GetCartQueryParams = zod.object({

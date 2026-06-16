@@ -232,6 +232,10 @@ router.post("/orders", async (req, res) => {
         .insert(ordersTable)
         .values({
           sessionId,
+          // Link the order to the registered account (matched by canonical phone
+          // in the anti-fraud gate above). Drives rating eligibility — only a
+          // customer with a delivered order containing a product may rate it.
+          userId: registeredUser.id,
           vendorId: cartVendorId,
           status: "pending",
           fulfillmentType,

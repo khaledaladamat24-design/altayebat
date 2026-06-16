@@ -14,6 +14,7 @@ import { useSession } from "@/hooks/use-session";
 import { ProductCard } from "@/components/product-card";
 import { useLanguage } from "@/contexts/language";
 import { useCartActions } from "@/contexts/cart-actions";
+import { StarRating } from "@/components/star-rating";
 
 export default function Product() {
   const { lang, dir, tr } = useLanguage();
@@ -141,6 +142,18 @@ export default function Product() {
         </div>
 
         <h1 className="text-2xl font-bold mb-1">{productName}</h1>
+        {product.rating != null && (product.reviewCount ?? 0) > 0 && (
+          <div className="flex items-center gap-2 mb-2">
+            <StarRating value={Number(product.rating)} readOnly size="sm" />
+            <span className="text-sm text-muted-foreground">
+              {Number(product.rating).toFixed(1)}{" "}
+              <span className="text-xs">
+                ({product.reviewCount}{" "}
+                {tr("تقييم", product.reviewCount === 1 ? "rating" : "ratings")})
+              </span>
+            </span>
+          </div>
+        )}
         {product.weightOrVolume && (
           <p className="text-sm text-muted-foreground mb-2">
             {product.weightOrVolume}

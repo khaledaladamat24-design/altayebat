@@ -88,6 +88,27 @@ export interface Product {
   fats?: number | null;
 }
 
+export interface RateProductInput {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  stars: number;
+}
+
+export interface ProductRatingResult {
+  /** @nullable */
+  average: number | null;
+  count: number;
+  myStars: number;
+}
+
+export interface MyProductRating {
+  canRate: boolean;
+  /** @nullable */
+  myStars: number | null;
+}
+
 export interface CartItem {
   id: number;
   productId: number;

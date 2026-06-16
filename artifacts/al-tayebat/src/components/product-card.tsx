@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { useLanguage } from "@/contexts/language";
 import { useCartActions } from "@/contexts/cart-actions";
+import { StarRating } from "@/components/star-rating";
 
 type ProductWithMacros = Product & {
   calories?: number | null;
@@ -90,6 +91,15 @@ export function ProductCard({ product: rawProduct }: { product: Product }) {
 
         <div className="p-3 flex flex-col flex-grow">
           <h3 className="font-semibold text-sm line-clamp-2 mb-1">{title}</h3>
+
+          {product.rating != null && (product.reviewCount ?? 0) > 0 && (
+            <div className="flex items-center gap-1 mb-1">
+              <StarRating value={Number(product.rating)} readOnly size="sm" />
+              <span className="text-[11px] text-muted-foreground">
+                {Number(product.rating).toFixed(1)} ({product.reviewCount})
+              </span>
+            </div>
+          )}
 
           {hasMacros && (
             <div className="flex flex-wrap gap-1 mb-1.5" dir="ltr">

@@ -4,8 +4,25 @@ import {
   productsTable,
   categoriesTable,
   vendorProfilesTable,
+  ordersTable,
+  orderItemsTable,
+  productRatingsTable,
+  usersTable,
 } from "@workspace/db";
-import { eq, and, or, ilike, isNull, ne, sql } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  ilike,
+  isNull,
+  ne,
+  sql,
+  inArray,
+  count,
+  avg,
+} from "drizzle-orm";
+import { getActingDbUserId } from "../lib/vendor-auth";
+import { phoneVariants } from "../lib/phone";
 
 // Products without a vendor (admin-uploaded) stay visible. Products linked to
 // a vendor only appear when that vendor is marked online AND not suspended by
@@ -116,6 +133,133 @@ router.get("/products/bestsellers", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// A customer may rate a product only after a delivered order containing it.
+// Match the order to the user by the linked user_id (set on new orders) OR by
+// the canonical phone variants (covers older orders that predate the user_id
+// link, whose customerPhone is stored as typed).
+async function hasDeliveredOrder(
+  userId: number,
+  productId: number,
+): Promise<boolean> {
+  const [u] = await db
+    .select({ phone: usersTable.phone })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+  const variants = u?.phone ? phoneVariants(u.phone) : [];
+  const ownerMatch = variants.length
+    ? or(
+        eq(ordersTable.userId, userId),
+        inArray(ordersTable.customerPhone, variants),
+      )
+    : eq(ordersTable.userId, userId);
+  const [row] = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .innerJoin(orderItemsTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .where(
+      and(
+        eq(ordersTable.status, "delivered"),
+        eq(orderItemsTable.productId, productId),
+        ownerMatch,
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+// Whether the caller may rate this product, plus their current rating (if any).
+router.get("/products/:id/rating/me", async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) return res.status(400).json({ error: "Invalid id" });
+    const userId = await getActingDbUserId(req);
+    if (!userId) return res.json({ canRate: false, myStars: null });
+    const eligible = await hasDeliveredOrder(userId, productId);
+    let myStars: number | null = null;
+    if (eligible) {
+      const [r] = await db
+        .select({ stars: productRatingsTable.stars })
+        .from(productRatingsTable)
+        .where(
+          and(
+            eq(productRatingsTable.productId, productId),
+            eq(productRatingsTable.userId, userId),
+          ),
+        )
+        .limit(1);
+      myStars = r?.stars ?? null;
+    }
+    return res.json({ canRate: eligible, myStars });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get my product rating");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Submit/replace the caller's 1-5 star rating for a product. Gated to customers
+// with a delivered order containing it; recomputes the cached aggregate that
+// products.rating / reviewCount mirror.
+router.post("/products/:id/rating", async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) return res.status(400).json({ error: "Invalid id" });
+    const stars = Number(req.body?.stars);
+    if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
+      return res.status(400).json({
+        error: "التقييم يجب أن يكون من 1 إلى 5 نجوم",
+        code: "INVALID_STARS",
+      });
+    }
+    const userId = await getActingDbUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        error: "يجب تسجيل الدخول لتقييم المنتج",
+        code: "UNAUTHORIZED",
+      });
+    }
+    if (!(await hasDeliveredOrder(userId, productId))) {
+      return res.status(403).json({
+        error: "يمكنك تقييم المنتج فقط بعد استلام طلب يحتوي عليه",
+        code: "NOT_ELIGIBLE",
+      });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      await tx
+        .insert(productRatingsTable)
+        .values({ productId, userId, stars })
+        .onConflictDoUpdate({
+          target: [productRatingsTable.productId, productRatingsTable.userId],
+          set: { stars, updatedAt: new Date() },
+        });
+      const [agg] = await tx
+        .select({ average: avg(productRatingsTable.stars), cnt: count() })
+        .from(productRatingsTable)
+        .where(eq(productRatingsTable.productId, productId));
+      const average = agg?.average != null ? Number(agg.average) : null;
+      const cnt = Number(agg?.cnt ?? 0);
+      await tx
+        .update(productsTable)
+        .set({
+          rating: average != null ? average.toFixed(2) : null,
+          reviewCount: cnt,
+        })
+        .where(eq(productsTable.id, productId));
+      return { average, count: cnt };
+    });
+
+    return res.json({
+      average: result.average,
+      count: result.count,
+      myStars: stars,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to rate product");
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -11,6 +11,12 @@ vi.mock("@workspace/api-client-react", () => ({
   getGetOrderQueryKey: (id: number) => ["order", id],
   useListOrders: (...args: unknown[]) => mockUseListOrders(...args),
   getListOrdersQueryKey: (params: unknown) => ["orders", params],
+  // The delivered-order view renders a per-item star rating; default to
+  // not-eligible so existing tracking tests stay focused on status.
+  useGetMyProductRating: () => ({ data: { canRate: false, myStars: null } }),
+  getGetMyProductRatingQueryKey: (id: number) => ["product-rating-me", id],
+  useRateProduct: () => ({ mutate: vi.fn(), isPending: false }),
+  getGetProductQueryKey: (id: number) => ["product", id],
 }));
 
 // The order-detail page reads the id from the route; the orders list + both

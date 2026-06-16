@@ -37,10 +37,13 @@ import type {
   ListFeaturedProductsParams,
   ListOrdersParams,
   ListProductsParams,
+  MyProductRating,
   Order,
   OrderInput,
   OrderTracking,
   Product,
+  ProductRatingResult,
+  RateProductInput,
   ShipmentCancelResult,
   ShipmentRequest,
   ShipmentResult,
@@ -618,6 +621,157 @@ export function useListBestsellers<TData = Awaited<ReturnType<typeof listBestsel
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListBestsellersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRateProductUrl = (id: number,) => {
+
+
+
+
+  return `/api/products/${id}/rating`
+}
+
+/**
+ * Submit or replace the caller's star rating. Only customers with a delivered order containing the product may rate it.
+
+ * @summary Rate a product (1-5 stars)
+ */
+export const rateProduct = async (id: number,
+    rateProductInput: RateProductInput, options?: RequestInit): Promise<ProductRatingResult> => {
+
+  return customFetch<ProductRatingResult>(getRateProductUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      rateProductInput,)
+  }
+);}
+
+
+
+
+export const getRateProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateProduct>>, TError,{id: number;data: BodyType<RateProductInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rateProduct>>, TError,{id: number;data: BodyType<RateProductInput>}, TContext> => {
+
+const mutationKey = ['rateProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rateProduct>>, {id: number;data: BodyType<RateProductInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rateProduct(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RateProductMutationResult = NonNullable<Awaited<ReturnType<typeof rateProduct>>>
+    export type RateProductMutationBody = BodyType<RateProductInput>
+    export type RateProductMutationError = ErrorType<void>
+
+    /**
+ * @summary Rate a product (1-5 stars)
+ */
+export const useRateProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateProduct>>, TError,{id: number;data: BodyType<RateProductInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rateProduct>>,
+        TError,
+        {id: number;data: BodyType<RateProductInput>},
+        TContext
+      > => {
+      return useMutation(getRateProductMutationOptions(options));
+    }
+
+export const getGetMyProductRatingUrl = (id: number,) => {
+
+
+
+
+  return `/api/products/${id}/rating/me`
+}
+
+/**
+ * @summary Whether the caller may rate this product and their current rating
+ */
+export const getMyProductRating = async (id: number, options?: RequestInit): Promise<MyProductRating> => {
+
+  return customFetch<MyProductRating>(getGetMyProductRatingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyProductRatingQueryKey = (id: number,) => {
+    return [
+    `/api/products/${id}/rating/me`
+    ] as const;
+    }
+
+
+export const getGetMyProductRatingQueryOptions = <TData = Awaited<ReturnType<typeof getMyProductRating>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyProductRatingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProductRating>>> = ({ signal }) => getMyProductRating(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyProductRatingQueryResult = NonNullable<Awaited<ReturnType<typeof getMyProductRating>>>
+export type GetMyProductRatingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Whether the caller may rate this product and their current rating
+ */
+
+export function useGetMyProductRating<TData = Awaited<ReturnType<typeof getMyProductRating>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyProductRating>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyProductRatingQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

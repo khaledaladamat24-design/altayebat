@@ -17,3 +17,15 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   if (/^009627\d{8}$/.test(digits)) return "0" + digits.slice(5);
   return null; // reject anything that isn't a valid JO mobile
 }
+
+/**
+ * Expand a canonical "07XXXXXXXX" number into the common stored variants so a
+ * value saved verbatim at checkout (e.g. "+9627...", "009627...", "7...") still
+ * matches the same account. Used to find a user's past orders, whose
+ * `customerPhone` is stored as typed (not normalized).
+ */
+export function phoneVariants(canonical: string): string[] {
+  const local = canonical; // 07XXXXXXXX
+  const noZero = canonical.replace(/^0/, ""); // 7XXXXXXXX
+  return [local, noZero, "962" + noZero, "+962" + noZero, "00962" + noZero];
+}

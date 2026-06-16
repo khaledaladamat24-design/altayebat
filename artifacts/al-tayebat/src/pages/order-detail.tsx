@@ -1,4 +1,11 @@
-import { useGetOrder, getGetOrderQueryKey } from "@workspace/api-client-react";
+import {
+  useGetOrder,
+  getGetOrderQueryKey,
+  useGetMyProductRating,
+  getGetMyProductRatingQueryKey,
+  useRateProduct,
+  getGetProductQueryKey,
+} from "@workspace/api-client-react";
 import { Link, useParams } from "wouter";
 import {
   ChevronRight,
@@ -19,6 +26,49 @@ import { useSession } from "@/hooks/use-session";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useLanguage } from "@/contexts/language";
+import { StarRating } from "@/components/star-rating";
+
+// Per-item star rating shown on a delivered order. The server only lets a
+// customer who actually received this product rate it, so the widget hides
+// itself when the caller is not eligible (canRate === false).
+function RateOrderItem({ productId }: { productId: number }) {
+  const { tr } = useLanguage();
+  const queryClient = useQueryClient();
+  const { data } = useGetMyProductRating(productId, {
+    query: { queryKey: getGetMyProductRatingQueryKey(productId) },
+  });
+  const { mutate, isPending } = useRateProduct({
+    mutation: {
+      onSuccess: () => {
+        toast.success(tr("شكراً لتقييمك!", "Thanks for your rating!"));
+        queryClient.invalidateQueries({
+          queryKey: getGetMyProductRatingQueryKey(productId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: getGetProductQueryKey(productId),
+        });
+      },
+      onError: () =>
+        toast.error(tr("تعذّر إرسال التقييم", "Couldn't submit rating")),
+    },
+  });
+
+  if (!data?.canRate) return null;
+
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <span className="text-xs text-muted-foreground">
+        {data.myStars ? tr("تقييمك:", "Your rating:") : tr("قيّم:", "Rate:")}
+      </span>
+      <StarRating
+        value={data.myStars ?? 0}
+        disabled={isPending}
+        size="md"
+        onRate={(stars) => mutate({ id: productId, data: { stars } })}
+      />
+    </div>
+  );
+}
 
 export default function OrderDetail() {
   const { lang, dir, tr } = useLanguage();
@@ -233,21 +283,26 @@ export default function OrderDetail() {
             {order.items.map((item) => (
               <div
                 key={item.id}
-                className="flex justify-between items-center text-sm border-b border-border pb-3 last:border-0 last:pb-0"
+                className="text-sm border-b border-border pb-3 last:border-0 last:pb-0"
               >
-                <div className="flex items-center gap-3">
-                  <div className="bg-muted w-8 h-8 flex items-center justify-center rounded-md font-bold text-xs text-primary">
-                    {item.quantity}x
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-muted w-8 h-8 flex items-center justify-center rounded-md font-bold text-xs text-primary">
+                      {item.quantity}x
+                    </div>
+                    <span>
+                      {lang === "en"
+                        ? item.productName || item.productNameAr
+                        : item.productNameAr}
+                    </span>
                   </div>
-                  <span>
-                    {lang === "en"
-                      ? item.productName || item.productNameAr
-                      : item.productNameAr}
+                  <span className="font-medium">
+                    {formatPrice(item.totalPrice)}
                   </span>
                 </div>
-                <span className="font-medium">
-                  {formatPrice(item.totalPrice)}
-                </span>
+                {order.status === "delivered" && (
+                  <RateOrderItem productId={item.productId} />
+                )}
               </div>
             ))}
           </div>
