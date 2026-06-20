@@ -2,7 +2,7 @@ import { useListCategories } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Tag } from "lucide-react";
 import { useLanguage } from "@/contexts/language";
 import { LanguageToggle } from "@/components/language-toggle";
 
@@ -38,6 +38,19 @@ export default function Categories() {
 
       <div className="px-4 mt-6">
         <div className="grid grid-cols-2 gap-4">
+          <Link href={`/offers/${zone}`}>
+            <div className="bg-rose/10 border border-rose/30 rounded-2xl overflow-hidden hover-elevate cursor-pointer aspect-square flex flex-col items-center justify-center p-4 text-center group">
+              <div className="w-20 h-20 mb-3 rounded-full bg-rose/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Tag className="w-9 h-9 text-rose" />
+              </div>
+              <h3 className="font-bold text-sm text-rose">
+                {tr("العروض", "Offers")}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {tr("خصومات وتخفيضات", "Deals & discounts")}
+              </p>
+            </div>
+          </Link>
           {isLoading
             ? Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton

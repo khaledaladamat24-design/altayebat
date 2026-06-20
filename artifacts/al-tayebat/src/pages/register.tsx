@@ -27,15 +27,14 @@ export default function Register() {
   const { user } = useUser();
   const { dir, tr } = useLanguage();
 
+  // Vendor specialty is now anchored on the 3 app zones (food_type). Stored as
+  // a comma-separated list in the single `category` text column so a vendor can
+  // span one or all zones — no DB change needed. The rest of the app keeps its
+  // own category dropdowns unchanged.
   const CATEGORIES = [
-    { value: "keto", label: tr("منتجات كيتو", "Keto products") },
-    { value: "organic", label: tr("خضروات عضوية", "Organic vegetables") },
-    { value: "pantry", label: tr("مؤونة صحية", "Healthy pantry") },
-    { value: "dairy", label: tr("ألبان ومشتقات", "Dairy & derivatives") },
-    { value: "nuts", label: tr("مكسرات وبذور", "Nuts & seeds") },
-    { value: "sweets", label: tr("حلويات طبيعية", "Natural sweets") },
-    { value: "meat", label: tr("لحوم ودواجن", "Meat & poultry") },
-    { value: "beverages", label: tr("مشروبات صحية", "Healthy beverages") },
+    { value: "healthy", label: tr("صحي", "Healthy") },
+    { value: "regular", label: tr("متنوع", "Regular") },
+    { value: "grocery", label: tr("بقالة", "Grocery") },
   ];
 
   // Single source of truth shared with the customer province filter so a
@@ -447,19 +446,37 @@ export default function Register() {
               <label className="text-xs font-bold text-muted-foreground">
                 {tr("التخصص الغذائي *", "Food specialty *")}
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.value}
-                    type="button"
-                    onClick={() =>
-                      setVendorDetails((v) => ({ ...v, category: cat.value }))
-                    }
-                    className={`h-11 rounded-xl text-sm font-medium border-2 transition-all ${vendorDetails.category === cat.value ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30"}`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+              <p className="text-[11px] text-muted-foreground">
+                {tr(
+                  "يمكنك اختيار أكثر من تخصص",
+                  "You can choose more than one",
+                )}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((cat) => {
+                  const selected = vendorDetails.category
+                    .split(",")
+                    .filter(Boolean);
+                  const isActive = selected.includes(cat.value);
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() =>
+                        setVendorDetails((v) => {
+                          const cur = v.category.split(",").filter(Boolean);
+                          const next = cur.includes(cat.value)
+                            ? cur.filter((c) => c !== cat.value)
+                            : [...cur, cat.value];
+                          return { ...v, category: next.join(",") };
+                        })
+                      }
+                      className={`h-11 rounded-xl text-sm font-medium border-2 transition-all ${isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30"}`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

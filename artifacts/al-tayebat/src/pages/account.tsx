@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import {
   ChevronLeft,
-  Heart,
   Package,
   Settings,
   CreditCard,
@@ -227,12 +226,6 @@ export default function Account() {
       label: tr("طرق الدفع", "Payment methods"),
       iconColor: "text-blue-500",
       href: vendorId ? "/payment-methods" : null,
-    },
-    {
-      icon: Heart,
-      label: tr("المفضلة", "Favorites"),
-      iconColor: "text-pink-500",
-      href: null,
     },
     {
       icon: Zap,

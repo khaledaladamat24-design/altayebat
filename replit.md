@@ -65,6 +65,8 @@
 - `food_type` is anchored on the **product** (a vendor may span zones), and on categories for the home rail. **Drift is intentional** — no constraint forces product↔category to match; filtering always uses the product's own `food_type`.
 - `GET /api/products` (+ `/featured`, `/bestsellers`) and `/api/categories` accept optional `?foodType=`; invalid/missing returns everything.
 - Home has a sticky zone toggle (`al_tayebat_zone`, default `healthy`) with an empty-state per zone.
+- The categories page (`/categories`) prepends an **Offers** card (rose accent) → `/offers/:zone`, mirroring the home offers pill.
+- **Vendor specialty** in registration (`register.tsx`) is the 3 zones (`healthy/regular/grocery`), **multi-select**, stored comma-separated in the existing single `vendor_profiles.category` text column (e.g. `healthy,grocery`) — no DB change. Treated as opaque text elsewhere; product-add category dropdowns are unchanged.
 
 ## Offers / Deals (العروضات)
 
