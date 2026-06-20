@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { useVideoPlayer } from '@/lib/video';
-import { Scene1Intro } from './video_scenes/Scene1Intro';
-import { Scene2App } from './video_scenes/Scene2App';
-import { Scene3Features } from './video_scenes/Scene3Features';
-import { Scene4Delivery } from './video_scenes/Scene4Delivery';
-import { Scene5Outro } from './video_scenes/Scene5Outro';
+import { useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
+import { useVideoPlayer } from "@/lib/video";
+import { Scene1Intro } from "./video_scenes/Scene1Intro";
+import { Scene2App } from "./video_scenes/Scene2App";
+import { Scene3Features } from "./video_scenes/Scene3Features";
+import { Scene4Delivery } from "./video_scenes/Scene4Delivery";
+import { Scene5Outro } from "./video_scenes/Scene5Outro";
 
 export const SCENE_DURATIONS = {
   intro: 4000,
@@ -55,7 +55,7 @@ export default function VideoTemplate({
 
   const baseSceneKey = currentSceneKey.replace(
     /_r[12]$/,
-    '',
+    "",
   ) as keyof typeof SCENE_DURATIONS;
   const SceneComponent = SCENE_COMPONENTS[baseSceneKey];
 
@@ -73,7 +73,7 @@ export default function VideoTemplate({
   return (
     <div
       className="w-full h-screen overflow-hidden relative"
-      style={{ backgroundColor: 'var(--color-bg-light)' }}
+      style={{ backgroundColor: "var(--color-bg-light)" }}
     >
       <AnimatePresence mode="popLayout">
         {SceneComponent && <SceneComponent key={currentSceneKey} />}

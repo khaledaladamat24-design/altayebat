@@ -1,6 +1,6 @@
 // Placeholder loading scene - replace with your video content
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
 export function ReplitLoadingScene() {
   return (
@@ -20,12 +20,12 @@ export function ReplitLoadingScene() {
         <motion.div
           animate={{
             scale: [1, 1.05, 1],
-            opacity: [1, 0.8, 1]
+            opacity: [1, 0.8, 1],
           }}
           transition={{
             duration: 2,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         >
           <ReplitLogo size={120} />
@@ -53,7 +53,13 @@ export function ReplitLoadingScene() {
   );
 }
 
-function ReplitLogo({ size = 64, className = '' }: { size?: number; className?: string }) {
+function ReplitLogo({
+  size = 64,
+  className = "",
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <svg
       width={size}

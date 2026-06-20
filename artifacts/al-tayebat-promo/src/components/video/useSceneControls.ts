@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 
 const REPEAT_SUFFIX_RE = /_r[12]$/;
 
 export function stripRepeatSuffix(key: string): string {
-  return key.replace(REPEAT_SUFFIX_RE, '');
+  return key.replace(REPEAT_SUFFIX_RE, "");
 }
 
 function rotateFromIndex(

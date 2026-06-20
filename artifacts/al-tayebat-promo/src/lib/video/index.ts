@@ -1,7 +1,11 @@
 // Video template library - hook and animation presets
 
-export { useVideoPlayer, useSceneTimer } from './hooks';
-export type { SceneDurations, UseVideoPlayerOptions, UseVideoPlayerReturn } from './hooks';
+export { useVideoPlayer, useSceneTimer } from "./hooks";
+export type {
+  SceneDurations,
+  UseVideoPlayerOptions,
+  UseVideoPlayerReturn,
+} from "./hooks";
 
 export {
   springs,
@@ -16,4 +20,4 @@ export {
   staggerDelay,
   customSpring,
   withDelay,
-} from './animations';
+} from "./animations";
