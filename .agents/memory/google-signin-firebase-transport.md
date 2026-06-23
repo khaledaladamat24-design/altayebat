@@ -20,6 +20,16 @@ client-supplied `firebaseUid`/`email` (see `header-trust-auth.md`) — it is the
 model, not specific to Google. Hardening it to verify a Firebase ID token server-side would be
 an app-wide change touching phone auth too; out of scope for adding the Google button.
 
+**firebaseUid backfill is mandatory (regression):** when a Google sign-in's email
+already has a row, `POST /api/users/profile` matches by email — it MUST backfill
+`firebaseUid` on that row (isNull-guarded, first-write-wins, never overwrite), exactly
+like the `clerkId` backfill. Without it the row keeps a null `firebase_uid`, so the
+`x-firebase-uid` identity header never resolves in `getActingDbUserId` and owner-gated
+routes (e.g. `POST /api/auth/location`) 403 "Not authorized" forever. Brand-new Google
+emails are fine because the INSERT path stores the uid. **Why:** any new identity
+transport added to the profile upsert must be backfilled onto email-matched rows or
+header-based ownership silently breaks.
+
 **Order gate still applies:** Google users carry no phone, so they still hit the
 order-placement gate at checkout and must register a phone (by design).
 

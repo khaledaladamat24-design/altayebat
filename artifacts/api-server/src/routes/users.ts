@@ -135,6 +135,20 @@ router.post("/users/profile", async (req, res) => {
             and(eq(usersTable.id, existing.id), isNull(usersTable.clerkId)),
           );
       }
+      // Backfill firebaseUid the same way (e.g. a Google sign-in whose email
+      // already has a row): without this the matched row keeps a null
+      // firebase_uid, so the x-firebase-uid identity header never resolves and
+      // owner-gated routes (e.g. POST /auth/location) 403 "Not authorized".
+      // isNull-guarded so it's first-write-wins and never overwrites an
+      // existing uid; firebaseUid is stripped from public responses.
+      if (firebaseUid && !existing.firebaseUid) {
+        await db
+          .update(usersTable)
+          .set({ firebaseUid })
+          .where(
+            and(eq(usersTable.id, existing.id), isNull(usersTable.firebaseUid)),
+          );
+      }
       return res.json(publicUser(updated));
     }
 
