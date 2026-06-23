@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureCategoriesSeeded } from "./lib/seed-categories";
+import { startOrderExpiryScheduler } from "./lib/order-expiry";
 
 const rawPort = process.env["PORT"];
 
@@ -25,4 +26,6 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   void ensureCategoriesSeeded();
+
+  startOrderExpiryScheduler();
 });

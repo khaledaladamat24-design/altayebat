@@ -392,7 +392,7 @@ export const ListOrdersQueryParams = zod.object({
 export const ListOrdersResponseItem = zod.object({
   "id": zod.number(),
   "sessionId": zod.string().nullish(),
-  "status": zod.enum(['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'on_the_way', 'delivered', 'cancelled']),
+  "status": zod.enum(['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'on_the_way', 'awaiting_admin', 'delivered', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'pickup']).optional(),
   "vendorId": zod.number().nullish(),
   "subtotal": zod.number(),
@@ -439,7 +439,7 @@ export const CreateOrderBody = zod.object({
 export const GetOrderResponse = zod.object({
   "id": zod.number(),
   "sessionId": zod.string().nullish(),
-  "status": zod.enum(['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'on_the_way', 'delivered', 'cancelled']),
+  "status": zod.enum(['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'on_the_way', 'awaiting_admin', 'delivered', 'cancelled']),
   "fulfillmentType": zod.enum(['delivery', 'pickup']).optional(),
   "vendorId": zod.number().nullish(),
   "subtotal": zod.number(),

@@ -16,6 +16,7 @@ export const OrderStatus = {
   ready: 'ready',
   out_for_delivery: 'out_for_delivery',
   on_the_way: 'on_the_way',
+  awaiting_admin: 'awaiting_admin',
   delivered: 'delivered',
   cancelled: 'cancelled',
 } as const;

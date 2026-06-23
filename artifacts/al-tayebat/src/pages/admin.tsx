@@ -16,6 +16,7 @@ import {
   Truck,
   Pencil,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { Button } from "@/components/ui/button";
@@ -525,7 +526,9 @@ export default function Admin() {
     const map: Record<string, string> = {
       pending: "text-amber-600 bg-amber-50 border-amber-200",
       confirmed: "text-green-600 bg-green-50 border-green-200",
+      preparing: "text-blue-600 bg-blue-50 border-blue-200",
       processing: "text-blue-600 bg-blue-50 border-blue-200",
+      awaiting_admin: "text-amber-700 bg-amber-100 border-amber-300",
       delivered: "text-green-700 bg-green-100 border-green-300",
       cancelled: "text-red-600 bg-red-50 border-red-200",
       approved: "text-green-600 bg-green-50 border-green-200",
@@ -534,7 +537,9 @@ export default function Admin() {
     const labels: Record<string, string> = {
       pending: tr("قيد الانتظار", "Pending"),
       confirmed: tr("مؤكد", "Confirmed"),
+      preparing: tr("قيد التجهيز", "Preparing"),
       processing: tr("قيد التجهيز", "Preparing"),
+      awaiting_admin: tr("بانتظار تدخّل الإدارة", "Needs admin action"),
       delivered: tr("تم التوصيل", "Delivered"),
       cancelled: tr("ملغي", "Cancelled"),
       approved: tr("مقبول", "Approved"),
@@ -1294,6 +1299,21 @@ export default function Admin() {
                       `${filteredOrders.length} orders`,
                     )}
                   </p>
+                  {(() => {
+                    const needsAction = filteredOrders.filter(
+                      (o) => o.status === "awaiting_admin",
+                    ).length;
+                    if (needsAction === 0) return null;
+                    return (
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl p-3 text-sm font-bold">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        {tr(
+                          `${needsAction} طلب بحاجة تدخّل الإدارة (المطعم لم يردّ ودفع الزبون مسبقاً)`,
+                          `${needsAction} order(s) need admin action (vendor unresponsive, customer prepaid)`,
+                        )}
+                      </div>
+                    );
+                  })()}
                   {loadingData ? (
                     <div className="text-center py-8 text-muted-foreground">
                       {tr("جاري التحميل...", "Loading...")}
@@ -1367,14 +1387,15 @@ export default function Admin() {
                           {order.status === "pending" && (
                             <button
                               onClick={() =>
-                                handleUpdateOrderStatus(order.id, "processing")
+                                handleUpdateOrderStatus(order.id, "preparing")
                               }
                               className="flex-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-xl py-2 font-bold"
                             >
                               {tr("قيد التجهيز", "Preparing")}
                             </button>
                           )}
-                          {order.status === "processing" && (
+                          {(order.status === "preparing" ||
+                            order.status === "processing") && (
                             <button
                               onClick={() =>
                                 handleUpdateOrderStatus(order.id, "delivered")
@@ -1383,6 +1404,26 @@ export default function Admin() {
                             >
                               {tr("تم التوصيل", "Delivered")}
                             </button>
+                          )}
+                          {order.status === "awaiting_admin" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleUpdateOrderStatus(order.id, "preparing")
+                                }
+                                className="flex-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-xl py-2 font-bold"
+                              >
+                                {tr("قبول الطلب", "Accept order")}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleUpdateOrderStatus(order.id, "cancelled")
+                                }
+                                className="flex-1 text-xs bg-red-50 text-red-600 border border-red-200 rounded-xl py-2 font-bold"
+                              >
+                                {tr("إلغاء الطلب", "Cancel order")}
+                              </button>
+                            </>
                           )}
                           {order.paymentScreenshotUrl &&
                             order.paymentStatus !== "confirmed" && (

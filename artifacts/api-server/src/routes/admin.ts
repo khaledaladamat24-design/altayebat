@@ -249,11 +249,28 @@ router.get("/admin/orders", async (req, res) => {
   }
 });
 
+// Admin order edits write the status directly (bypassing the vendor transition
+// guard), so validate against the known statuses here to keep orders from
+// landing in an off-contract state the customer/vendor UIs can't render.
+const ADMIN_ORDER_STATUSES = new Set([
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "out_for_delivery",
+  "awaiting_admin",
+  "delivered",
+  "cancelled",
+]);
+
 router.patch("/admin/orders/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { status, paymentStatus } = req.body;
+    if (status !== undefined && !ADMIN_ORDER_STATUSES.has(String(status))) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
     const [updated] = await db
       .update(ordersTable)
       .set({

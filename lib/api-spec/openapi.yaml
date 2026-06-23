@@ -983,6 +983,7 @@ components:
               ready,
               out_for_delivery,
               on_the_way,
+              awaiting_admin,
               delivered,
               cancelled,
             ]

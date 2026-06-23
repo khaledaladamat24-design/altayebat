@@ -11,6 +11,7 @@ import {
   Truck,
   AlertCircle,
   ShoppingBag,
+  ShieldCheck,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
@@ -56,6 +57,12 @@ export default function Orders() {
       icon: Truck,
       color: "text-primary",
       bg: "bg-primary/10",
+    },
+    awaiting_admin: {
+      label: tr("بمتابعة الإدارة", "With admin"),
+      icon: ShieldCheck,
+      color: "text-amber-600",
+      bg: "bg-amber-600/10",
     },
     delivered: {
       label: tr("تم التوصيل", "Delivered"),

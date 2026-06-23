@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   ShoppingBag,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -142,6 +143,12 @@ export default function OrderDetail() {
       color: "text-primary",
       bg: "bg-primary",
     },
+    awaiting_admin: {
+      label: tr("بمتابعة الإدارة", "With admin"),
+      icon: ShieldCheck,
+      color: "text-amber-600",
+      bg: "bg-amber-600",
+    },
     delivered: {
       label: tr("تم التوصيل", "Delivered"),
       icon: CheckCircle2,
@@ -179,6 +186,7 @@ export default function OrderDetail() {
 
   const currentStatusIndex = statusOrder.indexOf(order.status);
   const isCancelled = order.status === "cancelled";
+  const isAwaitingAdmin = order.status === "awaiting_admin";
 
   return (
     <div className="pb-8 min-h-screen bg-muted/30" dir={dir}>
@@ -206,7 +214,20 @@ export default function OrderDetail() {
             {formatPrice(order.total)}
           </h2>
 
-          {!isCancelled ? (
+          {isAwaitingAdmin ? (
+            <div className="flex flex-col items-center gap-2 text-amber-700 font-bold bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl">
+              <ShieldCheck className="w-6 h-6" />
+              <span>
+                {tr("طلبك بمتابعة الإدارة", "Your order is with the admin")}
+              </span>
+              <p className="text-sm font-medium text-amber-700/90 leading-relaxed">
+                {tr(
+                  "الإدارة تتابع طلبك مع المطعم لحفظ حقّك. سنوافيك بأي تحديث قريباً.",
+                  "Our team is following up with the restaurant to protect your order. We'll update you shortly.",
+                )}
+              </p>
+            </div>
+          ) : !isCancelled ? (
             <div className="relative pt-2 pb-6">
               {/* Progress Line */}
               <div className="absolute top-6 left-8 right-8 h-1 bg-muted rounded-full -z-10"></div>

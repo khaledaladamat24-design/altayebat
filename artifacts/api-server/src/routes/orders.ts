@@ -307,12 +307,21 @@ router.get("/orders/:id", async (req, res) => {
 // a stale "accept" from undoing a later "deliver".
 // `delivered` is reachable from `out_for_delivery` (delivery orders) AND from
 // `ready` (pickup orders, which skip the out-for-delivery leg entirely).
+// `awaiting_admin` is a holding state for prepaid orders the vendor ignored for
+// too long (see lib/order-expiry.ts). The vendor/admin can still rescue it by
+// accepting (→ preparing) or the admin can cancel it for a refund.
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  preparing: ["pending"],
+  preparing: ["pending", "awaiting_admin"],
   ready: ["preparing"],
   out_for_delivery: ["ready"],
   delivered: ["out_for_delivery", "ready"],
-  cancelled: ["pending", "preparing", "ready", "out_for_delivery"],
+  cancelled: [
+    "pending",
+    "awaiting_admin",
+    "preparing",
+    "ready",
+    "out_for_delivery",
+  ],
 };
 
 // Customer-driven delivery confirmation. The phone with the vendor dashboard

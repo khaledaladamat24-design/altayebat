@@ -80,6 +80,9 @@ describe("PATCH /api/orders/:id/status — valid transitions", () => {
     ["preparing", "cancelled"],
     ["ready", "cancelled"],
     ["out_for_delivery", "cancelled"],
+    // Admin rescue path for orders the expiry sweep parked in awaiting_admin.
+    ["awaiting_admin", "preparing"],
+    ["awaiting_admin", "cancelled"],
   ];
 
   for (const [from, to] of cases) {
