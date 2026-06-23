@@ -20,6 +20,8 @@ import { notifySessionChange } from "@/hooks/use-session";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signInWithPopup,
+  GoogleAuthProvider,
   type ConfirmationResult,
 } from "firebase/auth";
 import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
@@ -193,6 +195,94 @@ export default function Auth() {
   const goAfterAuth = (fallback: string) => {
     notifySessionChange();
     setLocation(takeReturnTo() || fallback);
+  };
+
+  /* ── Google sign-in (Firebase) — works on web (popup) and inside the native
+   * Android app (the @capacitor-firebase plugin). Clerk's OAuth is blocked in
+   * the in-app WebView, so we prove identity via Firebase and upsert the local
+   * DB profile by firebaseUid + email — the same transport phone users use.
+   * Google users still carry no phone, so the order-placement gate prompts them
+   * to register one at checkout. */
+  const handleGoogleSignIn = async () => {
+    if (!isConfigured()) {
+      toast.error(
+        tr("تسجيل الدخول غير متاح حالياً", "Sign-in is unavailable right now"),
+      );
+      return;
+    }
+    setLoading(true);
+    try {
+      let uid: string | undefined;
+      let emailAddr: string | null = null;
+      let displayName: string | null = null;
+
+      if (Capacitor.isNativePlatform()) {
+        const { FirebaseAuthentication } =
+          await import("@capacitor-firebase/authentication");
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        uid = result.user?.uid;
+        emailAddr = result.user?.email ?? null;
+        displayName = result.user?.displayName ?? null;
+      } else {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        uid = result.user.uid;
+        emailAddr = result.user.email;
+        displayName = result.user.displayName;
+      }
+
+      if (!uid) {
+        throw new Error(
+          tr("تعذّر تسجيل الدخول عبر Google", "Couldn't sign in with Google"),
+        );
+      }
+
+      // Upsert the profile FIRST; only persist local auth markers once it
+      // succeeds, so a failed upsert can't leave a half-signed-in state.
+      const res = await fetch(apiUrl("/api/users/profile"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firebaseUid: uid,
+          role: "consumer",
+          ...(emailAddr ? { email: emailAddr } : {}),
+          ...(displayName ? { name: displayName } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          body.error || tr("فشل حفظ الملف الشخصي", "Failed to save profile"),
+        );
+      }
+      const profile = await res.json();
+
+      localStorage.setItem("al_tayebat_firebase_uid", uid);
+      if (emailAddr) localStorage.setItem("al_tayebat_email", emailAddr);
+      localStorage.setItem("al_tayebat_onboarded_v2", "1");
+      if (profile?.id != null)
+        localStorage.setItem("al_tayebat_user_id", String(profile.id));
+      if (profile?.name) localStorage.setItem("al_tayebat_name", profile.name);
+      syncLocationFlagFromProfile(profile);
+
+      toast.success(tr("تم تسجيل الدخول 🎉", "Signed in 🎉"));
+      goAfterAuth("/");
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      // User dismissed the Google popup/sheet — stay silent.
+      if (
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/cancelled-popup-request"
+      ) {
+        return;
+      }
+      toast.error(
+        (err as Error)?.message ||
+          tr("فشل تسجيل الدخول عبر Google", "Google sign-in failed"),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── Upsert the local DB profile for an EMAIL (Clerk) user ──
@@ -1282,6 +1372,42 @@ export default function Auth() {
     </div>
   );
 
+  const googleButton = (
+    <>
+      <div className="flex items-center gap-3 py-1">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">{tr("أو", "or")}</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={loading}
+        className="w-full h-14 bg-white border border-border hover:bg-muted/40 active:scale-[0.98] disabled:opacity-50 text-foreground text-base font-bold rounded-2xl shadow-sm transition-all flex items-center justify-center gap-3"
+      >
+        <svg className="w-5 h-5" viewBox="0 0 48 48" aria-hidden="true">
+          <path
+            fill="#FFC107"
+            d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"
+          />
+          <path
+            fill="#FF3D00"
+            d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+          />
+          <path
+            fill="#4CAF50"
+            d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39.6 16.2 44 24 44z"
+          />
+          <path
+            fill="#1976D2"
+            d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C39.9 36.5 44 31 44 24c0-1.3-.1-2.3-.4-3.5z"
+          />
+        </svg>
+        {tr("المتابعة عبر Google", "Continue with Google")}
+      </button>
+    </>
+  );
+
   /* ── OTP phone screen ── */
   if (mode === "otp-phone") {
     return (
@@ -1672,6 +1798,8 @@ export default function Auth() {
               : tr("إرسال رمز التحقق", "Send verification code")}
           </button>
 
+          {googleButton}
+
           <p className="text-center text-sm text-muted-foreground">
             {tr("لديك حساب بالفعل؟ ", "Already have an account? ")}
             <button
@@ -1741,6 +1869,8 @@ export default function Auth() {
             ? tr("جاري تسجيل الدخول...", "Signing in...")
             : tr("دخول", "Sign in")}
         </button>
+
+        {googleButton}
 
         <p className="text-center text-sm text-muted-foreground pt-1">
           {tr("مستخدم جديد؟ ", "New here? ")}
