@@ -17,6 +17,7 @@ than 20 minutes:
 customer's money. A human (admin) takes over instead. COD has no such risk.
 
 **How to apply:**
+
 - The sweep re-scans every minute, so it is robust to server restarts (an order
   older than the cutoff is caught on the next tick regardless of when it
   started).
