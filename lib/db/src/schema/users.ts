@@ -17,6 +17,10 @@ export const usersTable = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash"),
   role: text("role").notNull().default("consumer"),
+  // How the user signed in (google | phone | email). NULL means the user has
+  // NOT yet completed the role-selection screen — the client uses this as the
+  // "has chosen a role" signal to force new users through /register exactly once.
+  authMethod: text("auth_method"),
   // Permanent delivery location captured during signup/profile. Used to
   // auto-populate checkout and to scope search by the buyer's city.
   latitude: doublePrecision("latitude"),

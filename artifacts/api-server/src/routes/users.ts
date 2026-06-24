@@ -22,6 +22,7 @@ function publicUser(u: UserRow) {
     phone: u.phone,
     name: u.name,
     role: u.role,
+    authMethod: u.authMethod,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
     isAdmin: u.email === SUPER_ADMIN_EMAIL || u.role === "admin",
@@ -73,7 +74,8 @@ router.get("/users/profile", async (req, res) => {
 
 router.post("/users/profile", async (req, res) => {
   try {
-    const { clerkId, firebaseUid, email, phone, name, role } = req.body;
+    const { clerkId, firebaseUid, email, phone, name, role, authMethod } =
+      req.body;
     if (!email && !phone)
       return res.status(400).json({ error: "Email or phone required" });
 
@@ -110,12 +112,26 @@ router.post("/users/profile", async (req, res) => {
     }
 
     if (existing) {
+      // Non-downgrade guard: routine login/upsert flows send `role:"consumer"`,
+      // so without this an existing vendor/admin would be silently demoted to
+      // consumer on every sign-in (wrong routing, lost dashboard). Never lower
+      // an established vendor/admin here; role is only ever ELEVATED, either via
+      // the explicit role-selection submit or the super-admin email.
+      const effectiveRole =
+        email === SUPER_ADMIN_EMAIL
+          ? "admin"
+          : existing.role === "admin" || existing.role === "vendor"
+            ? existing.role
+            : resolvedRole;
       const [updated] = await db
         .update(usersTable)
         .set({
           ...(name && { name }),
-          ...(role && { role: resolvedRole }),
+          ...(role && { role: effectiveRole }),
           ...(phone && { phone }),
+          // Only set on the role-selection submit; marks the user onboarded so
+          // returning logins skip the role screen.
+          ...(authMethod && { authMethod }),
           updatedAt: new Date(),
         })
         .where(eq(usersTable.id, existing.id))
@@ -161,6 +177,7 @@ router.post("/users/profile", async (req, res) => {
         phone: phone || null,
         name: name || null,
         role: resolvedRole,
+        authMethod: authMethod || null,
       })
       .returning();
 

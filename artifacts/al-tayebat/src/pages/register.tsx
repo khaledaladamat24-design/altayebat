@@ -80,6 +80,17 @@ export default function Register() {
     return { email, phone, name, firebaseUid, clerkId: user?.id || null };
   };
 
+  // How the user signed in, stashed by the auth flow. Persisted alongside the
+  // chosen role so returning logins know the user has onboarded (skip this
+  // screen). Falls back to inference from the identity columns just in case.
+  const resolveAuthMethod = (id: ReturnType<typeof collectIdentity>) => {
+    const stored = localStorage.getItem("al_tayebat_auth_method");
+    if (stored) return stored;
+    if (id.firebaseUid && id.email) return "google";
+    if (id.firebaseUid) return "phone";
+    return "email";
+  };
+
   const saveUserProfile = async (r: "consumer" | "vendor") => {
     const id = collectIdentity();
     if (!id.email && !id.phone) {
@@ -93,7 +104,11 @@ export default function Register() {
     const res = await fetch(apiUrl("/api/users/profile"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...id, role: r }),
+      body: JSON.stringify({
+        ...id,
+        role: r,
+        authMethod: resolveAuthMethod(id),
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

@@ -119,11 +119,37 @@ export default function Auth() {
   // the login form again unless they explicitly sign out.
   const redirectedRef = useRef(false);
   useEffect(() => {
-    if (authLoaded && isSignedIn && !redirectedRef.current) {
-      redirectedRef.current = true;
-      localStorage.setItem("al_tayebat_onboarded_v2", "1");
-      setLocation(takeReturnTo() || "/");
-    }
+    if (!authLoaded || !isSignedIn || redirectedRef.current) return;
+    redirectedRef.current = true;
+    localStorage.setItem("al_tayebat_onboarded_v2", "1");
+    // Route by the server profile's role state instead of always going home:
+    // an already-signed-in Clerk session must still hit the role gate when it
+    // has never chosen a role (authMethod NULL → /register), and a returning
+    // vendor must land on their dashboard.
+    (async () => {
+      try {
+        const cid = clerk.user?.id;
+        const em = clerk.user?.primaryEmailAddress?.emailAddress;
+        const qs = cid
+          ? `clerkId=${encodeURIComponent(cid)}`
+          : em
+            ? `email=${encodeURIComponent(em)}`
+            : "";
+        if (qs) {
+          const res = await fetch(apiUrl(`/api/users/profile?${qs}`));
+          if (res.ok) {
+            localStorage.setItem("al_tayebat_auth_method", "email");
+            routeAfterProfile(await res.json());
+            return;
+          }
+        }
+      } catch {
+        // fall through to the role gate below
+      }
+      // No resolvable profile → treat as not onboarded → force role selection.
+      localStorage.setItem("al_tayebat_auth_method", "email");
+      setLocation("/register");
+    })();
     // setLocation omitted: wouter v3 may return a new reference per render,
     // which would loop the effect (React #185) on Android WebView.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,6 +223,26 @@ export default function Auth() {
     setLocation(takeReturnTo() || fallback);
   };
 
+  // Route based on the server profile's role state:
+  // - authMethod NULL  → user has NOT chosen a role yet → force role selection.
+  // - role === vendor  → returning vendor → straight to their dashboard.
+  // - otherwise        → consumer/admin → home (honoring any stashed returnTo).
+  const routeAfterProfile = (
+    profile: { authMethod?: string | null; role?: string | null } | null,
+  ) => {
+    notifySessionChange();
+    if (!profile?.authMethod) {
+      // Keep returnTo stashed — register.tsx consumes it after role selection.
+      setLocation("/register");
+      return;
+    }
+    if (profile.role === "vendor") {
+      setLocation(takeReturnTo() || "/vendor-dashboard");
+      return;
+    }
+    setLocation(takeReturnTo() || "/");
+  };
+
   /* ── Google sign-in (Firebase) — works on web (popup) and inside the native
    * Android app (the @capacitor-firebase plugin). Clerk's OAuth is blocked in
    * the in-app WebView, so we prove identity via Firebase and upsert the local
@@ -260,13 +306,14 @@ export default function Auth() {
       localStorage.setItem("al_tayebat_firebase_uid", uid);
       if (emailAddr) localStorage.setItem("al_tayebat_email", emailAddr);
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
+      localStorage.setItem("al_tayebat_auth_method", "google");
       if (profile?.id != null)
         localStorage.setItem("al_tayebat_user_id", String(profile.id));
       if (profile?.name) localStorage.setItem("al_tayebat_name", profile.name);
       syncLocationFlagFromProfile(profile);
 
       toast.success(tr("تم تسجيل الدخول 🎉", "Signed in 🎉"));
-      goAfterAuth("/");
+      routeAfterProfile(profile);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
       // User dismissed the Google popup/sheet — stay silent.
@@ -311,14 +358,17 @@ export default function Auth() {
           ...(clerkUserId ? { clerkId: clerkUserId } : {}),
         }),
       });
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const profile = await res.json();
       if (profile?.id != null)
         localStorage.setItem("al_tayebat_user_id", String(profile.id));
       if (profile?.name) localStorage.setItem("al_tayebat_name", profile.name);
+      localStorage.setItem("al_tayebat_auth_method", "email");
       syncLocationFlagFromProfile(profile);
+      return profile as { authMethod?: string | null; role?: string | null };
     } catch {
       // Non-fatal — the account.tsx saveName fallback will retry the upsert.
+      return null;
     }
   };
 
@@ -398,9 +448,9 @@ export default function Auth() {
         localStorage.setItem("al_tayebat_email", email);
         localStorage.setItem("al_tayebat_onboarded_v2", "1");
         persistRemembered("email", email);
-        await upsertEmailProfile(email, clerk.user?.id);
+        const profile = await upsertEmailProfile(email, clerk.user?.id);
         toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-        goAfterAuth("/");
+        routeAfterProfile(profile);
       } else {
         toast.error(
           tr("تعذّر إكمال تسجيل الدخول", "Couldn't complete sign-in"),
@@ -680,7 +730,7 @@ export default function Auth() {
           }
           // Pass the now-hydrated Clerk id so the server backfills clerkId on
           // the row (identity resolution depends on it — see upsertEmailProfile).
-          await upsertEmailProfile(email, activeUser?.id);
+          const profile = await upsertEmailProfile(email, activeUser?.id);
           if (activeUser && activeUser.passwordEnabled === false) {
             setPassword("");
             setPassword2("");
@@ -689,7 +739,7 @@ export default function Auth() {
             toast.success(
               tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"),
             );
-            goAfterAuth("/");
+            routeAfterProfile(profile);
           }
         }
       }
@@ -753,11 +803,12 @@ export default function Auth() {
       if (body.firebaseUid)
         localStorage.setItem("al_tayebat_firebase_uid", body.firebaseUid);
       localStorage.setItem("al_tayebat_onboarded_v2", "1");
+      localStorage.setItem("al_tayebat_auth_method", "phone");
       // Returning users who already saved a location skip the mandatory gate.
       syncLocationFlagFromProfile(body);
       persistRemembered("phone", phone);
       toast.success(tr("مرحباً بك في الطيبات!", "Welcome to Al-Tayebat!"));
-      goAfterAuth("/");
+      routeAfterProfile(body);
     } catch (err) {
       toast.error(
         (err as Error).message || tr("فشل تسجيل الدخول", "Sign-in failed"),
@@ -829,6 +880,7 @@ export default function Auth() {
     localStorage.setItem("al_tayebat_firebase_uid", uid);
     localStorage.setItem("al_tayebat_phone", phone);
     localStorage.setItem("al_tayebat_onboarded_v2", "1");
+    localStorage.setItem("al_tayebat_auth_method", "phone");
     persistRemembered("phone", phone);
     const res = await fetch(apiUrl("/api/users/profile"), {
       method: "POST",

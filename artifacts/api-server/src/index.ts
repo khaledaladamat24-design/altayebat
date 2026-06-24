@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureCategoriesSeeded } from "./lib/seed-categories";
+import { backfillAuthMethod } from "./lib/backfill-auth-method";
 import { startOrderExpiryScheduler } from "./lib/order-expiry";
 
 const rawPort = process.env["PORT"];
@@ -26,6 +27,7 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   void ensureCategoriesSeeded();
+  void backfillAuthMethod();
 
   startOrderExpiryScheduler();
 });
