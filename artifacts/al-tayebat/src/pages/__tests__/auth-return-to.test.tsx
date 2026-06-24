@@ -150,6 +150,16 @@ describe("Auth success paths honour the stashed return-to path", () => {
       status: "complete",
       createdSessionId: "sess_email",
     });
+    // Returning (already-onboarded) consumer: the profile upsert returns a row
+    // with authMethod set, so the role gate is satisfied and routing honours
+    // the stashed return path instead of forcing /register.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 1, role: "consumer", authMethod: "email" }),
+      }),
+    );
 
     const user = userEvent.setup();
     renderAuth();
@@ -165,11 +175,18 @@ describe("Auth success paths honour the stashed return-to path", () => {
 
   it("phone-login (password) navigates to the stashed path", async () => {
     localStorage.setItem(RETURN_KEY, "/checkout");
+    // Returning phone user: phone-login returns a profile with authMethod set,
+    // so the role gate is satisfied and the stashed path is honoured.
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ id: 5, name: "أحمد" }),
+        json: async () => ({
+          id: 5,
+          name: "أحمد",
+          role: "consumer",
+          authMethod: "phone",
+        }),
       }),
     );
 
@@ -242,6 +259,15 @@ describe("Auth success paths honour the stashed return-to path", () => {
     // This account already has a password (forgot-password reset), so the
     // post-OTP branch must honour the stashed path, not the set-password screen.
     h.clerkUser.value = { passwordEnabled: true };
+    // Returning onboarded user: the profile upsert returns authMethod, so the
+    // role gate passes and routing honours the stashed path.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 1, role: "consumer", authMethod: "email" }),
+      }),
+    );
 
     const user = userEvent.setup();
     renderAuth();
@@ -315,6 +341,15 @@ describe("Auth success paths honour the stashed return-to path", () => {
       status: "complete",
       createdSessionId: "sess_home",
     });
+    // Returning onboarded consumer (authMethod set): with no stashed path the
+    // role gate passes and routing falls back to home.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 1, role: "consumer", authMethod: "email" }),
+      }),
+    );
 
     const user = userEvent.setup();
     renderAuth();
@@ -330,6 +365,14 @@ describe("Auth success paths honour the stashed return-to path", () => {
       status: "complete",
       createdSessionId: "sess_1",
     });
+    // Returning onboarded consumer (authMethod set) for both sign-ins.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 1, role: "consumer", authMethod: "email" }),
+      }),
+    );
 
     const user = userEvent.setup();
     const first = renderAuth();
