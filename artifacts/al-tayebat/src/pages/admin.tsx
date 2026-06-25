@@ -1522,7 +1522,7 @@ export default function Admin() {
                         <XCircle className="w-3 h-3" /> {tr("تعليق", "Suspend")}
                       </button>
                     )}
-                    {isSuperAdmin && (
+                    {authed && (
                       <button
                         onClick={() => handleDeleteVendor(vendor.id)}
                         className="text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-3 py-2"
@@ -1599,7 +1599,7 @@ export default function Admin() {
                       )}
                     </div>
                   </div>
-                  {isSuperAdmin && !u.isAdmin && (
+                  {authed && !u.isAdmin && (
                     <button
                       onClick={() => handleDeleteUser(u.id)}
                       className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
