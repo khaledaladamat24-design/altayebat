@@ -19,6 +19,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
+import { UserEditModal } from "@/components/admin/user-edit-modal";
+import { VendorEditModal } from "@/components/admin/vendor-edit-modal";
+import { VendorAdsModal } from "@/components/admin/vendor-ads-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +79,10 @@ interface AdminVendor {
   status: string;
   cliqAlias: string | null;
   walletNumber: string | null;
+  bankAccount: string | null;
+  description: string | null;
   deliveryFeeFixed: string | null;
+  freeDeliveryAbove: string | null;
   createdAt: string;
 }
 
@@ -128,6 +134,17 @@ export default function Admin() {
   const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(
     null,
   );
+  // Super-admin edit modals (edit vendor profile, edit user, manage a vendor's ads).
+  const [editingVendor, setEditingVendor] = useState<AdminVendor | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [adsVendor, setAdsVendor] = useState<AdminVendor | null>(null);
+
+  // The super-admin identity resolves only after Clerk hydrates, which happens
+  // after `authed` is initialized. Grant access as soon as it's known so the
+  // owner never hits the password gate for their own account.
+  useEffect(() => {
+    if (isSuperAdmin) setAuthed(true);
+  }, [isSuperAdmin]);
 
   const { data: categories } = useListCategories();
 
@@ -1522,6 +1539,22 @@ export default function Admin() {
                         <XCircle className="w-3 h-3" /> {tr("تعليق", "Suspend")}
                       </button>
                     )}
+                    {isSuperAdmin && (
+                      <>
+                        <button
+                          onClick={() => setEditingVendor(vendor)}
+                          className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-xl px-3 py-2"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setAdsVendor(vendor)}
+                          className="text-xs bg-rose-50 text-rose-600 border border-rose-200 rounded-xl px-3 py-2 font-bold"
+                        >
+                          {tr("إعلانات", "Ads")}
+                        </button>
+                      </>
+                    )}
                     {authed && (
                       <button
                         onClick={() => handleDeleteVendor(vendor.id)}
@@ -1599,20 +1632,55 @@ export default function Admin() {
                       )}
                     </div>
                   </div>
-                  {authed && !u.isAdmin && (
-                    <button
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {isSuperAdmin && !u.isAdmin && (
+                      <button
+                        onClick={() => setEditingUser(u)}
+                        className="text-primary p-2 hover:bg-primary/10 rounded-lg"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    {authed && !u.isAdmin && (
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="text-destructive p-2 hover:bg-destructive/10 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
           </div>
         )}
       </div>
+
+      {editingVendor && (
+        <VendorEditModal
+          vendor={editingVendor}
+          adminHeaders={adminHeaders}
+          onClose={() => setEditingVendor(null)}
+          onSaved={fetchTabData}
+        />
+      )}
+      {adsVendor && (
+        <VendorAdsModal
+          vendorId={adsVendor.id}
+          vendorName={adsVendor.storeNameAr || adsVendor.storeName}
+          adminHeaders={adminHeaders}
+          onClose={() => setAdsVendor(null)}
+        />
+      )}
+      {editingUser && (
+        <UserEditModal
+          user={editingUser}
+          adminHeaders={adminHeaders}
+          onClose={() => setEditingUser(null)}
+          onSaved={fetchTabData}
+        />
+      )}
     </div>
   );
 }

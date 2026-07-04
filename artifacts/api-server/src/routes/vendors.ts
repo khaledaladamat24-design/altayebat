@@ -591,6 +591,58 @@ router.delete(
   },
 );
 
+// Owner/admin: edit an existing ad (must belong to the vendor in the path).
+router.patch(
+  "/vendors/:id/ads/:adId",
+  requireVendorOwner("id"),
+  async (req, res) => {
+    try {
+      const vendorId = parseInt(String(req.params.id));
+      const adId = parseInt(String(req.params.adId));
+      if (isNaN(vendorId) || isNaN(adId)) {
+        return res.status(400).json({ error: "Invalid id" });
+      }
+      const [existing] = await db
+        .select()
+        .from(vendorAdsTable)
+        .where(eq(vendorAdsTable.id, adId))
+        .limit(1);
+      if (!existing || existing.vendorId !== vendorId) {
+        return res.status(404).json({ error: "الإعلان غير موجود" });
+      }
+      const { imageUrl, title, titleAr, linkUrl, sortOrder } = req.body ?? {};
+      const patch: Record<string, unknown> = {};
+      if (imageUrl !== undefined) {
+        if (!imageUrl || typeof imageUrl !== "string") {
+          return res.status(400).json({ error: "صورة الإعلان مطلوبة" });
+        }
+        if (looksLikeVideo(imageUrl)) {
+          return res
+            .status(400)
+            .json({ error: "يُسمح بالصور فقط (لا يمكن رفع فيديو)" });
+        }
+        patch.imageUrl = imageUrl;
+      }
+      if (title !== undefined) patch.title = title || null;
+      if (titleAr !== undefined) patch.titleAr = titleAr || null;
+      if (linkUrl !== undefined) patch.linkUrl = linkUrl || null;
+      if (sortOrder !== undefined) patch.sortOrder = Number(sortOrder);
+      if (Object.keys(patch).length === 0) {
+        return res.status(400).json({ error: "No editable fields provided" });
+      }
+      const [updated] = await db
+        .update(vendorAdsTable)
+        .set(patch)
+        .where(eq(vendorAdsTable.id, adId))
+        .returning();
+      return res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to update vendor ad");
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
 // List all orders for a vendor's products. Used by the vendor dashboard to
 // poll for new "pending" orders and trigger the audio alert.
 router.get(

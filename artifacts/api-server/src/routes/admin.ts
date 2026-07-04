@@ -12,6 +12,7 @@ import { eq, desc } from "drizzle-orm";
 import { checkSaleIntegrity } from "../lib/sale-integrity";
 import { SUPER_ADMIN_EMAIL } from "../lib/admin-auth";
 import { requireAdmin } from "../lib/vendor-auth";
+import { normalizePhone } from "../lib/phone";
 
 const router = Router();
 
@@ -322,6 +323,84 @@ router.get("/admin/users", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to list users");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const USER_ROLES = ["consumer", "vendor", "admin"] as const;
+
+// Super-admin: edit a user's core fields (name, phone, email, role). Phone is
+// normalized to canonical form; email is lower-cased. The super-admin account
+// (matched by email) is protected from edits here so it can never be locked out
+// or demoted through this endpoint.
+router.patch("/admin/users/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, id))
+      .limit(1);
+    if (!existing) return res.status(404).json({ error: "User not found" });
+    if (existing.email && existing.email === SUPER_ADMIN_EMAIL) {
+      return res
+        .status(403)
+        .json({ error: "لا يمكن تعديل حساب المالك (السوبر أدمن)" });
+    }
+
+    const { name, phone, email, role } = req.body ?? {};
+    const patch: Record<string, unknown> = {};
+
+    if (name !== undefined) patch.name = name ? String(name).trim() : null;
+
+    if (phone !== undefined) {
+      if (phone === null || phone === "") {
+        patch.phone = null;
+      } else {
+        const canonical = normalizePhone(String(phone));
+        if (!canonical) {
+          return res
+            .status(400)
+            .json({ error: "رقم الهاتف غير صالح", code: "INVALID_PHONE" });
+        }
+        patch.phone = canonical;
+      }
+    }
+
+    if (email !== undefined) {
+      patch.email = email ? String(email).trim().toLowerCase() : null;
+    }
+
+    if (role !== undefined) {
+      if (!USER_ROLES.includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
+      patch.role = role;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: "No editable fields provided" });
+    }
+    patch.updatedAt = new Date();
+
+    const [updated] = await db
+      .update(usersTable)
+      .set(patch)
+      .where(eq(usersTable.id, id))
+      .returning();
+
+    const { passwordHash, clerkId, firebaseUid, ...safe } = updated;
+    void passwordHash;
+    void clerkId;
+    void firebaseUid;
+    return res.json({
+      ...safe,
+      isAdmin: safe.email === SUPER_ADMIN_EMAIL || safe.role === "admin",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update user");
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
