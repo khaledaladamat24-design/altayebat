@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, Loader2, X, ImageIcon, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import imageCompression from "browser-image-compression";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
 
@@ -65,6 +66,24 @@ export function ImageUpload({
     setUploading(true);
     setProgress(0);
     try {
+      // Compress/resize in the browser before uploading so Cloudinary stores a
+      // lightweight file instead of the full-size camera photo. GIFs are skipped
+      // to preserve animation; any failure falls back to the original file.
+      let uploadFile: File = file;
+      if (file.type !== "image/gif") {
+        try {
+          uploadFile = await imageCompression(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1600,
+            useWebWorker: true,
+            initialQuality: 0.8,
+            fileType: "image/webp",
+          });
+        } catch {
+          uploadFile = file;
+        }
+      }
+
       const sigRes = await fetch(apiUrl("/api/uploads/cloudinary-signature"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,7 +93,11 @@ export function ImageUpload({
       const sig: SignaturePayload = await sigRes.json();
 
       const form = new FormData();
-      form.append("file", file);
+      const uploadName =
+        uploadFile === file
+          ? file.name
+          : file.name.replace(/\.[^./\\]+$/, "") + ".webp";
+      form.append("file", uploadFile, uploadName);
       form.append("api_key", sig.apiKey);
       form.append("timestamp", String(sig.timestamp));
       form.append("folder", sig.folder);
