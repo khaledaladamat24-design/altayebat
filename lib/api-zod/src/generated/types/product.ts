@@ -45,6 +45,7 @@ export interface Product {
   isOnSale?: boolean;
   /** @nullable */
   subcategory?: string | null;
+  isDemo?: boolean;
   /** @nullable */
   calories?: number | null;
   /** @nullable */

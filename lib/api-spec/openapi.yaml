@@ -184,6 +184,28 @@ paths:
                 items:
                   $ref: "#/components/schemas/Product"
 
+  /products/new-arrivals:
+    get:
+      operationId: listNewArrivals
+      tags: [products]
+      summary: Get the newest products (auto — by creation date)
+      parameters:
+        - name: foodType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [healthy, regular, grocery]
+      responses:
+        "200":
+          description: Newest products, most recent first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
   /products/bestsellers:
     get:
       operationId: listBestsellers
@@ -840,6 +862,8 @@ components:
           type: boolean
         subcategory:
           type: ["string", "null"]
+        isDemo:
+          type: boolean
         calories:
           type: ["integer", "null"]
         protein:

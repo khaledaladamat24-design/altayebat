@@ -32,6 +32,8 @@ export * from './listCategoriesFoodType';
 export * from './listCategoriesParams';
 export * from './listFeaturedProductsFoodType';
 export * from './listFeaturedProductsParams';
+export * from './listNewArrivalsFoodType';
+export * from './listNewArrivalsParams';
 export * from './listOrdersParams';
 export * from './listProductsFoodType';
 export * from './listProductsParams';

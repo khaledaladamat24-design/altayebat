@@ -36,6 +36,7 @@ import type {
   ListBestsellersParams,
   ListCategoriesParams,
   ListFeaturedProductsParams,
+  ListNewArrivalsParams,
   ListOrdersParams,
   ListProductsParams,
   MyProductRating,
@@ -538,6 +539,90 @@ export function useListFeaturedProducts<TData = Awaited<ReturnType<typeof listFe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListFeaturedProductsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNewArrivalsUrl = (params?: ListNewArrivalsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/products/new-arrivals?${stringifiedParams}` : `/api/products/new-arrivals`
+}
+
+/**
+ * @summary Get the newest products (auto — by creation date)
+ */
+export const listNewArrivals = async (params?: ListNewArrivalsParams, options?: RequestInit): Promise<Product[]> => {
+
+  return customFetch<Product[]>(getListNewArrivalsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNewArrivalsQueryKey = (params?: ListNewArrivalsParams,) => {
+    return [
+    `/api/products/new-arrivals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListNewArrivalsQueryOptions = <TData = Awaited<ReturnType<typeof listNewArrivals>>, TError = ErrorType<unknown>>(params?: ListNewArrivalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNewArrivals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNewArrivalsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNewArrivals>>> = ({ signal }) => listNewArrivals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNewArrivals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNewArrivalsQueryResult = NonNullable<Awaited<ReturnType<typeof listNewArrivals>>>
+export type ListNewArrivalsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the newest products (auto — by creation date)
+ */
+
+export function useListNewArrivals<TData = Awaited<ReturnType<typeof listNewArrivals>>, TError = ErrorType<unknown>>(
+ params?: ListNewArrivalsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNewArrivals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNewArrivalsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

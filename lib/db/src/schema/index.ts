@@ -9,3 +9,4 @@ export * from "./vendors";
 export * from "./vendor-ads";
 export * from "./delivery";
 export * from "./devices";
+export * from "./app-flags";

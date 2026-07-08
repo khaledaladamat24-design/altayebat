@@ -446,6 +446,32 @@ export default function Admin() {
     } else toast.error(tr("فشل الحذف", "Failed to delete"));
   };
 
+  const handleDeleteDemoProducts = async () => {
+    if (
+      !confirm(
+        tr(
+          "هل تريد حذف جميع المنتجات التجريبية نهائياً؟",
+          "Delete ALL demo products permanently?",
+        ),
+      )
+    )
+      return;
+    const res = await fetch(apiUrl("/api/admin/products/demo"), {
+      method: "DELETE",
+      headers: adminHeaders,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      toast.success(
+        tr(
+          `تم حذف ${data.deleted} منتج تجريبي`,
+          `Deleted ${data.deleted} demo products`,
+        ),
+      );
+      refreshAdminProducts();
+    } else toast.error(tr("فشل الحذف", "Failed to delete"));
+  };
+
   const handleUpdateOrderStatus = async (id: number, status: string) => {
     const res = await fetch(apiUrl(`/api/admin/orders/${id}`), {
       method: "PATCH",
@@ -725,6 +751,18 @@ export default function Admin() {
                 `${vendors.length} vendors · ${adminProducts.length} products`,
               )}
             </p>
+            {adminProducts.some((p) => p.isDemo) && (
+              <button
+                onClick={handleDeleteDemoProducts}
+                className="w-full flex items-center justify-center gap-2 text-sm font-bold text-destructive bg-destructive/10 border border-destructive/20 rounded-xl py-2.5 hover:bg-destructive/15"
+              >
+                <Trash2 className="w-4 h-4" />
+                {tr(
+                  `حذف المنتجات التجريبية (${adminProducts.filter((p) => p.isDemo).length})`,
+                  `Delete demo products (${adminProducts.filter((p) => p.isDemo).length})`,
+                )}
+              </button>
+            )}
             {loadingData && (
               <p className="text-sm text-muted-foreground text-center py-6">
                 {tr("جاري التحميل…", "Loading…")}

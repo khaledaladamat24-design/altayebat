@@ -1,7 +1,7 @@
 import {
   useListBanners,
   useListCategories,
-  useListFeaturedProducts,
+  useListNewArrivals,
   useListBestsellers,
 } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
@@ -60,8 +60,8 @@ export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useListCategories({
     foodType: zone,
   });
-  const { data: featuredProducts, isLoading: loadingFeatured } =
-    useListFeaturedProducts({ foodType: zone });
+  const { data: newArrivals, isLoading: loadingNewArrivals } =
+    useListNewArrivals({ foodType: zone });
   const { data: bestsellers, isLoading: loadingBestsellers } =
     useListBestsellers({ foodType: zone });
 
@@ -72,10 +72,10 @@ export default function Home() {
 
   const zoneEmpty =
     !loadingCategories &&
-    !loadingFeatured &&
+    !loadingNewArrivals &&
     !loadingBestsellers &&
     (categories?.length ?? 0) === 0 &&
-    (featuredProducts?.length ?? 0) === 0 &&
+    (newArrivals?.length ?? 0) === 0 &&
     (bestsellers?.length ?? 0) === 0;
 
   return (
@@ -383,14 +383,14 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {loadingFeatured
+                {loadingNewArrivals
                   ? Array.from({ length: 4 }).map((_, i) => (
                       <Skeleton
                         key={i}
                         className="w-full aspect-[3/4] rounded-xl"
                       />
                     ))
-                  : featuredProducts?.map((product) => (
+                  : newArrivals?.map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
               </div>

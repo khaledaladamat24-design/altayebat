@@ -70,6 +70,12 @@
 - **Vendor registration store name:** Arabic name required, English optional; server accepts either and falls back `storeName = enName || arName` (legacy rows unaffected). Enabling the vendor delivery toggle requires a confirm dialog + persistent warning that delivery is the vendor's own responsibility (no app delivery company yet — also stated in the privacy policy).
 - **Vendor specialty** in registration (`register.tsx`) is the 3 zones (`healthy/regular/grocery`), **multi-select**, stored comma-separated in the existing single `vendor_profiles.category` text column (e.g. `healthy,grocery`) — no DB change. Treated as opaque text elsewhere; product-add category dropdowns are unchanged.
 
+## Home rails (وصل حديثاً / الأكثر مبيعاً)
+
+- **"وصل حديثاً" is automatic:** `GET /api/products/new-arrivals` (+`?foodType=`) returns the 12 newest visible products by `created_at` — no manual `is_featured` flag needed (the flag/endpoint still exist but home no longer uses them).
+- **"الأكثر مبيعاً" ranks by REAL sales:** bestsellers orders by total `order_items.quantity` across non-cancelled orders (correlated subquery), then `ratingRankOrder` as fallback so zero-sales products still fill the rail. `is_bestseller` is only a tiebreaker.
+- **Demo products (TEMPORARY):** startup seed `seed-demo-products.ts` inserts 2 products per category (50 total, `is_demo=true`, `vendor_id NULL`, Unsplash images) exactly ONCE, gated by `app_flags` key `demo_products_seeded_v1` — after admin bulk-delete they never come back. Admin: `DELETE /api/admin/products/demo` (declared before `/:id`) + red button in the products list tab.
+
 ## Offers / Deals (العروضات)
 
 - Products carry `is_on_sale` (bool); `original_price > price` drives the strikethrough. `GET /api/products?onSale=true` (combinable with `?foodType=`).

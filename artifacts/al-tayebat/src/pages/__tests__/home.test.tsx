@@ -4,14 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { LanguageProvider } from "@/contexts/language";
 
 const mockUseListCategories = vi.fn();
-const mockUseListFeaturedProducts = vi.fn();
+const mockUseListNewArrivals = vi.fn();
 const mockUseListBestsellers = vi.fn();
 
 vi.mock("@workspace/api-client-react", () => ({
   useListBanners: () => ({ data: [], isLoading: false }),
   useListCategories: (...args: unknown[]) => mockUseListCategories(...args),
-  useListFeaturedProducts: (...args: unknown[]) =>
-    mockUseListFeaturedProducts(...args),
+  useListNewArrivals: (...args: unknown[]) => mockUseListNewArrivals(...args),
   useListBestsellers: (...args: unknown[]) => mockUseListBestsellers(...args),
   // ProductCard transitive deps (no products rendered in these tests).
   useAddToCart: () => ({ mutate: vi.fn() }),
@@ -35,7 +34,7 @@ function renderHome() {
 describe("Home zone toggle", () => {
   beforeEach(() => {
     mockUseListCategories.mockReset().mockReturnValue(emptyResult());
-    mockUseListFeaturedProducts.mockReset().mockReturnValue(emptyResult());
+    mockUseListNewArrivals.mockReset().mockReturnValue(emptyResult());
     mockUseListBestsellers.mockReset().mockReturnValue(emptyResult());
     localStorage.clear();
   });
@@ -51,7 +50,7 @@ describe("Home zone toggle", () => {
     expect(mockUseListCategories).toHaveBeenLastCalledWith({
       foodType: "healthy",
     });
-    expect(mockUseListFeaturedProducts).toHaveBeenLastCalledWith({
+    expect(mockUseListNewArrivals).toHaveBeenLastCalledWith({
       foodType: "healthy",
     });
     expect(mockUseListBestsellers).toHaveBeenLastCalledWith({
@@ -78,7 +77,7 @@ describe("Home zone toggle", () => {
     expect(mockUseListCategories).toHaveBeenLastCalledWith({
       foodType: "regular",
     });
-    expect(mockUseListFeaturedProducts).toHaveBeenLastCalledWith({
+    expect(mockUseListNewArrivals).toHaveBeenLastCalledWith({
       foodType: "regular",
     });
     expect(mockUseListBestsellers).toHaveBeenLastCalledWith({

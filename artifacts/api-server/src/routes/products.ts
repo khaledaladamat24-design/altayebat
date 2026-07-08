@@ -79,6 +79,7 @@ function buildProductRow(
     foodType: p.foodType,
     isOnSale: p.isOnSale,
     subcategory: p.subcategory ?? null,
+    isDemo: p.isDemo,
   };
 }
 
@@ -135,7 +136,10 @@ router.get("/products/featured", async (req, res) => {
   }
 });
 
-router.get("/products/bestsellers", async (req, res) => {
+// "New arrivals" home rail: fully automatic — every product any vendor (or
+// the admin) adds shows up here immediately, newest first, per zone. No
+// manual "featured" flag needed.
+router.get("/products/new-arrivals", async (req, res) => {
   try {
     const ft = foodTypeCondition(req.query.foodType);
     const rows = await db
@@ -149,10 +153,50 @@ router.get("/products/bestsellers", async (req, res) => {
         vendorProfilesTable,
         eq(productsTable.vendorId, vendorProfilesTable.id),
       )
-      .where(
-        and(eq(productsTable.isBestseller, true), vendorVisibleCondition, ft),
+      .where(and(vendorVisibleCondition, ft))
+      .orderBy(desc(productsTable.createdAt), desc(productsTable.id))
+      .limit(12);
+    res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list new arrivals");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// "Bestsellers" home rail: ranked by REAL sales — total quantity sold across
+// all non-cancelled orders. Products with zero sales still appear (after the
+// sold ones, in fair rating order) so the rail is never empty before sales
+// accumulate. The manual is_bestseller flag acts only as a tiebreaker via
+// ratingRankOrder — actual sales always outrank it.
+router.get("/products/bestsellers", async (req, res) => {
+  try {
+    const ft = foodTypeCondition(req.query.foodType);
+    const soldQty = sql<number>`coalesce((
+      select sum(${orderItemsTable.quantity})
+      from ${orderItemsTable}
+      join ${ordersTable} on ${ordersTable.id} = ${orderItemsTable.orderId}
+      where ${orderItemsTable.productId} = ${productsTable.id}
+        and ${ordersTable.status} <> 'cancelled'
+    ), 0)`;
+    const rows = await db
+      .select({
+        p: productsTable,
+        c: categoriesTable,
+        v: vendorProfilesTable,
+        sold: soldQty,
+      })
+      .from(productsTable)
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id),
       )
-      .orderBy(...ratingRankOrder);
+      .leftJoin(
+        vendorProfilesTable,
+        eq(productsTable.vendorId, vendorProfilesTable.id),
+      )
+      .where(and(vendorVisibleCondition, ft))
+      .orderBy(sql`${soldQty} desc`, ...ratingRankOrder)
+      .limit(12);
     res.json(rows.map((r) => buildProductRow(r.p, r.c, r.v)));
   } catch (err) {
     req.log.error({ err }, "Failed to list bestsellers");

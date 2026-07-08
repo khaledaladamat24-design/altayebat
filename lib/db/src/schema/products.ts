@@ -39,6 +39,9 @@ export const productsTable = pgTable(
     foodType: text("food_type").notNull().default("healthy"),
     isOnSale: boolean("is_on_sale").notNull().default(false),
     subcategory: text("subcategory"),
+    // Demo/sample products seeded once at startup so the app never launches
+    // with empty categories. Flagged so the admin can bulk-delete them later.
+    isDemo: boolean("is_demo").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

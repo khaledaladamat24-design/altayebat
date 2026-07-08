@@ -93,6 +93,7 @@ export const ListProductsResponseItem = zod.object({
   "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional(),
   "isOnSale": zod.boolean().optional(),
   "subcategory": zod.string().nullish(),
+  "isDemo": zod.boolean().optional(),
   "calories": zod.number().nullish(),
   "protein": zod.number().nullish(),
   "carbs": zod.number().nullish(),
@@ -130,6 +131,7 @@ export const GetProductResponse = zod.object({
   "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional(),
   "isOnSale": zod.boolean().optional(),
   "subcategory": zod.string().nullish(),
+  "isDemo": zod.boolean().optional(),
   "calories": zod.number().nullish(),
   "protein": zod.number().nullish(),
   "carbs": zod.number().nullish(),
@@ -170,12 +172,55 @@ export const ListFeaturedProductsResponseItem = zod.object({
   "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional(),
   "isOnSale": zod.boolean().optional(),
   "subcategory": zod.string().nullish(),
+  "isDemo": zod.boolean().optional(),
   "calories": zod.number().nullish(),
   "protein": zod.number().nullish(),
   "carbs": zod.number().nullish(),
   "fats": zod.number().nullish()
 })
 export const ListFeaturedProductsResponse = zod.array(ListFeaturedProductsResponseItem)
+
+
+/**
+ * @summary Get the newest products (auto — by creation date)
+ */
+export const ListNewArrivalsQueryParams = zod.object({
+  "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional()
+})
+
+export const ListNewArrivalsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nameAr": zod.string(),
+  "description": zod.string().nullish(),
+  "descriptionAr": zod.string().nullish(),
+  "price": zod.number(),
+  "originalPrice": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "categoryId": zod.number(),
+  "categoryName": zod.string().nullish(),
+  "categoryNameAr": zod.string().nullish(),
+  "inStock": zod.boolean(),
+  "isFeatured": zod.boolean().optional(),
+  "isBestseller": zod.boolean().optional(),
+  "isKeto": zod.boolean().optional(),
+  "isOrganic": zod.boolean().optional(),
+  "weightOrVolume": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "reviewCount": zod.number().optional(),
+  "vendorId": zod.number().nullish(),
+  "vendorName": zod.string().nullish(),
+  "vendorNameAr": zod.string().nullish(),
+  "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional(),
+  "isOnSale": zod.boolean().optional(),
+  "subcategory": zod.string().nullish(),
+  "isDemo": zod.boolean().optional(),
+  "calories": zod.number().nullish(),
+  "protein": zod.number().nullish(),
+  "carbs": zod.number().nullish(),
+  "fats": zod.number().nullish()
+})
+export const ListNewArrivalsResponse = zod.array(ListNewArrivalsResponseItem)
 
 
 /**
@@ -211,6 +256,7 @@ export const ListBestsellersResponseItem = zod.object({
   "foodType": zod.enum(['healthy', 'regular', 'grocery']).optional(),
   "isOnSale": zod.boolean().optional(),
   "subcategory": zod.string().nullish(),
+  "isDemo": zod.boolean().optional(),
   "calories": zod.number().nullish(),
   "protein": zod.number().nullish(),
   "carbs": zod.number().nullish(),

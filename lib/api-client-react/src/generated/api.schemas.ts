@@ -78,6 +78,7 @@ export interface Product {
   isOnSale?: boolean;
   /** @nullable */
   subcategory?: string | null;
+  isDemo?: boolean;
   /** @nullable */
   calories?: number | null;
   /** @nullable */
@@ -488,6 +489,19 @@ export type ListFeaturedProductsFoodType = typeof ListFeaturedProductsFoodType[k
 
 
 export const ListFeaturedProductsFoodType = {
+  healthy: 'healthy',
+  regular: 'regular',
+  grocery: 'grocery',
+} as const;
+
+export type ListNewArrivalsParams = {
+foodType?: ListNewArrivalsFoodType;
+};
+
+export type ListNewArrivalsFoodType = typeof ListNewArrivalsFoodType[keyof typeof ListNewArrivalsFoodType];
+
+
+export const ListNewArrivalsFoodType = {
   healthy: 'healthy',
   regular: 'regular',
   grocery: 'grocery',

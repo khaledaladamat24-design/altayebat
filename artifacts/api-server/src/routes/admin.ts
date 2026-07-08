@@ -209,6 +209,22 @@ router.put("/admin/products/:id", async (req, res) => {
   }
 });
 
+// Bulk-delete the demo/sample products seeded at startup. Declared BEFORE
+// /admin/products/:id so "demo" isn't parsed as an id.
+router.delete("/admin/products/demo", async (req, res) => {
+  try {
+    const deleted = await db
+      .delete(productsTable)
+      .where(eq(productsTable.isDemo, true))
+      .returning({ id: productsTable.id });
+    req.log.info({ count: deleted.length }, "Deleted demo products");
+    return res.json({ success: true, deleted: deleted.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete demo products");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/admin/products/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -471,6 +487,7 @@ router.get("/admin/products", async (req, res) => {
         carbs: r.p.carbs ? Number(r.p.carbs) : null,
         fats: r.p.fats ? Number(r.p.fats) : null,
         foodType: r.p.foodType,
+        isDemo: r.p.isDemo,
         vendorId: r.p.vendorId ?? null,
         vendorName: r.v?.storeName ?? null,
         vendorNameAr: r.v?.storeNameAr ?? null,
