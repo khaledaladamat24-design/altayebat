@@ -327,11 +327,17 @@ router.post("/vendors", async (req, res) => {
       freeDeliveryAbove,
     } = req.body;
 
-    if (!userId || !storeName || !category) {
+    // Arabic name is the primary required name; the English name is optional
+    // and falls back to the Arabic one. Legacy rows may only have storeName,
+    // so accept either name being present.
+    const arName = typeof storeNameAr === "string" ? storeNameAr.trim() : "";
+    const enName = typeof storeName === "string" ? storeName.trim() : "";
+    if (!userId || !(arName || enName) || !category) {
       return res
         .status(400)
-        .json({ error: "userId, storeName, category required" });
+        .json({ error: "userId, storeNameAr, category required" });
     }
+    const effectiveStoreName = enName || arName;
 
     const [existing] = await db
       .select()
@@ -361,8 +367,8 @@ router.post("/vendors", async (req, res) => {
       const [updated] = await db
         .update(vendorProfilesTable)
         .set({
-          storeName,
-          storeNameAr: storeNameAr || null,
+          storeName: effectiveStoreName,
+          storeNameAr: arName || null,
           category,
           description: description || null,
           phone: phoneToSave,
@@ -383,8 +389,8 @@ router.post("/vendors", async (req, res) => {
       .insert(vendorProfilesTable)
       .values({
         userId: Number(userId),
-        storeName,
-        storeNameAr: storeNameAr || null,
+        storeName: effectiveStoreName,
+        storeNameAr: arName || null,
         category,
         description: description || null,
         phone: trimmedPhone || null,

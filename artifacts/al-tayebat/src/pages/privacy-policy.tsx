@@ -67,6 +67,10 @@ export default function PrivacyPolicy() {
           "الموردون مسؤولون قانونياً عن جودة الأغذية وامتلاكهم التراخيص والشهادات الصحية اللازمة من الجهات الرسمية (مؤسسة الغذاء والدواء وأمانة عمان).",
           "Vendors are legally responsible for food quality and for holding the required licenses and health certifications from official authorities (Jordan Food and Drug Administration and the Greater Amman Municipality).",
         ),
+        tr(
+          "**التوصيل:** المسؤول عن توصيل الطلبات حالياً هو المورد بشكل كامل، ولا توجد شركة أو خدمة توصيل تابعة لإدارة التطبيق، وذلك إلى أن يتم مستقبلاً إضافة خدمة التوصيل من إدارة التطبيق.",
+          "**Delivery:** Delivering orders is currently the vendor's full responsibility; the app's administration operates no delivery company or service, until an administration-run delivery service is added in the future.",
+        ),
       ],
     },
     {
@@ -119,8 +123,8 @@ export default function PrivacyPolicy() {
             </h1>
             <p className="text-primary-foreground/70 text-xs">
               {tr(
-                "تاريخ آخر تحديث: 26 مايو 2026",
-                "Last updated: May 26, 2026",
+                "تاريخ آخر تحديث: 8 يوليو 2026",
+                "Last updated: July 8, 2026",
               )}
             </p>
           </div>

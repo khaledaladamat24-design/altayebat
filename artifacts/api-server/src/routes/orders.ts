@@ -8,8 +8,8 @@ import {
   vendorProfilesTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, or, inArray } from "drizzle-orm";
-import { requireOrderVendorOwner } from "../lib/vendor-auth";
+import { eq, and, or, inArray, isNull } from "drizzle-orm";
+import { requireOrderVendorOwner, getActingDbUserId } from "../lib/vendor-auth";
 import { normalizePhone } from "../lib/phone";
 import { sendPushToUser } from "../lib/fcm";
 
@@ -134,17 +134,57 @@ router.post("/orders", async (req, res) => {
         code: "INVALID_PHONE",
       });
     }
-    const [registeredUser] = await db
+    let [registeredUser]: { id: number }[] = await db
       .select({ id: usersTable.id })
       .from(usersTable)
       .where(eq(usersTable.phone, canonicalPhone))
       .limit(1);
     if (!registeredUser) {
-      return res.status(403).json({
-        error:
-          "يجب التسجيل برقم هاتفك أولاً قبل إتمام الطلب لتجنب الطلبات الوهمية.",
-        code: "PHONE_NOT_REGISTERED",
-      });
+      // The phone isn't registered, but if the caller is a signed-in user
+      // (e.g. Google/Clerk account) with NO phone on file yet, claim the
+      // entered phone permanently on their profile and let the order proceed
+      // instead of bouncing them to the auth page. Users who already have a
+      // (different) phone on file keep the original strict gate.
+      let phoneClaimed = false;
+      const actingUserId = await getActingDbUserId(req);
+      if (actingUserId) {
+        const [acting] = await db
+          .select({ id: usersTable.id, phone: usersTable.phone })
+          .from(usersTable)
+          .where(eq(usersTable.id, actingUserId))
+          .limit(1);
+        if (acting && !acting.phone) {
+          try {
+            // Conditional UPDATE (phone IS NULL) keeps the claim atomic under
+            // concurrent requests — only one wins; a loser falls through to 403.
+            const claimed = await db
+              .update(usersTable)
+              .set({ phone: canonicalPhone })
+              .where(
+                and(eq(usersTable.id, actingUserId), isNull(usersTable.phone)),
+              )
+              .returning({ id: usersTable.id });
+            if (claimed.length > 0) {
+              phoneClaimed = true;
+              // The acting user now owns this phone — link the order to them.
+              registeredUser = { id: actingUserId };
+              req.log.info(
+                { userId: actingUserId },
+                "Claimed checkout phone for signed-in user",
+              );
+            }
+          } catch (err) {
+            req.log.error({ err }, "Failed to claim checkout phone");
+          }
+        }
+      }
+      if (!phoneClaimed) {
+        return res.status(403).json({
+          error:
+            "يجب التسجيل برقم هاتفك أولاً قبل إتمام الطلب لتجنب الطلبات الوهمية.",
+          code: "PHONE_NOT_REGISTERED",
+        });
+      }
     }
 
     const subtotal = cartItems.reduce(

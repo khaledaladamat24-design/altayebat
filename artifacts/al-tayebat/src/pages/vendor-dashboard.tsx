@@ -559,6 +559,18 @@ export default function VendorDashboard() {
   ) => {
     if (!vendor || togglingFulfillment) return;
     const next = !vendor[field];
+    // Enabling delivery requires the vendor to explicitly acknowledge that
+    // delivering orders is entirely their own responsibility — the app has no
+    // delivery company of its own (yet).
+    if (field === "deliveryEnabled" && next) {
+      const acknowledged = window.confirm(
+        tr(
+          "تنبيه هام: لا توجد شركة توصيل تابعة للتطبيق حالياً — التوصيل يقع على عاتقك ومسؤوليتك الشخصية بالكامل كمورد. بتفعيل هذا الخيار أنت تؤكد أنك المسؤول عن تأمين توصيل الطلبات للزبائن. هل تريد تفعيل التوصيل؟",
+          "Important: The app currently has no delivery company — delivery is entirely your own personal responsibility as a vendor. By enabling this option you confirm that you are responsible for delivering orders to customers. Enable delivery?",
+        ),
+      );
+      if (!acknowledged) return;
+    }
     setTogglingFulfillment(true);
     try {
       const r = await fetch(apiUrl(`/api/vendors/${vendor.id}`), {
@@ -957,6 +969,12 @@ export default function VendorDashboard() {
           <ShoppingBag className="w-3.5 h-3.5" />{" "}
           {tr("استلام من المتجر", "Pickup")}
         </button>
+        <p className="w-full text-[11px] leading-relaxed text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-1">
+          {tr(
+            "⚠️ التوصيل مسؤوليتك الشخصية بالكامل كمورد — لا توجد شركة توصيل تابعة للتطبيق حالياً.",
+            "⚠️ Delivery is entirely your own responsibility as a vendor — the app currently has no delivery company.",
+          )}
+        </p>
       </div>
 
       {/* Tabs */}

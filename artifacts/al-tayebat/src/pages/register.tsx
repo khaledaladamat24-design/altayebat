@@ -142,11 +142,11 @@ export default function Register() {
   };
 
   const handleVendorDetails = () => {
-    if (!vendorDetails.storeName || !vendorDetails.category) {
+    if (!vendorDetails.storeNameAr.trim() || !vendorDetails.category) {
       toast.error(
         tr(
-          "يرجى تعبئة اسم المتجر والتخصص",
-          "Please enter store name and specialty",
+          "يرجى تعبئة اسم المتجر بالعربي والتخصص",
+          "Please enter the Arabic store name and specialty",
         ),
       );
       return;
@@ -444,7 +444,10 @@ export default function Register() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-muted-foreground">
-                {tr("اسم المتجر بالإنجليزي *", "Store name (English) *")}
+                {tr(
+                  "اسم المتجر بالإنجليزي (اختياري)",
+                  "Store name (English) (optional)",
+                )}
               </label>
               <input
                 value={vendorDetails.storeName}

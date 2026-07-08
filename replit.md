@@ -56,6 +56,7 @@
 ## Order placement gate (anti-fraud)
 
 - **Every order (including COD) is rejected unless `customerPhone` resolves to an existing `users` row.** Enforced in `POST /api/orders` before any charge logic. Matched in canonical form via `normalizePhone`.
+- **Exception — signed-in phone claim:** if the caller is a signed-in user (Clerk/Firebase via `getActingDbUserId`) whose `users.phone` is empty, the entered phone is claimed onto their profile (atomic conditional UPDATE `phone IS NULL`) and the order proceeds, linked to that user. Users with a different phone on file, and guests, still get 403.
 - Rejections: invalid phone → `400 {code:"INVALID_PHONE"}`; unregistered → `403 {code:"PHONE_NOT_REGISTERED"}` (Arabic message). Checkout detects `PHONE_NOT_REGISTERED`, stashes the form + `returnTo`, and routes to `/auth` (cart preserved via sessionId).
 - Phone accounts are created via the Firebase-OTP signup flow; email-only (Clerk) signups store no phone, so they still hit the gate until they register one.
 
@@ -66,6 +67,7 @@
 - `GET /api/products` (+ `/featured`, `/bestsellers`) and `/api/categories` accept optional `?foodType=`; invalid/missing returns everything.
 - Home has a sticky zone toggle (`al_tayebat_zone`, default `healthy`) with an empty-state per zone.
 - The categories page (`/categories`) prepends an **Offers** card (rose accent) → `/offers/:zone`, mirroring the home offers pill.
+- **Vendor registration store name:** Arabic name required, English optional; server accepts either and falls back `storeName = enName || arName` (legacy rows unaffected). Enabling the vendor delivery toggle requires a confirm dialog + persistent warning that delivery is the vendor's own responsibility (no app delivery company yet — also stated in the privacy policy).
 - **Vendor specialty** in registration (`register.tsx`) is the 3 zones (`healthy/regular/grocery`), **multi-select**, stored comma-separated in the existing single `vendor_profiles.category` text column (e.g. `healthy,grocery`) — no DB change. Treated as opaque text elsewhere; product-add category dropdowns are unchanged.
 
 ## Offers / Deals (العروضات)
