@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureCategoriesSeeded } from "./lib/seed-categories";
 import { ensureDemoProductsSeeded } from "./lib/seed-demo-products";
 import { backfillAuthMethod } from "./lib/backfill-auth-method";
+import { backfillVendorProfiles } from "./lib/backfill-vendor-profiles";
 import { startOrderExpiryScheduler } from "./lib/order-expiry";
 
 const rawPort = process.env["PORT"];
@@ -30,6 +31,7 @@ app.listen(port, (err) => {
   // Demo products must seed AFTER categories exist (looked up by slug).
   void ensureCategoriesSeeded().then(() => ensureDemoProductsSeeded());
   void backfillAuthMethod();
+  void backfillVendorProfiles();
 
   startOrderExpiryScheduler();
 });
