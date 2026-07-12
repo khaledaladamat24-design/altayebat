@@ -184,11 +184,12 @@ export default function Admin() {
     carbs: "",
     fats: "",
     foodType: "healthy",
+    vendorId: "",
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const startEditProduct = (p: Product) => {
+  const startEditProduct = (p: Product & { vendorId?: number | null }) => {
     setEditingId(p.id);
     setForm({
       nameAr: p.nameAr ?? "",
@@ -214,6 +215,7 @@ export default function Admin() {
         p.foodType === "regular" || p.foodType === "grocery"
           ? p.foodType
           : "healthy",
+      vendorId: p.vendorId != null ? String(p.vendorId) : "",
     });
     setTab("products-add");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -243,7 +245,8 @@ export default function Admin() {
       (tab === "orders" ||
         tab === "users" ||
         tab === "vendors" ||
-        tab === "products-list")
+        tab === "products-list" ||
+        tab === "products-add")
     ) {
       fetchTabData();
     }
@@ -293,6 +296,13 @@ export default function Admin() {
         ]);
         setAdminProducts((await readArray(pRes)) as typeof adminProducts);
         setVendors((await readArray(vRes)) as typeof vendors);
+      } else if (tab === "products-add") {
+        // The product form's vendor selector needs the vendor list even when
+        // the admin lands on this tab directly (without visiting the list tab).
+        const res = await fetch(apiUrl("/api/admin/vendors"), {
+          headers: adminHeaders,
+        });
+        setVendors((await readArray(res)) as typeof vendors);
       }
     } catch {
       toast.error(tr("فشل تحميل البيانات", "Failed to load data"));
@@ -395,6 +405,7 @@ export default function Admin() {
             protein: form.protein || null,
             carbs: form.carbs || null,
             fats: form.fats || null,
+            vendorId: form.vendorId ? Number(form.vendorId) : null,
           }),
         },
       );
@@ -1133,6 +1144,33 @@ export default function Admin() {
                       ))}
                   </select>
                 </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {tr("المورّد (المتجر)", "Vendor (store)")}
+                </label>
+                <select
+                  value={form.vendorId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, vendorId: e.target.value }))
+                  }
+                  className="w-full h-11 bg-muted rounded-xl px-3 text-sm border-none outline-none"
+                >
+                  <option value="">{tr("بدون مورد", "No vendor")}</option>
+                  {vendors.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {lang === "en"
+                        ? v.storeName
+                        : v.storeNameAr || v.storeName}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  {tr(
+                    "سيظهر المنتج في متجر هذا المورّد كأنك أضفته باسمه",
+                    "The product will appear in this vendor's store",
+                  )}
+                </p>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">

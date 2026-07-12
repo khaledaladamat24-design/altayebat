@@ -127,6 +127,7 @@ router.put("/admin/products/:id", async (req, res) => {
       protein,
       carbs,
       fats,
+      vendorId,
       foodType,
       subcategory,
     } = req.body;
@@ -190,6 +191,10 @@ router.put("/admin/products/:id", async (req, res) => {
         }),
         ...(fats !== undefined && {
           fats: fats === "" || fats === null ? null : String(fats),
+        }),
+        ...(vendorId !== undefined && {
+          vendorId:
+            vendorId === null || vendorId === "" ? null : Number(vendorId),
         }),
         ...(foodType !== undefined && {
           foodType: normalizeFoodType(foodType),
@@ -405,6 +410,38 @@ router.patch("/admin/users/:id", async (req, res) => {
       .set(patch)
       .where(eq(usersTable.id, id))
       .returning();
+
+    // When the admin promotes a user to vendor, auto-create a minimal store
+    // profile if they don't have one yet — the vendors tab and product
+    // assignment both key off vendor_profiles, so without this the "vendor"
+    // never shows up anywhere. Created pre-approved since it's an explicit
+    // admin action; the vendor (or admin) can complete the details later.
+    if (patch.role === "vendor") {
+      const [existingProfile] = await db
+        .select({ id: vendorProfilesTable.id })
+        .from(vendorProfilesTable)
+        .where(eq(vendorProfilesTable.userId, id))
+        .limit(1);
+      if (!existingProfile) {
+        const fallbackName =
+          (updated.name && updated.name.trim()) ||
+          updated.phone ||
+          updated.email ||
+          `مورّد #${id}`;
+        await db.insert(vendorProfilesTable).values({
+          userId: id,
+          storeName: fallbackName,
+          storeNameAr: updated.name?.trim() || null,
+          category: "healthy",
+          phone: updated.phone || null,
+          status: "approved",
+        });
+        req.log.info(
+          { userId: id },
+          "Auto-created vendor profile on admin role change",
+        );
+      }
+    }
 
     const { passwordHash, clerkId, firebaseUid, ...safe } = updated;
     void passwordHash;
