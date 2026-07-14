@@ -28,6 +28,7 @@ public class MainActivity extends BridgeActivity {
         // exposes them to the WebView.
         registerPlugin(BatteryOptimizationPlugin.class);
         registerPlugin(AppNavPlugin.class);
+        registerPlugin(FacebookEventsPlugin.class);
         super.onCreate(savedInstanceState);
         // Cold start from a notification tap: capture the target route now so
         // the web layer can pick it up once it has loaded.

@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPicker } from "@/components/map-picker";
 import { apiUrl } from "@/lib/api-url";
+import { trackPurchase } from "@/lib/fb-events";
 import { useLanguage } from "@/contexts/language";
 import { setReturnTo } from "@/lib/post-auth";
 
@@ -286,6 +287,7 @@ export default function Checkout() {
           queryClient.invalidateQueries({
             queryKey: getGetCartQueryKey({ sessionId }),
           });
+          trackPurchase(Number(order.total));
           toast.success(
             tr("تم تأكيد طلبك بنجاح!", "Your order has been confirmed!"),
           );

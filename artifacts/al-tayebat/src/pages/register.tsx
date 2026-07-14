@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { apiUrl } from "@/lib/api-url";
 import { useLanguage } from "@/contexts/language";
 import { takeReturnTo } from "@/lib/post-auth";
+import { trackCompleteRegistration } from "@/lib/fb-events";
 import { JORDAN_PROVINCES } from "@/lib/provinces";
 
 type Step = "role" | "vendor-details" | "vendor-payout" | "done";
@@ -129,6 +130,7 @@ export default function Register() {
       const profile = await saveUserProfile("consumer");
       localStorage.setItem("al_tayebat_role", "consumer");
       localStorage.setItem("al_tayebat_user_id", String(profile.id));
+      trackCompleteRegistration("consumer");
       toast.success(tr("أهلاً بك في الطيبات!", "Welcome to Al-Tayebat!"));
       // Return to wherever the user came from (e.g. checkout) when applicable.
       setLocation(takeReturnTo() || "/");
@@ -205,6 +207,7 @@ export default function Register() {
       localStorage.setItem("al_tayebat_role", "vendor");
       localStorage.setItem("al_tayebat_user_id", String(userProfile.id));
       localStorage.setItem("al_tayebat_vendor_id", String(vendor.id));
+      trackCompleteRegistration("vendor");
       toast.success(
         tr("تم تسجيل متجرك بنجاح! 🎉", "Your store has been registered! 🎉"),
       );
